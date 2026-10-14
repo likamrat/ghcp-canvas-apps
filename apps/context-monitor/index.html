@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="monitor-token" content="__TOKEN__">
+    <title>Context Monitor</title>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/style.css">
+    <script type="module" src="/app.js"></script>
+</head>
+<body>
+    <main>
+        <header>
+            <div><h1>Context Monitor</h1><p class="subtitle">Session hierarchy, models, and context usage.</p></div>
+            <button id="refresh" type="button">Refresh</button>
+        </header>
+        <div class="toolbar">
+            <div class="search"><label for="search">Find a session</label><input id="search" type="search" placeholder="Session, project, or model" autocomplete="off"></div>
+            <label class="archive"><input id="archived" type="checkbox"> Include archived</label>
+            <div class="refresh-choice">
+                <label for="auto-refresh">Auto-refresh</label>
+                <select id="auto-refresh">
+                    <option value="0">Off</option>
+                    <option value="5000" selected>Every 5 seconds</option>
+                    <option value="10000">Every 10 seconds</option>
+                    <option value="30000">Every 30 seconds</option>
+                    <option value="60000">Every minute</option>
+                    <option value="300000">Every 5 minutes</option>
+                </select>
+            </div>
+            <div class="sort-choice">
+                <label for="sort-by">Sort sessions</label>
+                <select id="sort-by" aria-describedby="sort-help">
+                    <option value="recent" selected>Recent activity (default)</option>
+                    <option value="context-high">Most context used</option>
+                    <option value="context-low">Least context used</option>
+                    <option value="percent-high">Highest % used</option>
+                    <option value="percent-low">Lowest % used</option>
+                    <option value="capacity">Largest context window</option>
+                    <option value="name-az">Name: A to Z</option>
+                    <option value="name-za">Name: Z to A</option>
+                </select>
+            </div>
+        </div>
+        <p id="sort-help" class="sort-help">Recent activity first. Parents and nested sessions stay together.</p>
+        <details class="threshold-settings">
+            <summary>Usage warnings</summary>
+            <form id="threshold-form" novalidate>
+                <fieldset id="threshold-controls" disabled>
+                    <div class="threshold-field"><label for="amber-threshold">Warning level (%)</label><input id="amber-threshold" type="number" min="0" max="100" step="1" value="65" required aria-describedby="threshold-help"></div>
+                    <div class="threshold-field"><label for="rose-threshold">High usage level (%)</label><input id="rose-threshold" type="number" min="0" max="100" step="1" value="85" required aria-describedby="threshold-help"></div>
+                    <button type="submit">Apply</button>
+                    <button id="reset-thresholds" type="button">Reset defaults</button>
+                </fieldset>
+                <p id="threshold-help" class="threshold-hint">Percent of the context window used: normal below the warning level, then warning, then high usage. Saved across views.</p>
+                <p id="threshold-status" class="threshold-status" role="status"></p>
+            </form>
+        </details>
+        <div class="overview">
+            <p id="count" role="status">Reading local sessions...</p>
+            <div class="legend" aria-label="Context usage levels">
+                <span id="legend-healthy" class="healthy">Normal &lt;65%</span><span id="legend-watch" class="watch">Warning 65 to &lt;85%</span><span id="legend-high" class="high">High usage 85%+</span>
+            </div>
+        </div>
+        <p id="error" class="notice" role="alert" hidden></p>
+        <p id="warnings" class="notice" hidden></p>
+        <div class="column-head" aria-hidden="true"><span>Session</span><span>Model</span><span>Context window</span></div>
+        <div id="sessions" aria-label="Session hierarchy" aria-busy="true">
+            <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+        <footer><span id="sync">Connecting to local app metadata</span><span id="refresh-status">Read-only / refreshes every 5s</span></footer>
+    </main>
+</body>
+</html>
