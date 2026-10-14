@@ -22,6 +22,15 @@ export const actionSchemas = {
         anyOf: [{ required: ["text"] }, { required: ["done"] }],
         additionalProperties: false,
     },
+    delete: {
+        type: "object",
+        properties: {
+            id: { type: "string", minLength: 1 },
+            version: { type: "integer", minimum: 1 },
+        },
+        required: ["id", "version"],
+        additionalProperties: false,
+    },
 };
 
 function fail(code, message) {
@@ -78,8 +87,18 @@ export function createStore(path = join(
                 return { id, ...list() };
             }
             if (typeof input.id !== "string" || !input.id ||
-                !Number.isSafeInteger(input.version) || input.version < 1 ||
-                (input.text === undefined && input.done === undefined) ||
+                !Number.isSafeInteger(input.version) || input.version < 1) {
+                fail("invalid_input", "Provide an item ID and current version.");
+            }
+            if (name === "delete") {
+                const result = db.prepare("DELETE FROM ideas WHERE id = ? AND version = ?")
+                    .run(input.id, input.version);
+                if (!result.changes) {
+                    fail("item_changed", "This thought changed or was deleted in another chat. Reload before trying again.");
+                }
+                return list();
+            }
+            if ((input.text === undefined && input.done === undefined) ||
                 (input.done !== undefined && typeof input.done !== "boolean")) {
                 fail("invalid_input", "Provide an item ID, current version, and text or done status.");
             }

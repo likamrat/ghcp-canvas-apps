@@ -88,6 +88,15 @@ async function copyText(text) {
     throw new Error("Could not copy to the clipboard. Expand the thought and select its text to copy manually.", { cause });
 }
 
+function confirmDeletion() {
+    const dialog = $("#delete-dialog");
+    dialog.returnValue = "cancel";
+    return new Promise((resolve) => {
+        dialog.addEventListener("close", () => resolve(dialog.returnValue === "delete"), { once: true });
+        dialog.showModal();
+    });
+}
+
 function render() {
     disclosureObserver.disconnect();
     disclosures.clear();
@@ -211,8 +220,29 @@ function render() {
                 copy.removeAttribute("aria-busy");
             }
         });
+        const remove = node("button", undefined, "icon-button delete-button");
+        remove.type = "button";
+        remove.disabled = busy || editing !== null;
+        remove.title = "Delete thought";
+        remove.setAttribute("aria-label", "Delete thought");
+        remove.append($("#trash-icon").content.cloneNode(true));
+        remove.addEventListener("click", async () => {
+            try {
+                if (!await confirmDeletion()) return;
+                await mutate("delete", { id: item.id, version: item.version }, () => {
+                    expandedItems.delete(item.id);
+                    queueMicrotask(() => {
+                        const buttons = document.querySelectorAll(".delete-button");
+                        const next = buttons[Math.min(visible.indexOf(item), buttons.length - 1)] ?? $("#idea");
+                        next.focus();
+                    });
+                });
+            } catch (error) {
+                showError(error);
+            }
+        });
         const actions = node("div", undefined, "item-actions");
-        actions.append(edit, copy);
+        actions.append(edit, copy, remove);
         row.append(checkbox, content, actions);
         list.append(row);
     }
@@ -234,10 +264,10 @@ async function mutate(action, input, onSuccess = () => {}) {
         items = result.items;
         loaded = true;
         onSuccess();
-        $("#status").textContent = "Saved locally. Shared across your chats.";
+        $("#status").textContent = action === "delete" ? "Thought deleted." : "Saved locally. Shared across your chats.";
     } catch (error) {
         showError(error);
-        $("#status").textContent = "Change not saved.";
+        $("#status").textContent = action === "delete" ? "Thought not deleted." : "Change not saved.";
     } finally {
         busy = false;
         $("#save").disabled = false;
@@ -246,12 +276,12 @@ async function mutate(action, input, onSuccess = () => {}) {
 }
 
 async function refresh() {
-    if (busy || loading || editing) return;
+    if (busy || loading || editing || $("#delete-dialog").open) return;
     loading = true;
     const epoch = mutationEpoch;
     try {
         const result = await api("list");
-        if (epoch !== mutationEpoch) return;
+        if (epoch !== mutationEpoch || $("#delete-dialog").open) return;
         const changed = JSON.stringify(items) !== JSON.stringify(result.items);
         items = result.items;
         if (changed || !loaded) render();

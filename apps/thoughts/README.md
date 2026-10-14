@@ -2,13 +2,15 @@
 
 ## Overview
 
-Capture ideas while chatting with coding agents. Expand long thoughts, edit them, copy the full text, or mark them done.
+Capture ideas while chatting with coding agents. Expand long thoughts, edit them, copy the full text, mark them done, or delete them.
 
 ## Use in GitHub Copilot
 
 Ask your Copilot agent to install [Thoughts](https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/thoughts) as a personal canvas, then open it. Approve the installation when prompted.
 
 Choose **Add thought** or press **Ctrl/Cmd + Enter** to save an idea. You can also tell your agent what to save.
+
+The bin icon asks for confirmation before permanently deleting a thought.
 
 Thoughts runs locally as a Copilot extension.
 
