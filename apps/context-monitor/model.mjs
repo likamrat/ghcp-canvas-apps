@@ -67,7 +67,21 @@ function sortValue(session, metric) {
     return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-export function visibleTree(sessions, { search = "", includeArchived = false, collapsed = new Set(), sort = "recent" } = {}) {
+export function availableModels(sessions) {
+    return [...new Set(sessions.filter((session) => !session.archived && typeof session.model === "string" && session.model.trim())
+        .map((session) => session.model))].sort((a, b) => a.localeCompare(b));
+}
+
+export function matchesFilters(session, { search = "", onlyPinned = false, model = "" } = {}) {
+    const query = search.trim().toLocaleLowerCase();
+    return (!onlyPinned || session.pinned === true) && (!model || session.model === model) &&
+        (!query || [session.name, session.project, session.model, session.id]
+            .some((value) => String(value ?? "").toLocaleLowerCase().includes(query)));
+}
+
+export function visibleTree(sessions, {
+    search = "", includeArchived = false, collapsed = new Set(), sort = "recent", onlyPinned = false, model = "",
+} = {}) {
     if (!Object.hasOwn(SORT_PRESETS, sort)) throw new Error("Choose a supported session sort order.");
     const preset = SORT_PRESETS[sort];
     const eligible = sessions.filter((session) => includeArchived || !session.archived);
@@ -83,10 +97,7 @@ export function visibleTree(sessions, { search = "", includeArchived = false, co
         }
     }
     const query = search.trim().toLocaleLowerCase();
-    const matches = new Set(eligible.filter((session) =>
-        !query || [session.name, session.project, session.model, session.id]
-            .some((value) => String(value ?? "").toLocaleLowerCase().includes(query)),
-    ).map((session) => session.id));
+    const matches = new Set(eligible.filter((session) => matchesFilters(session, { search, onlyPinned, model })).map((session) => session.id));
     const included = new Set(matches);
     for (const id of matches) {
         const seen = new Set([id]);
@@ -145,7 +156,7 @@ export function visibleTree(sessions, { search = "", includeArchived = false, co
             ...session, depth, childCount: nested.length,
             descendantCount: descendants.get(session.id) ?? 0, matching: matches.has(session.id),
         });
-        if (query || !collapsed.has(session.id)) {
+        if (query || onlyPinned || model || !collapsed.has(session.id)) {
             for (const child of [...nested].reverse()) stack.push({ session: child, depth: depth + 1 });
         }
     }

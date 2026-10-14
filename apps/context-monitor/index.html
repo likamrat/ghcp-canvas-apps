@@ -18,7 +18,6 @@
         </header>
         <div class="toolbar">
             <div class="search"><label for="search">Find a session</label><input id="search" type="search" placeholder="Session, project, or model" autocomplete="off"></div>
-            <label class="archive"><input id="archived" type="checkbox"> Include archived sessions</label>
             <div class="refresh-choice">
                 <label for="auto-refresh">Auto-refresh</label>
                 <select id="auto-refresh">
@@ -44,6 +43,16 @@
                 </select>
             </div>
         </div>
+        <div class="filters">
+            <div class="model-choice">
+                <label for="model-filter">Filter by model</label>
+                <select id="model-filter" aria-describedby="filter-help" disabled><option value="">All models</option></select>
+            </div>
+            <label class="check-filter"><input id="pinned-only" type="checkbox" disabled> Only pinned sessions</label>
+            <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
+        </div>
+        <p id="filter-help" class="filter-help">Models are from your open (non-archived) sessions. Parents stay visible to show where matching nested sessions belong.</p>
+        <p id="filter-status" class="filter-help" role="status" hidden></p>
         <p id="sort-help" class="sort-help">Recent activity first. Parents and nested sessions stay together.</p>
         <details class="threshold-settings">
             <summary>Usage warnings</summary>

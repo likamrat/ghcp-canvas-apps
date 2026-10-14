@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort, tokenCount } from "./model.mjs";
+import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters } from "./model.mjs";
 import { databasePath, readSnapshot } from "./source.mjs";
 import { startServer } from "./server.mjs";
 import { createSettings } from "./settings.mjs";
@@ -37,6 +37,9 @@ function fixture(t, { optional = true } = {}) {
             ('pending-workspace', 'Not started', 'project', NULL, NULL, NULL, '2026-10-13');
     `);
     if (optional) db.exec(`
+        CREATE TABLE app_state (key TEXT PRIMARY KEY, value TEXT);
+        INSERT INTO app_state VALUES ('sidebar-project-groups',
+            '{"state":{"pinnedWorkspaceIds":["root-workspace","chat"]},"version":0}');
         ALTER TABLE sessions ADD COLUMN total_input_tokens INTEGER;
         ALTER TABLE sessions ADD COLUMN total_output_tokens INTEGER;
         UPDATE sessions SET total_input_tokens = 1200000, total_output_tokens = 64000 WHERE id = 'root';
@@ -164,6 +167,36 @@ test("search sorts only matching contexts, not a hidden non-matching descendant"
     assert.equal(result.find((session) => session.id === "parent").descendantCount, 2);
 });
 
+test("model options contain only models used by non-archived sessions", () => {
+    assert.deepEqual(availableModels([
+        { model: "gpt-6.1-sol" }, { model: "claude-sonnet-5.5" }, { model: "gpt-6.1-sol" },
+        { model: "archived-model", archived: true }, { model: null }, { model: "" }, { model: "   " },
+    ]), ["claude-sonnet-5.5", "gpt-6.1-sol"]);
+});
+
+test("pin and model filters intersect with search and retain only necessary ancestors", () => {
+    const sessions = [
+        { id: "root", name: "Root", model: "gpt-6.1-sol", pinned: false },
+        { id: "child", name: "API review", parentId: "root", model: "claude-sonnet-5.5", pinned: true },
+        { id: "grandchild", name: "Keyboard", parentId: "child", model: "gpt-5.4", pinned: false },
+        { id: "other", name: "Other", parentId: "root", model: "claude-sonnet-5.5", pinned: false },
+        { id: "unknown", name: "Unknown pins", pinned: null },
+        { id: "archive", name: "Archived", model: "claude-sonnet-5.5", pinned: true, archived: true },
+    ];
+    const options = { onlyPinned: true, model: "claude-sonnet-5.5", collapsed: new Set(["root"]) };
+    const result = visibleTree(sessions, options);
+    assert.deepEqual(result.map((session) => session.id), ["root", "child"]);
+    assert.equal(result[0].matching, false);
+    assert.equal(result[1].matching, true);
+    assert.deepEqual(visibleTree(sessions, { ...options, includeArchived: true }).filter((row) => row.matching).map((row) => row.id).sort(),
+        ["archive", "child"]);
+    assert.equal(visibleTree(sessions, { ...options, search: "Keyboard" }).length, 0);
+    assert.equal(visibleTree(sessions, { model: "missing-model" }).length, 0);
+    assert.equal(matchesFilters(sessions[1], { onlyPinned: true, model: "claude-sonnet-5.5", search: "api" }), true);
+    assert.equal(matchesFilters(sessions[4], { onlyPinned: true }), false);
+    assert.deepEqual(visibleTree(sessions, { model: "gpt-5.4" }).map((row) => row.id), ["root", "child", "grandchild"]);
+});
+
 test("reads canonical app sessions, aliases, archived parents, and exact token breakdown read-only", (t) => {
     const path = fixture(t);
     const before = readFileSync(path);
@@ -179,6 +212,10 @@ test("reads canonical app sessions, aliases, archived parents, and exact token b
     assert.equal(root.breakdown.system, 4000);
     assert.equal(root.breakdown.mcp, null);
     assert.deepEqual(root.usage, { input: 1200000, output: 64000 });
+    assert.equal(root.pinned, true);
+    assert.equal(snapshot.pinsAvailable, true);
+    assert.equal(child.pinned, false);
+    assert.equal(snapshot.sessions.find((row) => row.id === "chat").pinned, true);
     assert.deepEqual(snapshot.sessions.find((row) => row.id === "chat").usage, { input: 0, output: 0 });
     assert.deepEqual(snapshot.sessions.find((row) => row.id === "pending-workspace").usage, { input: null, output: null });
     assert.equal(root.sampledAt, new Date(1791936000000).toISOString());
@@ -196,6 +233,42 @@ test("optional metadata missing is explicit and does not invent token details", 
     assert.ok(snapshot.warnings.some((warning) => warning.includes("Chat parent links")));
     assert.equal(snapshot.sessions.find((row) => row.id === "root").sampledAt, null);
     assert.deepEqual(snapshot.sessions.find((row) => row.id === "root").usage, { input: null, output: null });
+    assert.equal(snapshot.pinsAvailable, false);
+    assert.equal(snapshot.sessions.find((row) => row.id === "root").pinned, null);
+    assert.ok(snapshot.warnings.some((warning) => warning.includes("pinned-only filter is disabled")));
+});
+
+test("pins resolve historical identities and follow local app updates without pinning descendants", (t) => {
+    const path = fixture(t);
+    const db = new DatabaseSync(path);
+    db.prepare("UPDATE app_state SET value = ? WHERE key = 'sidebar-project-groups'")
+        .run(JSON.stringify({ state: { pinnedWorkspaceIds: ["old-root", "child-workspace"] }, version: 0 }));
+    let snapshot = readSnapshot({ path });
+    assert.equal(snapshot.sessions.find((row) => row.id === "root").pinned, true);
+    assert.equal(snapshot.sessions.find((row) => row.id === "child").pinned, true);
+    assert.equal(snapshot.sessions.find((row) => row.id === "chat").pinned, false);
+    db.prepare("UPDATE app_state SET value = ? WHERE key = 'sidebar-project-groups'")
+        .run(JSON.stringify({ state: { pinnedWorkspaceIds: [] }, version: 0 }));
+    snapshot = readSnapshot({ path });
+    assert.equal(snapshot.pinsAvailable, true);
+    assert.ok(snapshot.sessions.every((row) => row.pinned === false));
+    db.close();
+});
+
+test("malformed pin state is explicit instead of silently treating sessions as unpinned", (t) => {
+    const path = fixture(t);
+    const db = new DatabaseSync(path);
+    for (const value of ["invalid-json", JSON.stringify({ state: {} }), JSON.stringify({ state: { pinnedWorkspaceIds: [123] } })]) {
+        db.prepare("UPDATE app_state SET value = ? WHERE key = 'sidebar-project-groups'").run(value);
+        const snapshot = readSnapshot({ path });
+        assert.equal(snapshot.pinsAvailable, false);
+        assert.ok(snapshot.sessions.every((row) => row.pinned === null));
+        assert.ok(snapshot.warnings.some((warning) => warning.includes("pinned-only filter is disabled")));
+    }
+    db.exec("DELETE FROM app_state WHERE key = 'sidebar-project-groups'");
+    assert.equal(readSnapshot({ path }).pinsAvailable, true);
+    assert.ok(readSnapshot({ path }).sessions.every((row) => row.pinned === false));
+    db.close();
 });
 
 test("missing database never creates one; incompatible schemas fail explicitly", (t) => {
@@ -324,7 +397,7 @@ test("settings HTTP writes require the token, validate input, and report conflic
     assert.deepEqual((await conflict.json()).settings, current);
 });
 
-function renderer({ sessions = [] } = {}) {
+function renderer({ sessions = [], pinsAvailable = true } = {}) {
     const node = (tag = "fragment") => ({
         tag, dataset: {}, style: { values: new Map(), setProperty(name, value) { this.values.set(name, value); } },
         children: [], attributes: new Map(),
@@ -365,6 +438,7 @@ function renderer({ sessions = [] } = {}) {
     runInNewContext(code, {
         document, window: { addEventListener() {} }, visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS,
         SORT_PRESETS, isContextSort, tokenCount, Intl, Date,
+        availableModels, matchesFilters,
         AbortSignal: { timeout: () => ({}) },
         setTimeout(callback, delay) { timers.set(++id, { callback, due: clock + delay }); return id; },
         clearTimeout(timerId) { timers.delete(timerId); },
@@ -382,7 +456,7 @@ function renderer({ sessions = [] } = {}) {
             }
             reads++;
             const data = {
-                sessions, warnings: [], collectedAt: "2026-10-14T00:00:00Z",
+                sessions: [...sessions], warnings: [], collectedAt: "2026-10-14T00:00:00Z", pinsAvailable,
                 settings: savedSettings,
             };
             const response = { ok: true, json: async () => data };
@@ -418,6 +492,16 @@ function renderer({ sessions = [] } = {}) {
         sort(value) {
             const control = document.getElementById("sort-by");
             control.value = value;
+            control.listeners.get("change")();
+        },
+        filterModel(value) {
+            const control = document.getElementById("model-filter");
+            control.value = value;
+            control.listeners.get("change")();
+        },
+        onlyPinned(checked) {
+            const control = document.getElementById("pinned-only");
+            control.checked = checked;
             control.listeners.get("change")();
         },
         reads: () => reads,
@@ -692,4 +776,48 @@ test("compact rows explain cumulative input/output totals separately from curren
     assert.ok(html.includes("Include archived sessions"));
     assert.ok(html.includes("Input/output totals add up across requests"));
     assert.ok(html.includes("what it generates"));
+});
+
+test("renderer filters pins and models while distinguishing parent context from matches", async () => {
+    const sessions = [
+        { id: "root", name: "Root", model: "gpt-6.1-sol", pinned: false, context: { used: 99, capacity: 100 } },
+        { id: "child", name: "Child", parentId: "root", model: "claude-sonnet-5.5", pinned: true, context: { used: 10, capacity: 100 } },
+        { id: "other", name: "Other", model: "gpt-6.1-sol", pinned: true, context: { used: 50, capacity: 100 } },
+    ];
+    const ui = renderer({ sessions });
+    await ui.settle();
+    const ids = () => ui.elements().filter((node) => node.dataset.action === "details").map((node) => node.dataset.id);
+    assert.deepEqual(ui.nodes.get("model-filter").children.map((node) => node.value), ["", "claude-sonnet-5.5", "gpt-6.1-sol"]);
+    ui.onlyPinned(true);
+    ui.filterModel("claude-sonnet-5.5");
+    assert.deepEqual(ids(), ["root", "child"]);
+    assert.match(ui.nodes.get("count").textContent, /1 matching session \/ 1 parent shown for context \/ 0 high usage/);
+    assert.ok(ui.elements().some((node) => node.textContent === "Parent of matching sessions"));
+    assert.ok(ui.elements().some((node) => node.textContent === "Nested session / Pinned"));
+    const existingOption = ui.nodes.get("model-filter").children[1];
+    await ui.manual();
+    assert.equal(ui.nodes.get("model-filter").value, "claude-sonnet-5.5");
+    assert.equal(ui.nodes.get("model-filter").children[1], existingOption);
+    ui.search("not found");
+    assert.ok(ui.elements().some((node) => node.textContent === "No matching sessions"));
+    ui.search("");
+    ui.filterModel("");
+    ui.onlyPinned(false);
+    assert.deepEqual(ids(), ["other", "root"]);
+});
+
+test("model options update on refresh and explicitly reset a selection that disappears", async () => {
+    const sessions = [{ id: "one", name: "One", model: "gpt-6.1-sol", context: { used: 10, capacity: 100 } }];
+    const ui = renderer({ sessions });
+    await ui.settle();
+    ui.filterModel("gpt-6.1-sol");
+    sessions[0] = { ...sessions[0], model: "claude-sonnet-5.5" };
+    await ui.manual();
+    assert.deepEqual(ui.nodes.get("model-filter").children.map((node) => node.value), ["", "claude-sonnet-5.5"]);
+    assert.equal(ui.nodes.get("model-filter").value, "");
+    assert.equal(ui.nodes.get("filter-status").hidden, false);
+    assert.match(ui.nodes.get("filter-status").textContent, /gpt-6.1-sol is no longer used/);
+    const unavailable = renderer({ sessions, pinsAvailable: false });
+    await unavailable.settle();
+    assert.equal(unavailable.nodes.get("pinned-only").disabled, true);
 });

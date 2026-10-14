@@ -16,7 +16,7 @@ function schemaFor(db) {
     const tables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name));
     const schema = new Map();
     for (const table of ["sessions", "workspaces", "projects", "workspace_session_aliases",
-        "chat_parent_links", "session_side_chats", "workspace_side_chats", "session_context_usage"]) {
+        "chat_parent_links", "session_side_chats", "workspace_side_chats", "session_context_usage", "app_state"]) {
         schema.set(table, tables.has(table)
             ? new Set(db.prepare(`PRAGMA table_info("${table}")`).all().map((row) => row.name)) : new Set());
     }
@@ -29,6 +29,21 @@ function schemaFor(db) {
         }
     }
     return schema;
+}
+
+function readPins(db, schema) {
+    const unavailable = { ids: null, warning: "Pinned-session metadata is unavailable in this app database. The pinned-only filter is disabled." };
+    if (!["key", "value"].every((column) => schema.get("app_state").has(column))) return unavailable;
+    const row = db.prepare("SELECT value FROM app_state WHERE key = 'sidebar-project-groups'").get();
+    if (!row) return { ids: new Set(), warning: null };
+    let preferences;
+    try { preferences = JSON.parse(row.value); }
+    catch {
+        return { ids: null, warning: "Pinned-session metadata is invalid JSON. The pinned-only filter is disabled." };
+    }
+    const ids = preferences?.state?.pinnedWorkspaceIds;
+    if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string" || !id)) return unavailable;
+    return { ids: new Set(ids), warning: null };
 }
 
 function selectRows(db, schema, table, fields) {
@@ -99,6 +114,8 @@ export function readSnapshot({ path = databasePath(), now = () => new Date().toI
                 identities.set(session.id, session.id);
             }
         }
+        const pins = readPins(db, schema);
+        const pinnedIds = pins.ids === null ? null : new Set([...pins.ids].map((id) => identities.get(id) ?? id));
         const historySchema = schema.get("session_context_usage");
         const latestSample = ["session_id", "id", "ts_ms"].every((column) => historySchema.has(column))
             ? db.prepare("SELECT ts_ms FROM session_context_usage WHERE session_id = ? ORDER BY id DESC LIMIT 1") : null;
@@ -115,6 +132,7 @@ export function readSnapshot({ path = databasePath(), now = () => new Date().toI
                 contextTier: raw?.context_tier || null,
                 running: raw?.is_running === 1 ? true : raw?.is_running === 0 ? false : null,
                 archived: Boolean(workspace?.archived_at || raw?.archived_at),
+                pinned: pinnedIds === null ? null : pinnedIds.has(id),
                 location: raw?.execution_location || "local",
                 updatedAt: raw?.updated_at || workspace?.updated_at || null,
                 sampledAt: Number.isSafeInteger(timestamp) && timestamp >= 0 && timestamp <= 8640000000000000
@@ -138,10 +156,12 @@ export function readSnapshot({ path = databasePath(), now = () => new Date().toI
         if (!schema.get("chat_parent_links").has("parent_session_id")) {
             resolved.warnings.push("Chat parent links are unavailable in this app database; unlinked chats appear at the root.");
         }
+        if (pins.warning) resolved.warnings.push(pins.warning);
         return {
             collectedAt: now(),
             source: "Local Copilot app metadata (read-only)",
             sessions: resolved.sessions,
+            pinsAvailable: pins.ids !== null,
             warnings: resolved.warnings,
         };
     } catch (error) {

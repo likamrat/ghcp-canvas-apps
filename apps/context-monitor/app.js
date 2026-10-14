@@ -1,9 +1,12 @@
-import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort, tokenCount } from "./model.mjs";
+import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters } from "./model.mjs";
 
 const token = document.querySelector('meta[name="monitor-token"]').content;
 const rows = document.getElementById("sessions");
 const search = document.getElementById("search");
 const archived = document.getElementById("archived");
+const pinnedOnly = document.getElementById("pinned-only");
+const modelFilter = document.getElementById("model-filter");
+const filterStatus = document.getElementById("filter-status");
 const sortBy = document.getElementById("sort-by");
 const sortHelp = document.getElementById("sort-help");
 const refresh = document.getElementById("refresh");
@@ -28,6 +31,7 @@ let preferences = null;
 let draftVersion = null;
 let draftDirty = false;
 let savingThresholds = false;
+let listedModels = null;
 const exact = (value) => value === null ? "Not reported" : value.toLocaleString();
 const compact = (value) => value === null ? "?" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 const levelLabel = { healthy: "Normal", watch: "Warning", high: "High usage", unknown: "Not reported" };
@@ -106,6 +110,42 @@ function element(tag, className, text) {
     return node;
 }
 
+function filters() {
+    return { search: search.value, onlyPinned: pinnedOnly.checked, model: modelFilter.value };
+}
+
+function isFiltering() {
+    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.value);
+}
+
+function updateFilters() {
+    const models = availableModels(snapshot.sessions);
+    const previous = modelFilter.value;
+    if (!listedModels || models.length !== listedModels.length || models.some((model, index) => model !== listedModels[index])) {
+        const options = [element("option", "", "All models")];
+        options[0].value = "";
+        for (const model of models) {
+            const option = element("option", "", model);
+            option.value = model;
+            options.push(option);
+        }
+        modelFilter.replaceChildren(...options);
+        listedModels = models;
+    }
+    modelFilter.value = models.includes(previous) ? previous : "";
+    modelFilter.disabled = models.length === 0;
+    if (previous && modelFilter.value !== previous) {
+        filterStatus.textContent = `Model filter reset to All models: ${previous} is no longer used by an open session.`;
+        filterStatus.hidden = false;
+    }
+    pinnedOnly.disabled = snapshot.pinsAvailable !== true;
+    if (pinnedOnly.disabled && pinnedOnly.checked) {
+        pinnedOnly.checked = false;
+        filterStatus.textContent = "The pinned-only filter was turned off because app pin metadata is unavailable.";
+        filterStatus.hidden = false;
+    }
+}
+
 function toggle(set, id) {
     if (set.has(id)) set.delete(id);
     else set.add(id);
@@ -113,7 +153,7 @@ function toggle(set, id) {
 
 function sessionRow(session) {
     const isParent = session.descendantCount > 0;
-    const isOpen = !collapsed.has(session.id) || Boolean(search.value.trim());
+    const isOpen = !collapsed.has(session.id) || isFiltering();
     const container = element("article",
         `session${session.depth ? " is-nested" : " is-root"}${isParent ? " is-parent" : ""}${isParent && isOpen ? " is-expanded" : ""}`);
     const row = element("div", "session-row");
@@ -132,11 +172,13 @@ function sessionRow(session) {
         : isParent ? "Parent session" : "Root session";
     const hierarchyLabel = element("div", "hierarchy-label", [
         hierarchy, isParent ? `${session.descendantCount} nested` : session.depth > 1 ? `Level ${session.depth}` : null,
+        session.pinned === true ? "Pinned" : null,
     ].filter(Boolean).join(" / "));
     nameBlock.append(name, hierarchyLabel, element("div", "meta", [
         session.project || (session.kind === "general_chat" ? "Chat" : "Session"),
         session.archived ? "Archived" : session.running === null ? "Status not reported" : session.running ? "Running" : "Idle",
     ].join(" / ")));
+    if (!session.matching) nameBlock.append(element("div", "filter-parent", "Parent of matching sessions"));
     identity.append(nameBlock);
     const actions = element("div", "row-actions");
     if (isParent) {
@@ -148,8 +190,8 @@ function sessionRow(session) {
         fold.setAttribute("aria-label", `${label} for ${session.name}`);
         fold.setAttribute("aria-expanded", String(isOpen));
         fold.setAttribute("aria-controls", `children-${session.id}`);
-        fold.disabled = Boolean(search.value.trim());
-        fold.title = search.value.trim() ? "Clear search to show or hide nested sessions." : `${label} (${session.descendantCount})`;
+        fold.disabled = isFiltering();
+        fold.title = isFiltering() ? "Clear search and filters to show or hide nested sessions." : `${label} (${session.descendantCount})`;
         fold.dataset.tooltip = fold.title;
         const icon = element("span", `disclosure-icon ${isOpen ? "hide-children" : "show-children"}`);
         icon.setAttribute("aria-hidden", "true");
@@ -255,15 +297,20 @@ function render() {
             if (!isContextSort(sortBy.value)) collapsed.add(session.id);
         }
     }
-    const visible = visibleTree(sessions, { search: search.value, includeArchived: archived.checked, collapsed, sort: sortBy.value });
-    const high = active.filter((session) => session.context.level === "high").length;
-    const missing = active.filter((session) => session.context.level === "unknown").length;
-    count.textContent = `${visible.length} of ${active.length} sessions shown / ${high} high usage${missing ? ` / ${missing} not reported` : ""}`;
+    const visible = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, collapsed, sort: sortBy.value });
+    const matching = active.filter((session) => matchesFilters(session, filters()));
+    const high = matching.filter((session) => session.context.level === "high").length;
+    const missing = matching.filter((session) => session.context.level === "unknown").length;
+    const parentsShown = visible.filter((session) => !session.matching).length;
+    const prefix = isFiltering()
+        ? `${matching.length} matching ${matching.length === 1 ? "session" : "sessions"}${parentsShown ? ` / ${parentsShown} ${parentsShown === 1 ? "parent" : "parents"} shown for context` : ""}`
+        : `${visible.length} of ${active.length} sessions shown`;
+    count.textContent = `${prefix} / ${high} high usage${missing ? ` / ${missing} not reported` : ""}`;
     const fragment = document.createDocumentFragment();
     if (!visible.length) {
         const empty = element("div", "empty");
-        empty.append(element("strong", "", search.value.trim() ? "No matching sessions" : "No sessions yet"),
-            element("span", "", search.value.trim() ? "Try another session, project, or model." : "Start a session in the Copilot app, then refresh."));
+        empty.append(element("strong", "", isFiltering() ? "No matching sessions" : "No sessions yet"),
+            element("span", "", isFiltering() ? "Change the model filter, turn off pinned-only, or clear your search." : "Start a session in the Copilot app, then refresh."));
         fragment.append(empty);
     } else {
         const groups = new Map();
@@ -273,7 +320,7 @@ function render() {
             if (session.descendantCount) {
                 const children = element("div", "session-children");
                 children.id = `children-${session.id}`;
-                children.hidden = collapsed.has(session.id) && !search.value.trim();
+                children.hidden = collapsed.has(session.id) && !isFiltering();
                 children.setAttribute("role", "group");
                 children.setAttribute("aria-label", `Nested sessions under ${session.name}`);
                 article.append(children);
@@ -308,6 +355,7 @@ async function load() {
         if (!response.ok) throw new Error(data.error || "Local metadata is unavailable.");
         acceptSettings(data.settings);
         snapshot = data;
+        updateFilters();
         errorBox.hidden = true;
         render();
         sync.textContent = `Read at ${new Date(snapshot.collectedAt).toLocaleTimeString()} / last reported context`;
@@ -335,6 +383,12 @@ rows.addEventListener("click", (event) => {
 });
 search.addEventListener("input", render);
 archived.addEventListener("change", render);
+for (const control of [pinnedOnly, modelFilter]) {
+    control.addEventListener("change", () => {
+        filterStatus.hidden = true;
+        render();
+    });
+}
 sortBy.addEventListener("change", () => {
     if (isContextSort(sortBy.value)) collapsed.clear();
     render();
