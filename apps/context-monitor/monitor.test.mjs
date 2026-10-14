@@ -197,6 +197,32 @@ test("pin and model filters intersect with search and retain only necessary ance
     assert.deepEqual(visibleTree(sessions, { model: "gpt-5.4" }).map((row) => row.id), ["root", "child", "grandchild"]);
 });
 
+test("usage filters select normal, warning, high, and unknown readings using configured levels", () => {
+    const sessions = [
+        { id: "normal", name: "Normal", pinned: true, model: "gpt-6.1-sol", context: contextUsage(64, 100) },
+        { id: "warning", name: "Warning", parentId: "normal", pinned: true, model: "claude-sonnet-5.5", context: contextUsage(65, 100) },
+        { id: "high", name: "High", parentId: "warning", pinned: false, model: "gpt-5.4", context: contextUsage(85, 100) },
+        { id: "unknown", name: "Unknown", context: contextUsage(null, 100) },
+        { id: "over", name: "Over", context: contextUsage(110, 100) },
+    ];
+    const matches = (level, options = {}, rows = sessions) =>
+        visibleTree(rows, { usageLevel: level, ...options }).filter((row) => row.matching).map((row) => row.id).sort();
+    assert.deepEqual(matches("healthy"), ["normal"]);
+    assert.deepEqual(matches("watch"), ["warning"]);
+    assert.deepEqual(matches("high"), ["high", "over"]);
+    assert.deepEqual(matches("unknown"), ["unknown"]);
+    assert.deepEqual(matches("watch", { onlyPinned: true, model: "claude-sonnet-5.5", search: "warn" }), ["warning"]);
+    assert.deepEqual(matches("high", { onlyPinned: true }), []);
+    const parents = visibleTree(sessions, { usageLevel: "high", collapsed: new Set(["normal", "warning"]) });
+    assert.ok(parents.some((row) => row.id === "normal" && row.matching === false));
+    assert.ok(parents.some((row) => row.id === "high" && row.matching === true));
+    const custom = sessions.map((row) => ({ ...row, context: contextUsage(row.context.used, row.context.capacity, { watch: 40, high: 70 }) }));
+    assert.deepEqual(matches("watch", {}, custom), ["normal", "warning"]);
+    assert.deepEqual(matches("healthy", {}, custom), []);
+    const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+    for (const label of ["Normal (green)", "Warning (yellow)", "High usage (red)", "Not reported"]) assert.ok(html.includes(label));
+});
+
 test("reads canonical app sessions, aliases, archived parents, and exact token breakdown read-only", (t) => {
     const path = fixture(t);
     const before = readFileSync(path);
@@ -499,6 +525,11 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
             control.value = value;
             control.listeners.get("change")();
         },
+        usageLevel(value) {
+            const control = document.getElementById("usage-filter");
+            control.value = value;
+            control.listeners.get("change")();
+        },
         onlyPinned(checked) {
             const control = document.getElementById("pinned-only");
             control.checked = checked;
@@ -791,7 +822,7 @@ test("renderer filters pins and models while distinguishing parent context from 
     ui.onlyPinned(true);
     ui.filterModel("claude-sonnet-5.5");
     assert.deepEqual(ids(), ["root", "child"]);
-    assert.match(ui.nodes.get("count").textContent, /1 matching session \/ 1 parent shown for context \/ 0 high usage/);
+    assert.equal(ui.nodes.get("count").textContent, "1 matching session / 1 parent shown for context");
     assert.ok(ui.elements().some((node) => node.textContent === "Parent of matching sessions"));
     assert.ok(ui.elements().some((node) => node.textContent === "Nested session / Pinned"));
     const existingOption = ui.nodes.get("model-filter").children[1];
@@ -820,4 +851,34 @@ test("model options update on refresh and explicitly reset a selection that disa
     const unavailable = renderer({ sessions, pinsAvailable: false });
     await unavailable.settle();
     assert.equal(unavailable.nodes.get("pinned-only").disabled, true);
+});
+
+test("usage filtering updates immediately after threshold changes and survives refresh", async () => {
+    const ui = renderer({ sessions: [
+        { id: "low", name: "Low", pinned: true, model: "gpt-6.1-sol", context: { used: 50, capacity: 100 } },
+        { id: "warn", name: "Warning", pinned: true, model: "claude-sonnet-5.5", context: { used: 70, capacity: 100 } },
+        { id: "high", name: "High", pinned: false, context: { used: 90, capacity: 100 } },
+    ] });
+    await ui.settle();
+    const ids = () => ui.elements().filter((node) => node.dataset.action === "details").map((node) => node.dataset.id).sort();
+    ui.usageLevel("watch");
+    assert.deepEqual(ids(), ["warn"]);
+    await ui.manual();
+    assert.equal(ui.nodes.get("usage-filter").value, "watch");
+    assert.deepEqual(ids(), ["warn"]);
+    ui.draft(40, 60);
+    ui.submit();
+    await ui.settle();
+    assert.deepEqual(ids(), ["low"]);
+    ui.usageLevel("high");
+    assert.deepEqual(ids(), ["high", "warn"]);
+    ui.onlyPinned(true);
+    assert.deepEqual(ids(), ["warn"]);
+    ui.filterModel("gpt-6.1-sol");
+    assert.deepEqual(ids(), []);
+    assert.ok(ui.elements().some((node) => node.textContent === "No matching sessions"));
+    ui.usageLevel("");
+    assert.deepEqual(ids(), ["low"]);
+    await ui.reset();
+    assert.equal(ui.nodes.get("usage-filter").value, "");
 });

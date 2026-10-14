@@ -12,61 +12,79 @@
 </head>
 <body>
     <main>
-        <header>
-            <div><h1>Context Monitor</h1><p class="subtitle">Session hierarchy, models, and context usage.</p></div>
-            <button id="refresh" type="button">Refresh</button>
-        </header>
-        <div class="toolbar">
-            <div class="search"><label for="search">Find a session</label><input id="search" type="search" placeholder="Session, project, or model" autocomplete="off"></div>
-            <div class="refresh-choice">
-                <label for="auto-refresh">Auto-refresh</label>
-                <select id="auto-refresh">
-                    <option value="0">Off</option>
-                    <option value="5000" selected>Every 5 seconds</option>
-                    <option value="10000">Every 10 seconds</option>
-                    <option value="30000">Every 30 seconds</option>
-                    <option value="60000">Every minute</option>
-                    <option value="300000">Every 5 minutes</option>
-                </select>
+        <header><h1>Context Monitor</h1></header>
+        <section class="control-panel" aria-label="Session controls">
+            <div class="control-filters">
+                <div class="search"><label for="search">Search sessions</label><input id="search" type="search" placeholder="Name, project, or model" autocomplete="off"></div>
+                <div class="model-choice">
+                    <label for="model-filter">Model</label>
+                    <select id="model-filter" aria-describedby="filter-help" disabled><option value="">All models</option></select>
+                </div>
+                <div class="usage-choice">
+                    <label for="usage-filter">Context usage</label>
+                    <select id="usage-filter" aria-describedby="filter-help">
+                        <option value="">All usage levels</option>
+                        <option value="healthy">Normal (green)</option>
+                        <option value="watch">Warning (yellow)</option>
+                        <option value="high">High usage (red)</option>
+                        <option value="unknown">Not reported</option>
+                    </select>
+                </div>
             </div>
-            <div class="sort-choice">
-                <label for="sort-by">Sort sessions</label>
-                <select id="sort-by" aria-describedby="sort-help">
-                    <option value="recent" selected>Recent activity (default)</option>
-                    <option value="context-high">Most context used</option>
-                    <option value="context-low">Least context used</option>
-                    <option value="percent-high">Highest % used</option>
-                    <option value="percent-low">Lowest % used</option>
-                    <option value="capacity">Largest context window</option>
-                    <option value="name-az">Name: A to Z</option>
-                    <option value="name-za">Name: Z to A</option>
-                </select>
+            <div class="control-options">
+                <div class="sort-choice">
+                    <label for="sort-by">Sort by</label>
+                    <select id="sort-by" aria-describedby="sort-help">
+                        <option value="recent" selected>Recent activity (default)</option>
+                        <option value="context-high">Most context used</option>
+                        <option value="context-low">Least context used</option>
+                        <option value="percent-high">Highest % used</option>
+                        <option value="percent-low">Lowest % used</option>
+                        <option value="capacity">Largest context window</option>
+                        <option value="name-az">Name: A to Z</option>
+                        <option value="name-za">Name: Z to A</option>
+                    </select>
+                </div>
+                <div class="refresh-choice">
+                    <label for="auto-refresh">Auto-refresh</label>
+                    <select id="auto-refresh">
+                        <option value="0">Off</option>
+                        <option value="5000" selected>Every 5 seconds</option>
+                        <option value="10000">Every 10 seconds</option>
+                        <option value="30000">Every 30 seconds</option>
+                        <option value="60000">Every minute</option>
+                        <option value="300000">Every 5 minutes</option>
+                    </select>
+                </div>
+                <div class="scope-filters">
+                    <label class="check-filter"><input id="pinned-only" type="checkbox" disabled> Only pinned sessions</label>
+                    <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
+                </div>
+                <button id="refresh" type="button">Refresh</button>
             </div>
-        </div>
-        <div class="filters">
-            <div class="model-choice">
-                <label for="model-filter">Filter by model</label>
-                <select id="model-filter" aria-describedby="filter-help" disabled><option value="">All models</option></select>
+            <div class="control-settings">
+                <details class="threshold-settings">
+                    <summary>Usage settings</summary>
+                    <form id="threshold-form" novalidate>
+                        <fieldset id="threshold-controls" disabled>
+                            <div class="threshold-field"><label for="amber-threshold">Warning level (%)</label><input id="amber-threshold" type="number" min="0" max="100" step="1" value="65" required aria-describedby="threshold-help"></div>
+                            <div class="threshold-field"><label for="rose-threshold">High usage level (%)</label><input id="rose-threshold" type="number" min="0" max="100" step="1" value="85" required aria-describedby="threshold-help"></div>
+                            <button type="submit">Apply</button>
+                            <button id="reset-thresholds" type="button">Reset defaults</button>
+                        </fieldset>
+                        <p id="threshold-help" class="threshold-hint">Percent of context used. Warning must be below High usage.</p>
+                        <p id="threshold-status" class="threshold-status" role="status"></p>
+                    </form>
+                </details>
+                <details class="reading-help">
+                    <summary>Token guide</summary>
+                    <p class="token-guide" id="token-guide">Tokens are pieces of text. <strong>Input</strong> is what the model reads, including messages, history, and tools. <strong>Output</strong> is what it generates. Input/output totals add up across requests; <strong>context</strong> measures the current window, not those totals.</p>
+                </details>
             </div>
-            <label class="check-filter"><input id="pinned-only" type="checkbox" disabled> Only pinned sessions</label>
-            <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
-        </div>
-        <p id="filter-help" class="filter-help">Models are from your open (non-archived) sessions. Parents stay visible to show where matching nested sessions belong.</p>
-        <p id="filter-status" class="filter-help" role="status" hidden></p>
-        <p id="sort-help" class="sort-help">Recent activity first. Parents and nested sessions stay together.</p>
-        <details class="threshold-settings">
-            <summary>Usage warnings</summary>
-            <form id="threshold-form" novalidate>
-                <fieldset id="threshold-controls" disabled>
-                    <div class="threshold-field"><label for="amber-threshold">Warning level (%)</label><input id="amber-threshold" type="number" min="0" max="100" step="1" value="65" required aria-describedby="threshold-help"></div>
-                    <div class="threshold-field"><label for="rose-threshold">High usage level (%)</label><input id="rose-threshold" type="number" min="0" max="100" step="1" value="85" required aria-describedby="threshold-help"></div>
-                    <button type="submit">Apply</button>
-                    <button id="reset-thresholds" type="button">Reset defaults</button>
-                </fieldset>
-                <p id="threshold-help" class="threshold-hint">Percent of the context window used: normal below the warning level, then warning, then high usage. Saved across views.</p>
-                <p id="threshold-status" class="threshold-status" role="status"></p>
-            </form>
-        </details>
+            <p id="filter-help" class="sr-only">Models are from your open (non-archived) sessions. Usage levels follow your saved thresholds. Parents stay visible to show where matching nested sessions belong.</p>
+            <p id="filter-status" class="filter-notice" role="status" hidden></p>
+            <p id="sort-help" class="sr-only">Recent activity first. Parents and nested sessions stay together.</p>
+        </section>
         <div class="overview">
             <p id="count" role="status">Reading local sessions...</p>
             <div class="legend" aria-label="Context usage levels">
@@ -75,7 +93,6 @@
         </div>
         <p id="error" class="notice" role="alert" hidden></p>
         <p id="warnings" class="notice" hidden></p>
-        <p class="token-guide" id="token-guide">Tokens are pieces of text. <strong>Input</strong> is what the model reads, including messages, history, and tools. <strong>Output</strong> is what it generates. Input/output totals add up across requests; <strong>context</strong> measures the current window, not those totals.</p>
         <div class="column-head" aria-hidden="true"><span>Session</span><span>Model / token totals</span><span>Context window</span><span></span></div>
         <div id="sessions" aria-label="Session hierarchy" aria-busy="true">
             <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>

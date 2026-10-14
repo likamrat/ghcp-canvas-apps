@@ -6,6 +6,7 @@ const search = document.getElementById("search");
 const archived = document.getElementById("archived");
 const pinnedOnly = document.getElementById("pinned-only");
 const modelFilter = document.getElementById("model-filter");
+const usageFilter = document.getElementById("usage-filter");
 const filterStatus = document.getElementById("filter-status");
 const sortBy = document.getElementById("sort-by");
 const sortHelp = document.getElementById("sort-help");
@@ -111,11 +112,11 @@ function element(tag, className, text) {
 }
 
 function filters() {
-    return { search: search.value, onlyPinned: pinnedOnly.checked, model: modelFilter.value };
+    return { search: search.value, onlyPinned: pinnedOnly.checked, model: modelFilter.value, usageLevel: usageFilter.value };
 }
 
 function isFiltering() {
-    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.value);
+    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.value || usageFilter.value);
 }
 
 function updateFilters() {
@@ -305,12 +306,12 @@ function render() {
     const prefix = isFiltering()
         ? `${matching.length} matching ${matching.length === 1 ? "session" : "sessions"}${parentsShown ? ` / ${parentsShown} ${parentsShown === 1 ? "parent" : "parents"} shown for context` : ""}`
         : `${visible.length} of ${active.length} sessions shown`;
-    count.textContent = `${prefix} / ${high} high usage${missing ? ` / ${missing} not reported` : ""}`;
+    count.textContent = `${prefix}${high ? ` / ${high} high usage` : ""}${missing ? ` / ${missing} not reported` : ""}`;
     const fragment = document.createDocumentFragment();
     if (!visible.length) {
         const empty = element("div", "empty");
         empty.append(element("strong", "", isFiltering() ? "No matching sessions" : "No sessions yet"),
-            element("span", "", isFiltering() ? "Change the model filter, turn off pinned-only, or clear your search." : "Start a session in the Copilot app, then refresh."));
+            element("span", "", isFiltering() ? "Change the filters or clear your search." : "Start a session in the Copilot app, then refresh."));
         fragment.append(empty);
     } else {
         const groups = new Map();
@@ -383,7 +384,7 @@ rows.addEventListener("click", (event) => {
 });
 search.addEventListener("input", render);
 archived.addEventListener("change", render);
-for (const control of [pinnedOnly, modelFilter]) {
+for (const control of [pinnedOnly, modelFilter, usageFilter]) {
     control.addEventListener("change", () => {
         filterStatus.hidden = true;
         render();
