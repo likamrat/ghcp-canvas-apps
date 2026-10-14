@@ -10,4 +10,4 @@ These apps are built for canvas panels in the GitHub Copilot app.
 
 Each app lives in `apps/<app-name>/`, with its source, assets, and one `README.md`.
 
-Use these README sections: Overview, Use in the GitHub Copilot app, Data, Develop, and Publish. Put installation screenshots in the Use section without captions.
+Start each app README with its name, a short description, and a screenshot. Then use these sections: Use in the GitHub Copilot app, Data, Develop, and Publish. Include a copy-paste installation prompt in the Use section.
