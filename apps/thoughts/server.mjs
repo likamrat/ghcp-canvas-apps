@@ -1,0 +1,80 @@
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+
+const assets = new Map([
+    ["/", ["index.html", "text/html; charset=utf-8"]],
+    ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
+    ["/style.css", ["style.css", "text/css; charset=utf-8"]],
+]);
+
+export async function startServer(store) {
+    const token = randomBytes(32).toString("hex");
+    const server = createServer(async (req, res) => {
+        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Content-Security-Policy",
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'");
+        const address = server.address();
+        const expectedHost = `127.0.0.1:${address.port}`;
+        const origin = `http://${expectedHost}`;
+        if (req.headers.host !== expectedHost ||
+            (req.headers.origin && req.headers.origin !== origin)) {
+            res.writeHead(403).end("Forbidden");
+            return;
+        }
+        try {
+            const url = new URL(req.url, origin);
+            if (req.method === "GET" && url.pathname === "/favicon.ico") {
+                res.writeHead(204).end();
+                return;
+            }
+            if (req.method === "GET" && assets.has(url.pathname)) {
+                const [file, type] = assets.get(url.pathname);
+                let content = await readFile(new URL(file, import.meta.url), "utf8");
+                if (file === "index.html") content = content.replace("__TOKEN__", token);
+                res.setHeader("Content-Type", type);
+                res.end(content);
+                return;
+            }
+            if (url.pathname === "/api" && req.method === "POST") {
+                if (req.headers["x-inbox-token"] !== token ||
+                    req.headers["content-type"] !== "application/json") {
+                    res.writeHead(403).end("Forbidden");
+                    return;
+                }
+                let body = "";
+                for await (const chunk of req) {
+                    body += chunk;
+                    if (Buffer.byteLength(body) > 20000) {
+                        throw Object.assign(new Error("Request too large."), { code: "invalid_input" });
+                    }
+                }
+                let payload;
+                try { payload = JSON.parse(body); }
+                catch { throw Object.assign(new Error("Invalid JSON."), { code: "invalid_input" }); }
+                const result = store.run(payload?.action, payload?.input);
+                res.setHeader("Content-Type", "application/json");
+                res.end(JSON.stringify(result));
+                return;
+            }
+            res.writeHead(404).end("Not found");
+        } catch (error) {
+            res.writeHead(error.code === "item_changed" ? 409 : error.code === "invalid_input" ? 400 : 500,
+                { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: error.message }));
+        }
+    });
+    await new Promise((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(0, "127.0.0.1", resolve);
+    });
+    return {
+        server,
+        url: `http://127.0.0.1:${server.address().port}/`,
+        close: () => new Promise((resolve, reject) => {
+            server.close((error) => error ? reject(error) : resolve());
+            server.closeIdleConnections();
+        }),
+    };
+}
