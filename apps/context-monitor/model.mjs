@@ -47,6 +47,16 @@ export function resolveParents(sessions, identities) {
 export function visibleTree(sessions, { search = "", includeArchived = false, collapsed = new Set() } = {}) {
     const eligible = sessions.filter((session) => includeArchived || !session.archived);
     const byId = new Map(eligible.map((session) => [session.id, session]));
+    const descendants = new Map();
+    for (const session of eligible) {
+        const seen = new Set([session.id]);
+        let parent = session.parentId;
+        while (parent && byId.has(parent) && !seen.has(parent)) {
+            seen.add(parent);
+            descendants.set(parent, (descendants.get(parent) ?? 0) + 1);
+            parent = byId.get(parent).parentId;
+        }
+    }
     const query = search.trim().toLocaleLowerCase();
     const matches = new Set(eligible.filter((session) =>
         !query || [session.name, session.project, session.model, session.id]
@@ -80,7 +90,10 @@ export function visibleTree(sessions, { search = "", includeArchived = false, co
         if (visited.has(session.id)) continue;
         visited.add(session.id);
         const nested = children.get(session.id) ?? [];
-        result.push({ ...session, depth, childCount: nested.length, matching: matches.has(session.id) });
+        result.push({
+            ...session, depth, childCount: nested.length,
+            descendantCount: descendants.get(session.id) ?? 0, matching: matches.has(session.id),
+        });
         if (query || !collapsed.has(session.id)) {
             for (const child of [...nested].reverse()) stack.push({ session: child, depth: depth + 1 });
         }

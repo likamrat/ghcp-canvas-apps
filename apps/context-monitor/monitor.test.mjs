@@ -103,12 +103,18 @@ test("tree shows arbitrary nesting and collapse affects only descendants", () =>
     assert.equal(result.find((row) => row.id === "c").depth, 2);
     assert.deepEqual(visibleTree(tree, { collapsed: new Set(["a"]) }).map((row) => row.id).sort(), ["a", "e"]);
     assert.equal(result.find((row) => row.id === "e").depth, 0);
+    assert.equal(result.find((row) => row.id === "a").descendantCount, 2);
+    assert.equal(result.find((row) => row.id === "b").descendantCount, 1);
+    assert.equal(visibleTree(tree, { collapsed: new Set(["a"]) }).find((row) => row.id === "a").descendantCount, 2);
+    assert.equal(visibleTree(tree, { includeArchived: true }).find((row) => row.id === "d").descendantCount, 1);
 });
 
 test("search retains ancestors and reveals matches through collapsed parents", () => {
     const result = visibleTree(tree, { search: "model x", collapsed: new Set(["a"]) });
     assert.deepEqual(result.map((row) => row.id), ["a", "b", "c"]);
     assert.equal(result[0].matching, false);
+    assert.equal(result[0].descendantCount, 2);
+    assert.equal(visibleTree(tree, { search: "Root" })[0].descendantCount, 2);
     assert.equal(visibleTree(tree, { search: "no match" }).length, 0);
     assert.equal(visibleTree(tree, { includeArchived: true }).length, 5);
 });
@@ -263,10 +269,18 @@ test("settings HTTP writes require the token, validate input, and report conflic
     assert.deepEqual((await conflict.json()).settings, current);
 });
 
-function renderer() {
-    const node = () => ({
+function renderer({ sessions = [] } = {}) {
+    const node = (tag = "fragment") => ({
+        tag, dataset: {}, style: { setProperty() {} }, children: [], attributes: new Map(),
         value: "", hidden: false, textContent: "", listeners: new Map(),
-        setAttribute() {}, append() {}, replaceChildren() {},
+        setAttribute(name, value) { this.attributes.set(name, value); },
+        append(...children) {
+            for (const child of children) {
+                if (child.tag === "fragment") this.append(...child.children);
+                else { child.parent = this; this.children.push(child); }
+            }
+        },
+        replaceChildren(...children) { this.children = []; this.append(...children); },
         addEventListener(name, callback) { this.listeners.set(name, callback); },
     });
     const nodes = new Map();
@@ -310,7 +324,7 @@ function renderer() {
             }
             reads++;
             const data = {
-                sessions: [], warnings: [], collectedAt: "2026-10-14T00:00:00Z",
+                sessions, warnings: [], collectedAt: "2026-10-14T00:00:00Z",
                 settings: savedSettings,
             };
             const response = { ok: true, json: async () => data };
@@ -318,8 +332,27 @@ function renderer() {
         },
     });
     const settle = () => new Promise((resolve) => setImmediate(resolve));
+    const elements = () => {
+        const result = [];
+        const stack = [...document.getElementById("sessions").children];
+        while (stack.length) {
+            const element = stack.pop();
+            result.push(element);
+            stack.push(...element.children);
+        }
+        return result;
+    };
     return {
-        document, timers, nodes, settle,
+        document, timers, nodes, settle, elements,
+        fold(id) {
+            const button = elements().find((element) => element.dataset.action === "fold" && element.dataset.id === id);
+            document.getElementById("sessions").listeners.get("click")({ target: { closest: () => button } });
+        },
+        search(value) {
+            const control = document.getElementById("search");
+            control.value = value;
+            control.listeners.get("input")();
+        },
         reads: () => reads,
         writes: () => writes,
         saved: () => savedSettings,
@@ -474,4 +507,37 @@ test("polling and conflicts preserve threshold drafts; stale snapshots never rev
     await staleRead;
     assert.equal(ui.nodes.get("legend-high").textContent, "90%+");
     assert.equal(ui.nodes.get("rose-threshold").value, "90");
+});
+
+test("parent disclosure shows all nested levels, survives refresh, and search preserves collapse choices", async () => {
+    const ui = renderer({ sessions: tree.map((session) => ({ ...session, context: { used: 10, capacity: 100 } })) });
+    await ui.settle();
+    const articles = () => ui.elements().filter((element) => element.tag === "article");
+    const button = (id) => ui.elements().find((element) => element.dataset.action === "fold" && element.dataset.id === id);
+    assert.equal(articles().length, 2);
+    assert.equal(button("a").textContent, "Expand");
+    assert.equal(button("a").attributes.get("aria-expanded"), "false");
+    assert.ok(ui.elements().some((element) => element.textContent === "Parent session / 2 nested"));
+    ui.fold("a");
+    assert.equal(articles().length, 4);
+    assert.equal(button("a").textContent, "Collapse");
+    assert.equal(button("b").textContent, "Collapse");
+    const children = ui.elements().find((element) => element.id === "children-a");
+    assert.equal(children.attributes.get("role"), "group");
+    assert.ok(children.children.every((element) => element.tag === "article"));
+    assert.ok(ui.elements().some((element) => element.textContent === "Nested session / Level 2"));
+    ui.fold("b");
+    assert.equal(articles().length, 3);
+    await ui.manual();
+    assert.equal(articles().length, 3);
+    ui.fold("a");
+    assert.equal(articles().length, 2);
+    ui.search("Grandchild");
+    assert.equal(articles().length, 3);
+    assert.equal(button("a").disabled, true);
+    ui.search("");
+    assert.equal(articles().length, 2);
+    ui.fold("a");
+    assert.equal(articles().length, 3);
+    assert.equal(button("b").textContent, "Expand");
 });

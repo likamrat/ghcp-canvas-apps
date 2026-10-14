@@ -18,6 +18,7 @@ const resetThresholds = document.getElementById("reset-thresholds");
 const thresholdStatus = document.getElementById("threshold-status");
 const collapsed = new Set();
 const expanded = new Set();
+const initializedParents = new Set();
 let snapshot = null;
 let loading = false;
 let timer;
@@ -109,20 +110,13 @@ function toggle(set, id) {
 }
 
 function sessionRow(session) {
-    const container = element("article", "session");
+    const isParent = session.descendantCount > 0;
+    const isOpen = !collapsed.has(session.id) || Boolean(search.value.trim());
+    const container = element("article",
+        `session${session.depth ? " is-nested" : " is-root"}${isParent ? " is-parent" : ""}${isParent && isOpen ? " is-expanded" : ""}`);
     const row = element("div", "session-row");
     row.style.setProperty("--depth", session.depth);
     const identity = element("div", `identity${session.depth ? " nested" : ""}`);
-    if (session.childCount) {
-        const fold = element("button", "fold", collapsed.has(session.id) && !search.value.trim() ? "+" : "-");
-        fold.type = "button";
-        fold.dataset.action = "fold";
-        fold.dataset.id = session.id;
-        fold.setAttribute("aria-label", `Toggle children of ${session.name}`);
-        fold.setAttribute("aria-expanded", String(!collapsed.has(session.id) || Boolean(search.value.trim())));
-        fold.disabled = Boolean(search.value.trim());
-        identity.append(fold);
-    } else identity.append(element("span", "fold-space"));
     const nameBlock = element("div", "name-block");
     const name = element("button", "name", session.name);
     name.type = "button";
@@ -131,11 +125,29 @@ function sessionRow(session) {
     name.dataset.id = session.id;
     name.setAttribute("aria-expanded", String(expanded.has(session.id)));
     name.setAttribute("aria-controls", `details-${session.id}`);
-    nameBlock.append(name, element("div", "meta", [
+    const hierarchy = session.depth
+        ? isParent ? "Nested parent" : "Nested session"
+        : isParent ? "Parent session" : "Root session";
+    const hierarchyLabel = element("div", "hierarchy-label", [
+        hierarchy, isParent ? `${session.descendantCount} nested` : session.depth > 1 ? `Level ${session.depth}` : null,
+    ].filter(Boolean).join(" / "));
+    nameBlock.append(name, hierarchyLabel, element("div", "meta", [
         session.project || (session.kind === "general_chat" ? "Chat" : "Session"),
         session.archived ? "Archived" : session.running === null ? "Status not reported" : session.running ? "Running" : "Idle",
     ].join(" / ")));
     identity.append(nameBlock);
+    if (isParent) {
+        const fold = element("button", "fold", isOpen ? "Collapse" : "Expand");
+        fold.type = "button";
+        fold.dataset.action = "fold";
+        fold.dataset.id = session.id;
+        fold.setAttribute("aria-label", `${isOpen ? "Collapse" : "Expand"} nested sessions under ${session.name}`);
+        fold.setAttribute("aria-expanded", String(isOpen));
+        fold.setAttribute("aria-controls", `children-${session.id}`);
+        fold.disabled = Boolean(search.value.trim());
+        fold.title = search.value.trim() ? "Clear search to expand or collapse this branch." : `${session.descendantCount} nested sessions`;
+        identity.append(fold);
+    }
     const modelBlock = element("div", "model-block");
     const model = element("div", "model", session.model || "Model not reported");
     model.title = session.model || "Model not reported";
@@ -190,17 +202,38 @@ function render() {
     document.getElementById("legend-watch").textContent = `${thresholds.watch} to <${thresholds.high}%`;
     document.getElementById("legend-high").textContent = `${thresholds.high}%+`;
     const active = sessions.filter((session) => archived.checked || !session.archived);
+    for (const session of visibleTree(sessions, { includeArchived: archived.checked })) {
+        if (session.depth === 0 && session.descendantCount && !initializedParents.has(session.id)) {
+            initializedParents.add(session.id);
+            collapsed.add(session.id);
+        }
+    }
     const visible = visibleTree(sessions, { search: search.value, includeArchived: archived.checked, collapsed });
     const high = active.filter((session) => session.context.level === "high").length;
     const missing = active.filter((session) => session.context.level === "unknown").length;
-    count.textContent = `${active.length} sessions / ${high} high context${missing ? ` / ${missing} not reported` : ""}`;
+    count.textContent = `${visible.length} of ${active.length} sessions shown / ${high} high context${missing ? ` / ${missing} not reported` : ""}`;
     const fragment = document.createDocumentFragment();
     if (!visible.length) {
         const empty = element("div", "empty");
         empty.append(element("strong", "", search.value.trim() ? "No matching sessions" : "No sessions yet"),
             element("span", "", search.value.trim() ? "Try another session, project, or model." : "Start a session in the Copilot app, then refresh."));
         fragment.append(empty);
-    } else for (const session of visible) fragment.append(sessionRow(session));
+    } else {
+        const groups = new Map();
+        for (const session of visible) {
+            const article = sessionRow(session);
+            (session.depth ? groups.get(session.parentId) : fragment).append(article);
+            if (session.descendantCount) {
+                const children = element("div", "session-children");
+                children.id = `children-${session.id}`;
+                children.hidden = collapsed.has(session.id) && !search.value.trim();
+                children.setAttribute("role", "group");
+                children.setAttribute("aria-label", `Nested sessions under ${session.name}`);
+                article.append(children);
+                groups.set(session.id, children);
+            }
+        }
+    }
     const focused = document.activeElement;
     const focusId = focused?.dataset.id;
     const focusAction = focused?.dataset.action;
