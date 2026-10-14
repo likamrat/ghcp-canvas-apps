@@ -163,8 +163,12 @@ function sessionRow(session) {
     const line = element("div", "line");
     line.setAttribute("aria-hidden", "true");
     if (percent !== null) {
+        const thresholds = preferences?.thresholds ?? DEFAULT_THRESHOLDS;
+        line.style.setProperty("--watch", `${thresholds.watch}%`);
+        line.style.setProperty("--high", `${thresholds.high}%`);
         line.style.setProperty("--usage", `${Math.min(100, Math.max(0, percent))}%`);
-        line.append(element("span", "trace"), element("span", "marker"));
+        line.title = `Threshold scale: sage below ${thresholds.watch}%, amber below ${thresholds.high}%, rose from ${thresholds.high}%. Marker: ${percent.toFixed(1)}% used.`;
+        line.append(element("span", "marker"));
     }
     context.append(numbers, line);
     row.append(identity, modelBlock, context);

@@ -2,7 +2,7 @@
 
 ## Overview
 
-A single view of your GitHub Copilot app sessions and their context windows. Each session has one compact row with its model, last reported token usage, and a thin context line. Parents have a shaded row, a **Parent session** label, the total nested-session count, and an explicit **Expand / Collapse** button. Children are grouped directly underneath, with tree connectors, indentation, and **Nested session** or **Nested parent** labels.
+A single view of your GitHub Copilot app sessions and their context windows. Each session has one compact row with its model, last reported token usage, and a segmented context strip. Parents have a shaded row, a **Parent session** label, the total nested-session count, and an explicit **Expand / Collapse** button. Children are grouped directly underneath, with tree connectors, indentation, and **Nested session** or **Nested parent** labels.
 
 Top-level parent branches start collapsed. **Expand** reveals the full nested hierarchy, including grandchildren; nested parents can also be collapsed independently. Standalone sessions are labeled **Root session**. Expansion choices survive automatic refreshes and remain local to the open view.
 
@@ -10,11 +10,13 @@ By default, muted sage means below 65% of input capacity, amber means 65% to bel
 
 These are visual thresholds, not predictions of when Copilot will compact a conversation. Missing telemetry is neutral and marked **N/A**, never treated as zero.
 
+The strip is a 0-100% threshold scale: sage, amber, and rose segments show the configured ranges, and a contrasting vertical marker shows actual usage. Segment boundaries follow your settings; the full-colored strip does not mean the context window is full. Usage above 100% keeps its exact numeric percentage while the marker stops at the right edge. Unknown usage gets a neutral dashed strip with no marker.
+
 Search by session, project, model, or session ID. Search keeps matching sessions' ancestors visible, even through collapsed branches; clear search to return to your expansion choices. The nested count includes all non-archived descendants (or archived descendants too when included), regardless of search. Choose a session name to inspect exact counts, input/output limits, and any system, conversation, tool, MCP, and buffer counts reported by the app. Include archived sessions with the checkbox; they are hidden initially.
 
 ## Preview
 
-![Context Monitor with nested sessions and thin sage, amber, and rose context lines](screenshot.png)
+![Context Monitor with nested sessions and segmented sage, amber, and rose context strips](screenshot.png)
 
 Synthetic sample sessions, not a user's saved metadata.
 

@@ -271,7 +271,8 @@ test("settings HTTP writes require the token, validate input, and report conflic
 
 function renderer({ sessions = [] } = {}) {
     const node = (tag = "fragment") => ({
-        tag, dataset: {}, style: { setProperty() {} }, children: [], attributes: new Map(),
+        tag, dataset: {}, style: { values: new Map(), setProperty(name, value) { this.values.set(name, value); } },
+        children: [], attributes: new Map(),
         value: "", hidden: false, textContent: "", listeners: new Map(),
         setAttribute(name, value) { this.attributes.set(name, value); },
         append(...children) {
@@ -540,4 +541,29 @@ test("parent disclosure shows all nested levels, survives refresh, and search pr
     ui.fold("a");
     assert.equal(articles().length, 3);
     assert.equal(button("b").textContent, "Expand");
+});
+
+test("context strips encode configured threshold segments and actual usage; unknown stays neutral", async () => {
+    const ui = renderer({ sessions: [
+        { id: "measured", name: "Measured", context: { used: 234, capacity: 1000 } },
+        { id: "overflow", name: "Overflow", context: { used: 1100, capacity: 1000 } },
+        { id: "unknown", name: "Unknown", context: { used: null, capacity: 1000 } },
+    ] });
+    await ui.settle();
+    const lines = () => ui.elements().filter((element) => element.className === "line");
+    const atMeasuredUsage = (line) => Math.abs(Number.parseFloat(line.style.values.get("--usage")) - 23.4) < 1e-9;
+    const known = lines().find(atMeasuredUsage);
+    assert.equal(known.style.values.get("--watch"), "65%");
+    assert.equal(known.style.values.get("--high"), "85%");
+    assert.deepEqual(known.children.map((child) => child.className), ["marker"]);
+    assert.ok(lines().some((line) => line.style.values.get("--usage") === "100%"));
+    const unknown = lines().find((line) => line.parent.className === "context unknown");
+    assert.equal(unknown.children.length, 0);
+    assert.equal(unknown.style.values.has("--usage"), false);
+    ui.draft(40, 70);
+    ui.submit();
+    await ui.settle();
+    const updated = lines().find(atMeasuredUsage);
+    assert.equal(updated.style.values.get("--watch"), "40%");
+    assert.equal(updated.style.values.get("--high"), "70%");
 });

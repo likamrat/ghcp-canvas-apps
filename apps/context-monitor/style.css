@@ -23,13 +23,16 @@
     --sage: #42755e;
     --amber: #896423;
     --rose: #aa505e;
+    --strip-sage: #509c83;
+    --strip-amber: #b28736;
+    --strip-rose: #bf667e;
     --hover: color-mix(in srgb, var(--ink) 4%, var(--surface));
 }
 @media (prefers-color-scheme: dark) {
-    :root { --surface: var(--background-color-default, #1b1e22); --ink: var(--text-color-default, #e4e8ec); --muted: var(--text-color-muted, #a0a9b4); --edge: var(--border-color-default, #353c44); --sage: #91bea5; --amber: #d3b57c; --rose: #d996a0; }
+    :root { --surface: var(--background-color-default, #1b1e22); --ink: var(--text-color-default, #e4e8ec); --muted: var(--text-color-muted, #a0a9b4); --edge: var(--border-color-default, #353c44); --sage: #91bea5; --amber: #d3b57c; --rose: #d996a0; --strip-sage: #6bb99e; --strip-amber: #dfb765; --strip-rose: #d47e92; }
 }
-:root[data-color-mode="light"] { --sage: #42755e; --amber: #896423; --rose: #aa505e; }
-:root[data-color-mode="dark"] { --sage: #91bea5; --amber: #d3b57c; --rose: #d996a0; }
+:root[data-color-mode="light"] { --sage: #42755e; --amber: #896423; --rose: #aa505e; --strip-sage: #509c83; --strip-amber: #b28736; --strip-rose: #bf667e; }
+:root[data-color-mode="dark"] { --sage: #91bea5; --amber: #d3b57c; --rose: #d996a0; --strip-sage: #6bb99e; --strip-amber: #dfb765; --strip-rose: #d47e92; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--surface); color: var(--ink); font: 14px/1.6 var(--monitor-sans); }
 main { max-width: 1160px; margin: 0 auto; padding: 28px 24px 18px; }
@@ -63,7 +66,10 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .overview { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 19px 0 12px; color: var(--muted); font-size: 13px; }
 .overview p { margin: 0; }
 .legend { display: flex; gap: 16px; font-size: 12px; }
-.legend span::before { content: ""; display: inline-block; vertical-align: middle; width: 12px; height: 2px; margin-right: 5px; background: currentColor; }
+.legend span::before { content: ""; display: inline-block; vertical-align: middle; width: 12px; height: 5px; margin-right: 5px; background: currentColor; }
+.legend .healthy::before { background: var(--strip-sage); }
+.legend .watch::before { background: var(--strip-amber); }
+.legend .high::before { background: var(--strip-rose); }
 .healthy { color: var(--sage); }
 .watch { color: var(--amber); }
 .high { color: var(--rose); }
@@ -93,10 +99,9 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .numbers { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font: 12px/1.5 var(--monitor-mono); font-variant-numeric: tabular-nums; }
 .percent { font-size: 15px; font-weight: 600; }
 .tokens { color: var(--muted); white-space: nowrap; }
-.line { position: relative; height: 1px; margin: 10px 3px 4px; background: color-mix(in srgb, var(--edge) 70%, transparent); }
-.trace { position: absolute; inset: 0 auto 0 0; width: var(--usage); background: linear-gradient(90deg, color-mix(in srgb, currentColor 25%, transparent), currentColor); }
-.marker { position: absolute; left: var(--usage); top: -2px; width: 5px; height: 5px; background: currentColor; border-radius: 50%; transform: translateX(-50%); }
-.unknown .line { background: repeating-linear-gradient(90deg, var(--edge) 0 3px, transparent 3px 7px); }
+.line { position: relative; height: 7px; margin: 11px 3px 5px; border-radius: 1px; background: linear-gradient(90deg, var(--strip-sage) 0 var(--watch), var(--strip-amber) var(--watch) var(--high), var(--strip-rose) var(--high) 100%); }
+.marker { position: absolute; left: var(--usage); top: -3px; width: 3px; height: 13px; background: var(--ink); border: 1px solid var(--surface); border-radius: 1px; transform: translateX(-50%); }
+.unknown .line { background: repeating-linear-gradient(90deg, var(--edge) 0 8px, transparent 8px 12px); }
 .details { padding: 0 12px 15px 35px; }
 .details[hidden] { display: none; }
 .details dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 20px; margin: 5px 0 12px; }
