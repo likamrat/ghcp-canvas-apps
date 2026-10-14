@@ -2,25 +2,25 @@
 
 ## Overview
 
-Capture ideas while chatting with coding agents. Expand long thoughts, edit them, copy the full text, mark them done, or delete them.
+Capture ideas in a canvas inside the GitHub Copilot app. Expand long thoughts, edit them, copy the full text, mark them done, or delete them.
 
-## Use in GitHub Copilot
+## Use in the GitHub Copilot app
 
-Ask your Copilot agent to install [Thoughts](https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/thoughts) as a personal canvas, then open it. Approve the installation when prompted.
+In the GitHub Copilot app, ask your agent to install [Thoughts](https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/thoughts) as a personal canvas, then open it. Approve the installation when prompted.
 
 Choose **Add thought** or press **Ctrl/Cmd + Enter** to save an idea. You can also tell your agent what to save.
 
 The bin icon asks for confirmation before permanently deleting a thought.
 
-Thoughts runs locally as a Copilot extension.
+Thoughts runs locally in the GitHub Copilot app.
 
 ## Data
 
-Thoughts are saved locally in SQLite and shared across chats. They stay on your computer when you close the canvas or restart Copilot.
+Thoughts are saved locally in SQLite and shared across chats. They stay on your computer when you close the canvas or restart the app.
 
 ## Develop
 
-Use a Copilot runtime with canvas extension support and Node 24 or later. No build step or package installation is needed.
+Use the GitHub Copilot app with canvas extension support and Node 24 or later. No build step or package installation is needed.
 
 Run tests from this app's folder:
 
@@ -34,6 +34,6 @@ Icons use [Phosphor Icons](https://github.com/phosphor-icons/core) under MIT ([l
 
 ## Publish
 
-Keep the source, assets, and this README in `apps/thoughts/`. Push changes to `main`, then update the installed extension in Copilot.
+Keep the source, assets, and this README in `apps/thoughts/`. Push changes to `main`, then update the installed extension in the GitHub Copilot app.
 
 Keep saved thoughts, databases, and logs out of the repository.
