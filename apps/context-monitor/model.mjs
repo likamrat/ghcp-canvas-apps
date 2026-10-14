@@ -44,7 +44,32 @@ export function resolveParents(sessions, identities) {
     };
 }
 
-export function visibleTree(sessions, { search = "", includeArchived = false, collapsed = new Set() } = {}) {
+export const SORT_PRESETS = Object.freeze({
+    recent: { metric: "recent", descending: true, hint: "Recent activity first. Parents and nested sessions stay together." },
+    "context-high": { metric: "used", descending: true, hint: "Most context used first. The group containing the largest context comes first." },
+    "context-low": { metric: "used", descending: false, hint: "Least context used first. The group containing the smallest context comes first." },
+    "percent-high": { metric: "percent", descending: true, hint: "Highest percentage used first. The group containing the highest usage comes first." },
+    "percent-low": { metric: "percent", descending: false, hint: "Lowest percentage used first. The group containing the lowest usage comes first." },
+    capacity: { metric: "capacity", descending: true, hint: "Largest context windows first. Parents and nested sessions stay together." },
+    "name-az": { metric: "name", descending: false, hint: "A to Z, keeping each parent's nested sessions underneath it." },
+    "name-za": { metric: "name", descending: true, hint: "Z to A, keeping each parent's nested sessions underneath it." },
+});
+
+export function isContextSort(sort) {
+    return Object.hasOwn(SORT_PRESETS, sort) && ["used", "percent", "capacity"].includes(SORT_PRESETS[sort].metric);
+}
+
+function sortValue(session, metric) {
+    if (metric === "used") return tokenCount(session.context?.used);
+    if (metric === "capacity") return tokenCount(session.context?.capacity) > 0 ? session.context.capacity : null;
+    if (metric === "percent") return Number.isFinite(session.context?.percent) && session.context.percent >= 0 ? session.context.percent : null;
+    const timestamp = Date.parse(session.updatedAt ?? "");
+    return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+export function visibleTree(sessions, { search = "", includeArchived = false, collapsed = new Set(), sort = "recent" } = {}) {
+    if (!Object.hasOwn(SORT_PRESETS, sort)) throw new Error("Choose a supported session sort order.");
+    const preset = SORT_PRESETS[sort];
     const eligible = sessions.filter((session) => includeArchived || !session.archived);
     const byId = new Map(eligible.map((session) => [session.id, session]));
     const descendants = new Map();
@@ -72,6 +97,23 @@ export function visibleTree(sessions, { search = "", includeArchived = false, co
             parent = byId.get(parent).parentId;
         }
     }
+    const scores = new Map(eligible.map((session) => [
+        session.id, isContextSort(sort) && !matches.has(session.id) ? null : sortValue(session, preset.metric),
+    ]));
+    if (isContextSort(sort)) {
+        for (const session of eligible) {
+            const value = scores.get(session.id);
+            if (!matches.has(session.id) || value === null) continue;
+            const seen = new Set([session.id]);
+            let parent = session.parentId;
+            while (parent && byId.has(parent) && !seen.has(parent)) {
+                seen.add(parent);
+                const current = scores.get(parent);
+                if (current === null || (preset.descending ? value > current : value < current)) scores.set(parent, value);
+                parent = byId.get(parent).parentId;
+            }
+        }
+    }
     const children = new Map();
     for (const session of eligible) {
         if (!included.has(session.id)) continue;
@@ -79,8 +121,17 @@ export function visibleTree(sessions, { search = "", includeArchived = false, co
         if (!children.has(parent)) children.set(parent, []);
         children.get(parent).push(session);
     }
-    const compare = (a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")) ||
-        a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+    const compare = (a, b) => {
+        const direction = preset.descending ? -1 : 1;
+        if (preset.metric === "name") return direction * a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+        const left = scores.get(a.id);
+        const right = scores.get(b.id);
+        if (left === null && right !== null) return 1;
+        if (right === null && left !== null) return -1;
+        return (left === null ? 0 : direction * (left - right)) ||
+            String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")) ||
+            a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+    };
     for (const group of children.values()) group.sort(compare);
     const result = [];
     const visited = new Set();
@@ -105,7 +156,7 @@ export const DEFAULT_THRESHOLDS = Object.freeze({ watch: 65, high: 85 });
 export function validateThresholds(thresholds) {
     if (!thresholds || !Number.isInteger(thresholds.watch) || !Number.isInteger(thresholds.high) ||
         thresholds.watch < 0 || thresholds.high > 100 || thresholds.watch >= thresholds.high) {
-        throw Object.assign(new Error("Use whole percentages from 0 to 100, with amber lower than rose."), { code: "invalid_input" });
+        throw Object.assign(new Error("Choose whole percentages from 0 to 100. The warning level must be lower than the high-usage level."), { code: "invalid_input" });
     }
     return { watch: thresholds.watch, high: thresholds.high };
 }

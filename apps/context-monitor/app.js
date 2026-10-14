@@ -1,9 +1,11 @@
-import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS } from "./model.mjs";
+import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort } from "./model.mjs";
 
 const token = document.querySelector('meta[name="monitor-token"]').content;
 const rows = document.getElementById("sessions");
 const search = document.getElementById("search");
 const archived = document.getElementById("archived");
+const sortBy = document.getElementById("sort-by");
+const sortHelp = document.getElementById("sort-help");
 const refresh = document.getElementById("refresh");
 const autoRefresh = document.getElementById("auto-refresh");
 const refreshStatus = document.getElementById("refresh-status");
@@ -28,7 +30,7 @@ let draftDirty = false;
 let savingThresholds = false;
 const exact = (value) => value === null ? "Not reported" : value.toLocaleString();
 const compact = (value) => value === null ? "?" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
-const levelLabel = { healthy: "Healthy", watch: "Watch", high: "High", unknown: "Not reported" };
+const levelLabel = { healthy: "Normal", watch: "Warning", high: "High usage", unknown: "Not reported" };
 
 function scheduleRefresh() {
     clearTimeout(timer);
@@ -61,13 +63,13 @@ async function saveThresholds(reset = false) {
     if (!preferences || savingThresholds) return;
     try {
         if (!reset && (!amberThreshold.value.trim() || !roseThreshold.value.trim())) {
-            throw new Error("Enter both threshold percentages.");
+            throw new Error("Enter both usage levels as percentages.");
         }
         const thresholds = validateThresholds(reset ? preferences.defaults
             : { watch: Number(amberThreshold.value), high: Number(roseThreshold.value) });
         savingThresholds = true;
         thresholdControls.disabled = true;
-        showThresholdStatus("Saving thresholds...");
+        showThresholdStatus("Saving usage warnings...");
         const response = await fetch("/api/settings", {
             method: "POST",
             headers: { "x-monitor-token": token, "content-type": "application/json" },
@@ -81,13 +83,13 @@ async function saveThresholds(reset = false) {
                 draftVersion = preferences.version;
                 render();
             }
-            throw new Error(data.error || "Thresholds could not be saved.");
+            throw new Error(data.error || "Usage warnings could not be saved.");
         }
         draftDirty = false;
         savingThresholds = false;
         acceptSettings(data);
         showThresholdStatus(reset
-            ? `Default thresholds restored: amber ${data.defaults.watch}%, rose ${data.defaults.high}%.` : "Thresholds saved.");
+            ? `Defaults restored: warning at ${data.defaults.watch}%, high usage at ${data.defaults.high}%.` : "Usage warnings saved.");
         render();
     } catch (error) {
         showThresholdStatus(error.message, true);
@@ -167,7 +169,7 @@ function sessionRow(session) {
         line.style.setProperty("--watch", `${thresholds.watch}%`);
         line.style.setProperty("--high", `${thresholds.high}%`);
         line.style.setProperty("--usage", `${Math.min(100, Math.max(0, percent))}%`);
-        line.title = `Threshold scale: sage below ${thresholds.watch}%, amber below ${thresholds.high}%, rose from ${thresholds.high}%. Marker: ${percent.toFixed(1)}% used.`;
+        line.title = `Normal below ${thresholds.watch}%, warning below ${thresholds.high}%, high usage from ${thresholds.high}%. Current usage: ${percent.toFixed(1)}%.`;
         line.append(element("span", "marker"));
     }
     context.append(numbers, line);
@@ -202,20 +204,21 @@ function render() {
     const sessions = snapshot.sessions.map((session) => ({
         ...session, context: contextUsage(session.context.used, session.context.capacity, thresholds),
     }));
-    document.getElementById("legend-healthy").textContent = `Below ${thresholds.watch}%`;
-    document.getElementById("legend-watch").textContent = `${thresholds.watch} to <${thresholds.high}%`;
-    document.getElementById("legend-high").textContent = `${thresholds.high}%+`;
+    document.getElementById("legend-healthy").textContent = `Normal <${thresholds.watch}%`;
+    document.getElementById("legend-watch").textContent = `Warning ${thresholds.watch} to <${thresholds.high}%`;
+    document.getElementById("legend-high").textContent = `High usage ${thresholds.high}%+`;
+    sortHelp.textContent = SORT_PRESETS[sortBy.value].hint;
     const active = sessions.filter((session) => archived.checked || !session.archived);
     for (const session of visibleTree(sessions, { includeArchived: archived.checked })) {
         if (session.depth === 0 && session.descendantCount && !initializedParents.has(session.id)) {
             initializedParents.add(session.id);
-            collapsed.add(session.id);
+            if (!isContextSort(sortBy.value)) collapsed.add(session.id);
         }
     }
-    const visible = visibleTree(sessions, { search: search.value, includeArchived: archived.checked, collapsed });
+    const visible = visibleTree(sessions, { search: search.value, includeArchived: archived.checked, collapsed, sort: sortBy.value });
     const high = active.filter((session) => session.context.level === "high").length;
     const missing = active.filter((session) => session.context.level === "unknown").length;
-    count.textContent = `${visible.length} of ${active.length} sessions shown / ${high} high context${missing ? ` / ${missing} not reported` : ""}`;
+    count.textContent = `${visible.length} of ${active.length} sessions shown / ${high} high usage${missing ? ` / ${missing} not reported` : ""}`;
     const fragment = document.createDocumentFragment();
     if (!visible.length) {
         const empty = element("div", "empty");
@@ -292,6 +295,10 @@ rows.addEventListener("click", (event) => {
 });
 search.addEventListener("input", render);
 archived.addEventListener("change", render);
+sortBy.addEventListener("change", () => {
+    if (isContextSort(sortBy.value)) collapsed.clear();
+    render();
+});
 refresh.addEventListener("click", load);
 autoRefresh.addEventListener("change", scheduleRefresh);
 thresholdForm.addEventListener("submit", (event) => {

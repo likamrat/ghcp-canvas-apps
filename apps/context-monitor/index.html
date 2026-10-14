@@ -30,24 +30,38 @@
                     <option value="300000">Every 5 minutes</option>
                 </select>
             </div>
+            <div class="sort-choice">
+                <label for="sort-by">Sort sessions</label>
+                <select id="sort-by" aria-describedby="sort-help">
+                    <option value="recent" selected>Recent activity (default)</option>
+                    <option value="context-high">Most context used</option>
+                    <option value="context-low">Least context used</option>
+                    <option value="percent-high">Highest % used</option>
+                    <option value="percent-low">Lowest % used</option>
+                    <option value="capacity">Largest context window</option>
+                    <option value="name-az">Name: A to Z</option>
+                    <option value="name-za">Name: Z to A</option>
+                </select>
+            </div>
         </div>
+        <p id="sort-help" class="sort-help">Recent activity first. Parents and nested sessions stay together.</p>
         <details class="threshold-settings">
-            <summary>Color thresholds</summary>
+            <summary>Usage warnings</summary>
             <form id="threshold-form" novalidate>
                 <fieldset id="threshold-controls" disabled>
-                    <div class="threshold-field"><label for="amber-threshold">Amber starts at (%)</label><input id="amber-threshold" type="number" min="0" max="100" step="1" value="65" required></div>
-                    <div class="threshold-field"><label for="rose-threshold">Rose starts at (%)</label><input id="rose-threshold" type="number" min="0" max="100" step="1" value="85" required></div>
+                    <div class="threshold-field"><label for="amber-threshold">Warning level (%)</label><input id="amber-threshold" type="number" min="0" max="100" step="1" value="65" required aria-describedby="threshold-help"></div>
+                    <div class="threshold-field"><label for="rose-threshold">High usage level (%)</label><input id="rose-threshold" type="number" min="0" max="100" step="1" value="85" required aria-describedby="threshold-help"></div>
                     <button type="submit">Apply</button>
                     <button id="reset-thresholds" type="button">Reset defaults</button>
                 </fieldset>
-                <p class="threshold-hint">Sage below amber, amber below rose, rose at or above its threshold. Saved across views.</p>
+                <p id="threshold-help" class="threshold-hint">Percent of the context window used: normal below the warning level, then warning, then high usage. Saved across views.</p>
                 <p id="threshold-status" class="threshold-status" role="status"></p>
             </form>
         </details>
         <div class="overview">
             <p id="count" role="status">Reading local sessions...</p>
-            <div class="legend" aria-label="Context thresholds">
-                <span id="legend-healthy" class="healthy">Below 65%</span><span id="legend-watch" class="watch">65 to &lt;85%</span><span id="legend-high" class="high">85%+</span>
+            <div class="legend" aria-label="Context usage levels">
+                <span id="legend-healthy" class="healthy">Normal &lt;65%</span><span id="legend-watch" class="watch">Warning 65 to &lt;85%</span><span id="legend-high" class="high">High usage 85%+</span>
             </div>
         </div>
         <p id="error" class="notice" role="alert" hidden></p>

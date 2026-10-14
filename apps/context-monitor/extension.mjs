@@ -34,13 +34,13 @@ await joinSession({
                 },
                 {
                     name: "get_settings",
-                    description: "Read saved color thresholds, built-in defaults, and the current settings version.",
+                    description: "Read saved warning and high-usage levels, built-in defaults, and the current settings version.",
                     inputSchema: emptyInput,
                     handler: action(() => settings.read()),
                 },
                 {
                     name: "set_thresholds",
-                    description: "Save user-requested amber and rose thresholds using the latest settings version. Use the defaults from get_settings to reset.",
+                    description: "Save user-requested warning and high-usage percentages using the latest settings version. Use the defaults from get_settings to reset.",
                     inputSchema: settingsSchema,
                     handler: action((ctx) => settings.update(ctx.input)),
                 },

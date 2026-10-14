@@ -46,7 +46,7 @@ export function createSettings(path = join(
             if (!input || typeof input !== "object" || Array.isArray(input) ||
                 Object.keys(input).some((key) => !Object.hasOwn(settingsSchema.properties, key)) ||
                 !Number.isSafeInteger(input.version) || input.version < 1) {
-                throw Object.assign(new Error("Provide both thresholds and the current settings version."), { code: "invalid_input" });
+                throw Object.assign(new Error("Provide both usage warning levels and the current settings version."), { code: "invalid_input" });
             }
             const { watch, high } = validateThresholds(input);
             const result = db.prepare(`
@@ -54,7 +54,7 @@ export function createSettings(path = join(
                 WHERE id = 1 AND version = ?
             `).run(watch, high, input.version);
             if (!result.changes) {
-                throw Object.assign(new Error("Thresholds changed in another view. Review your draft and Apply again."),
+                throw Object.assign(new Error("Usage warnings changed in another view. Review your draft and Apply again."),
                     { code: "settings_changed", settings: read() });
             }
             return read();

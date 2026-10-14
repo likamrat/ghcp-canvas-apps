@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds } from "./model.mjs";
+import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort } from "./model.mjs";
 import { databasePath, readSnapshot } from "./source.mjs";
 import { startServer } from "./server.mjs";
 import { createSettings } from "./settings.mjs";
@@ -117,6 +117,47 @@ test("search retains ancestors and reveals matches through collapsed parents", (
     assert.equal(visibleTree(tree, { search: "Root" })[0].descendantCount, 2);
     assert.equal(visibleTree(tree, { search: "no match" }).length, 0);
     assert.equal(visibleTree(tree, { includeArchived: true }).length, 5);
+});
+
+test("sort presets order groups and siblings by context, percentage, capacity, name, or activity", () => {
+    const sessions = [
+        { id: "parent", name: "Parent", updatedAt: "2026-10-10", context: contextUsage(10, 100) },
+        { id: "low", name: "Low", parentId: "parent", updatedAt: "2026-10-13", context: contextUsage(5, 200) },
+        { id: "max", name: "Max", parentId: "low", context: contextUsage(90, 100) },
+        { id: "mid", name: "Mid", parentId: "parent", updatedAt: "2026-10-14", context: contextUsage(40, 100) },
+        { id: "solo", name: "Solo", updatedAt: "2026-10-15", context: contextUsage(50, 1000) },
+        { id: "zero", name: "Zero", updatedAt: "2026-10-11", context: contextUsage(0, 100) },
+        { id: "unknown", name: "Unknown", context: contextUsage(null, null) },
+        { id: "archived", name: "Archived", parentId: "parent", archived: true, context: contextUsage(999, 1000) },
+    ];
+    const ids = (sort, options) => visibleTree(sessions, { sort, ...options }).map((session) => session.id);
+    assert.deepEqual(ids("context-high"), ["parent", "low", "max", "mid", "solo", "zero", "unknown"]);
+    assert.deepEqual(ids("context-low"), ["zero", "parent", "low", "max", "mid", "solo", "unknown"]);
+    assert.equal(ids("percent-high")[0], "parent");
+    assert.equal(ids("percent-low")[0], "zero");
+    assert.equal(ids("capacity")[0], "solo");
+    assert.equal(ids("name-az")[0], "parent");
+    assert.equal(ids("name-za")[0], "zero");
+    assert.equal(ids("recent")[0], "solo");
+    assert.equal(ids("context-high", { includeArchived: true })[1], "archived");
+    assert.equal(ids("context-low").at(-1), "unknown");
+    assert.equal(ids("context-high").at(-1), "unknown");
+    assert.deepEqual(ids("context-high", { collapsed: new Set(["parent"]) }), ["parent", "solo", "zero", "unknown"]);
+    const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+    for (const sort of Object.keys(SORT_PRESETS)) assert.ok(html.includes(`value="${sort}"`));
+    assert.throws(() => visibleTree(sessions, { sort: "unsupported" }), /supported session sort/);
+});
+
+test("search sorts only matching contexts, not a hidden non-matching descendant", () => {
+    const sessions = [
+        { id: "parent", name: "Parent", context: contextUsage(10, 1000) },
+        { id: "match", name: "Matching child", parentId: "parent", project: "matches", context: contextUsage(90, 1000) },
+        { id: "outside", name: "Outside search", parentId: "parent", context: contextUsage(200, 1000) },
+        { id: "solo", name: "Solo", project: "matches", context: contextUsage(95, 1000) },
+    ];
+    const result = visibleTree(sessions, { sort: "context-high", search: "matches" });
+    assert.deepEqual(result.map((session) => session.id), ["solo", "parent", "match"]);
+    assert.equal(result.find((session) => session.id === "parent").descendantCount, 2);
 });
 
 test("reads canonical app sessions, aliases, archived parents, and exact token breakdown read-only", (t) => {
@@ -305,9 +346,11 @@ function renderer({ sessions = [] } = {}) {
     let writes = 0;
     let savedSettings = { thresholds: { ...DEFAULT_THRESHOLDS }, defaults: DEFAULT_THRESHOLDS, version: 1 };
     document.getElementById("auto-refresh").value = "5000";
+    document.getElementById("sort-by").value = "recent";
     const code = readFileSync(new URL("./app.js", import.meta.url), "utf8").replace(/^import .*;\r?\n/, "");
     runInNewContext(code, {
-        document, window: { addEventListener() {} }, visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, Intl, Date,
+        document, window: { addEventListener() {} }, visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS,
+        SORT_PRESETS, isContextSort, Intl, Date,
         AbortSignal: { timeout: () => ({}) },
         setTimeout(callback, delay) { timers.set(++id, { callback, due: clock + delay }); return id; },
         clearTimeout(timerId) { timers.delete(timerId); },
@@ -317,7 +360,7 @@ function renderer({ sessions = [] } = {}) {
                 const input = JSON.parse(options.body);
                 if (input.version !== savedSettings.version) {
                     return Promise.resolve({
-                        ok: false, json: async () => ({ error: "Thresholds changed in another view.", settings: savedSettings }),
+                        ok: false, json: async () => ({ error: "Usage warnings changed in another view.", settings: savedSettings }),
                     });
                 }
                 savedSettings = { thresholds: validateThresholds(input), defaults: DEFAULT_THRESHOLDS, version: input.version + 1 };
@@ -335,11 +378,11 @@ function renderer({ sessions = [] } = {}) {
     const settle = () => new Promise((resolve) => setImmediate(resolve));
     const elements = () => {
         const result = [];
-        const stack = [...document.getElementById("sessions").children];
+        const stack = [...document.getElementById("sessions").children].reverse();
         while (stack.length) {
             const element = stack.pop();
             result.push(element);
-            stack.push(...element.children);
+            stack.push(...[...element.children].reverse());
         }
         return result;
     };
@@ -353,6 +396,11 @@ function renderer({ sessions = [] } = {}) {
             const control = document.getElementById("search");
             control.value = value;
             control.listeners.get("input")();
+        },
+        sort(value) {
+            const control = document.getElementById("sort-by");
+            control.value = value;
+            control.listeners.get("change")();
         },
         reads: () => reads,
         writes: () => writes,
@@ -469,18 +517,18 @@ test("threshold controls apply, reject invalid drafts, and reset both inputs and
     ui.submit();
     await ui.settle();
     assert.deepEqual(ui.saved().thresholds, { watch: 40, high: 70 });
-    assert.equal(ui.nodes.get("legend-high").textContent, "70%+");
+    assert.equal(ui.nodes.get("legend-high").textContent, "High usage 70%+");
     ui.draft(90, 50);
     ui.submit();
     await ui.settle();
     assert.equal(ui.writes(), 1);
-    assert.match(ui.nodes.get("threshold-status").textContent, /amber lower than rose/);
-    assert.equal(ui.nodes.get("legend-high").textContent, "70%+");
+    assert.match(ui.nodes.get("threshold-status").textContent, /warning level must be lower/);
+    assert.equal(ui.nodes.get("legend-high").textContent, "High usage 70%+");
     await ui.reset();
     assert.deepEqual(ui.saved().thresholds, DEFAULT_THRESHOLDS);
     assert.equal(ui.nodes.get("amber-threshold").value, "65");
     assert.equal(ui.nodes.get("rose-threshold").value, "85");
-    assert.equal(ui.nodes.get("legend-high").textContent, "85%+");
+    assert.equal(ui.nodes.get("legend-high").textContent, "High usage 85%+");
 });
 
 test("polling and conflicts preserve threshold drafts; stale snapshots never revert newly saved colors", async () => {
@@ -490,7 +538,7 @@ test("polling and conflicts preserve threshold drafts; stale snapshots never rev
     ui.remoteChange(50, 80);
     await ui.manual();
     assert.equal(ui.nodes.get("amber-threshold").value, "40");
-    assert.equal(ui.nodes.get("legend-high").textContent, "80%+");
+    assert.equal(ui.nodes.get("legend-high").textContent, "High usage 80%+");
     ui.submit();
     await ui.settle();
     assert.match(ui.nodes.get("threshold-status").textContent, /another view/);
@@ -503,10 +551,10 @@ test("polling and conflicts preserve threshold drafts; stale snapshots never rev
     ui.draft(50, 90);
     ui.submit();
     await ui.settle();
-    assert.equal(ui.nodes.get("legend-high").textContent, "90%+");
+    assert.equal(ui.nodes.get("legend-high").textContent, "High usage 90%+");
     ui.release();
     await staleRead;
-    assert.equal(ui.nodes.get("legend-high").textContent, "90%+");
+    assert.equal(ui.nodes.get("legend-high").textContent, "High usage 90%+");
     assert.equal(ui.nodes.get("rose-threshold").value, "90");
 });
 
@@ -566,4 +614,25 @@ test("context strips encode configured threshold segments and actual usage; unkn
     const updated = lines().find(atMeasuredUsage);
     assert.equal(updated.style.values.get("--watch"), "40%");
     assert.equal(updated.style.values.get("--high"), "70%");
+});
+
+test("context sorting reveals nested sessions and preserves ordering across refresh", async () => {
+    const ui = renderer({ sessions: [
+        { id: "parent", name: "Parent", context: { used: 10, capacity: 100 } },
+        { id: "child", name: "Child", parentId: "parent", context: { used: 90, capacity: 100 } },
+        { id: "solo", name: "Solo", context: { used: 50, capacity: 100 } },
+    ] });
+    await ui.settle();
+    const ids = () => ui.elements().filter((node) => node.dataset.action === "details").map((node) => node.dataset.id);
+    assert.deepEqual(ids(), ["parent", "solo"]);
+    ui.sort("context-high");
+    assert.deepEqual(ids(), ["parent", "child", "solo"]);
+    assert.match(ui.nodes.get("sort-help").textContent, /largest context/);
+    await ui.manual();
+    assert.deepEqual(ids(), ["parent", "child", "solo"]);
+    ui.sort("context-low");
+    assert.deepEqual(ids(), ["parent", "child", "solo"]);
+    ui.sort("name-za");
+    assert.deepEqual(ids(), ["solo", "parent", "child"]);
+    assert.match(ui.nodes.get("legend-watch").textContent, /Warning/);
 });

@@ -6,7 +6,11 @@ A single view of your GitHub Copilot app sessions and their context windows. Eac
 
 Top-level parent branches start collapsed. **Expand** reveals the full nested hierarchy, including grandchildren; nested parents can also be collapsed independently. Standalone sessions are labeled **Root session**. Expansion choices survive automatic refreshes and remain local to the open view.
 
-By default, muted sage means below 65% of input capacity, amber means 65% to below 85%, and rose means 85% or more. Open **Color thresholds** to change where amber and rose begin, then choose **Apply**. Use whole percentages from 0 to 100, with amber lower than rose. **Reset defaults** restores and saves 65% / 85%, including when you have unsaved edits. The legend, rows, and high-context count update together.
+Use **Sort sessions** to choose **Recent activity** (default), **Most / Least context used**, **Highest / Lowest % used**, **Largest context window**, or **Name: A to Z / Z to A**. Context used sorts the actual token count; percentage sorts how full the window is; largest window sorts input capacity. Sessions or groups without reported values go last in either direction.
+
+Parents and their nested sessions stay together. Context-based sorting ranks each group by its highest or lowest matching value, so a large nested context brings its parent group to the top. It also expands the groups to make those nested sessions visible. You can still collapse them afterward, and auto-refresh preserves the sort and your expansion choices. Searching ranks matching sessions, not hidden non-matching children.
+
+The usage states are **Normal**, **Warning**, and **High usage**. By default, warning starts at 65% of input capacity and high usage at 85%. Open **Usage warnings** to change **Warning level (%)** or **High usage level (%)**, then choose **Apply**. Use whole percentages from 0 to 100, with warning lower than high usage. **Reset defaults** restores and saves 65% / 85%, including when you have unsaved edits. The legend, rows, and high-usage count update together.
 
 These are visual thresholds, not predictions of when Copilot will compact a conversation. Missing telemetry is neutral and marked **N/A**, never treated as zero.
 
@@ -46,7 +50,7 @@ Workspace bindings and historical CLI aliases are normalized into one app sessio
 
 No session metadata is committed or saved by this extension. Color preferences are saved locally in `$COPILOT_HOME/extensions/context-monitor/artifacts/settings.sqlite` and shared across Context Monitor views, sessions, and restarts. Only this separate preferences database is writable; the Copilot app database stays read-only. Simultaneous edits are version-checked, and conflicts preserve your draft for review rather than silently overwriting another view's settings. Other open views pick up saved changes on their next refresh.
 
-Search, collapse, detail expansion, archive visibility, and refresh interval are transient per-view settings.
+Search, sort order, collapse, detail expansion, archive visibility, and refresh interval are transient per-view settings.
 
 ## Develop
 
