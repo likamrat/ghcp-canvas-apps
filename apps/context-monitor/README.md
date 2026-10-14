@@ -24,7 +24,9 @@ In a Copilot chat, ask:
 
 Review the installation approval. User scope makes the monitor available across chats. The repository also includes a project discovery entry in `.github/extensions/context-monitor/extension.mjs` for developing the app here. A project installation shadows a user installation with the same name.
 
-The canvas refreshes every five seconds while visible. **Refresh** retries immediately. Closing the canvas stops its server; reopening it reads the same app metadata. No hosted site or GitHub Pages deployment is needed.
+**Auto-refresh** offers **Off**, **5 seconds** (default), **10 seconds**, **30 seconds**, **1 minute**, and **5 minutes**. Refreshing pauses while the canvas is hidden. Changing the interval restarts the countdown; each countdown begins after the previous read finishes, so requests never overlap. **Off** disables automatic reads, including on returning to the canvas; **Refresh** still reads immediately. The canvas always reads once when opened.
+
+Closing the canvas stops its server; reopening it reads the same app metadata and restores the default interval. No hosted site or GitHub Pages deployment is needed.
 
 ## Data
 
@@ -36,7 +38,7 @@ Context values are the app's **last reported snapshot**, not lifetime token tota
 
 Workspace bindings and historical CLI aliases are normalized into one app session. Project children use workspace creator links; chat children use chat/side-chat parent links. Detached sessions remain roots; fork ancestry is not treated as nesting. A missing or hidden archived parent promotes its visible child to the root. Cyclic links are detached with a warning.
 
-No metadata is committed or saved by this extension. Search, collapse, detail expansion, and archive visibility are transient per-view settings.
+No metadata is committed or saved by this extension. Search, collapse, detail expansion, archive visibility, and refresh interval are transient per-view settings.
 
 ## Develop
 
@@ -50,7 +52,7 @@ No packages or build step are required. Copilot supplies `@github/copilot-sdk`. 
 
 `extension.mjs` wires canvas lifecycle; `source.mjs` owns the read-only app adapter; `model.mjs` owns context thresholds and tree filtering; `server.mjs` serves the renderer in `index.html`, `app.js`, and `style.css`. The UI uses the host's documented theme/font tokens, with light/dark fallbacks, keyboard-accessible controls, and responsive rows.
 
-Tests use disposable synthetic SQLite fixtures and cover thresholds, unknown telemetry, nesting, search, aliases, archives, schema errors, read-only behavior, and HTTP access restrictions.
+Tests use disposable synthetic SQLite fixtures and cover thresholds, unknown telemetry, nesting, search, aliases, archives, schema errors, read-only behavior, and HTTP access restrictions. Renderer tests use a controlled clock to verify each refresh interval, Off/manual mode, hidden-canvas pausing, and interval changes during in-flight reads.
 
 ## Publish
 

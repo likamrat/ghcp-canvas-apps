@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { contextUsage, resolveParents, visibleTree } from "./model.mjs";
 import { databasePath, readSnapshot } from "./source.mjs";
 import { startServer } from "./server.mjs";
+import { runInNewContext } from "node:vm";
 
 function fixture(t, { optional = true } = {}) {
     const folder = mkdtempSync(join(tmpdir(), "context-monitor-"));
@@ -171,4 +172,138 @@ test("source errors become visible retryable HTTP errors, not empty success data
     const response = await fetch(new URL("api/snapshot", server.url), { headers: { "x-monitor-token": token } });
     assert.equal(response.status, 503);
     assert.deepEqual(await response.json(), { error: "Database not available", code: "database_missing" });
+});
+
+function renderer() {
+    const node = () => ({
+        value: "", hidden: false, textContent: "", listeners: new Map(),
+        setAttribute() {}, append() {}, replaceChildren() {},
+        addEventListener(name, callback) { this.listeners.set(name, callback); },
+    });
+    const nodes = new Map();
+    const document = {
+        hidden: false, activeElement: null, listeners: new Map(),
+        querySelector: () => ({ content: "test-token" }),
+        getElementById(id) {
+            if (!nodes.has(id)) nodes.set(id, node());
+            return nodes.get(id);
+        },
+        createDocumentFragment: node,
+        createElement: node,
+        addEventListener(name, callback) { this.listeners.set(name, callback); },
+    };
+    const timers = new Map();
+    let clock = 0;
+    let id = 0;
+    let reads = 0;
+    let pending;
+    let hold = false;
+    document.getElementById("auto-refresh").value = "5000";
+    const code = readFileSync(new URL("./app.js", import.meta.url), "utf8").replace(/^import .*;\r?\n/, "");
+    runInNewContext(code, {
+        document, window: { addEventListener() {} }, visibleTree, Intl, Date,
+        AbortSignal: { timeout: () => ({}) },
+        setTimeout(callback, delay) { timers.set(++id, { callback, due: clock + delay }); return id; },
+        clearTimeout(timerId) { timers.delete(timerId); },
+        fetch() {
+            reads++;
+            const response = { ok: true, json: async () => ({ sessions: [], warnings: [], collectedAt: "2026-10-14T00:00:00Z" }) };
+            return hold ? new Promise((resolve) => { pending = () => resolve(response); }) : Promise.resolve(response);
+        },
+    });
+    const settle = () => new Promise((resolve) => setImmediate(resolve));
+    return {
+        document, timers, nodes, settle,
+        reads: () => reads,
+        change(value) {
+            const control = document.getElementById("auto-refresh");
+            control.value = String(value);
+            control.listeners.get("change")();
+        },
+        async advance(duration) {
+            clock += duration;
+            for (const [timerId, timer] of [...timers]) {
+                if (timer.due <= clock) {
+                    timers.delete(timerId);
+                    timer.callback();
+                }
+            }
+            await settle();
+        },
+        visibility(hidden) {
+            document.hidden = hidden;
+            document.listeners.get("visibilitychange")();
+        },
+        manual: () => document.getElementById("refresh").listeners.get("click")(),
+        hold: () => { hold = true; },
+        release: () => { hold = false; pending(); },
+    };
+}
+
+test("auto-refresh defaults to 5s and fires at each selected interval, not earlier", async () => {
+    const ui = renderer();
+    await ui.settle();
+    assert.equal(ui.reads(), 1);
+    assert.equal(ui.timers.size, 1);
+    const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+    assert.match(html, /value="5000" selected/);
+    for (const interval of [5000, 10000, 30000, 60000, 300000]) {
+        assert.ok(html.includes(`value="${interval}"`));
+        ui.change(interval);
+        const before = ui.reads();
+        assert.equal(ui.timers.size, 1);
+        await ui.advance(interval - 1);
+        assert.equal(ui.reads(), before);
+        await ui.advance(1);
+        assert.equal(ui.reads(), before + 1);
+        assert.equal(ui.timers.size, 1);
+    }
+});
+
+test("Off cancels automatic reads but manual refresh still works, including after hiding", async () => {
+    const ui = renderer();
+    await ui.settle();
+    ui.change(0);
+    assert.equal(ui.timers.size, 0);
+    assert.equal(ui.nodes.get("refresh-status").textContent, "Read-only / auto-refresh off");
+    await ui.advance(300000);
+    ui.visibility(true);
+    ui.visibility(false);
+    await ui.settle();
+    assert.equal(ui.reads(), 1);
+    await ui.manual();
+    assert.equal(ui.reads(), 2);
+    assert.equal(ui.timers.size, 0);
+    ui.change(30000);
+    ui.visibility(true);
+    await ui.advance(30000);
+    assert.equal(ui.reads(), 2);
+    ui.visibility(false);
+    await ui.settle();
+    assert.equal(ui.reads(), 3);
+    assert.equal(ui.timers.size, 1);
+});
+
+test("changing intervals during a read schedules only the latest interval after it finishes", async () => {
+    const ui = renderer();
+    await ui.settle();
+    ui.hold();
+    const request = ui.manual();
+    ui.change(10000);
+    ui.change(60000);
+    assert.equal(ui.timers.size, 0);
+    ui.manual();
+    assert.equal(ui.reads(), 2);
+    ui.release();
+    await request;
+    await ui.advance(59999);
+    assert.equal(ui.reads(), 2);
+    await ui.advance(1);
+    assert.equal(ui.reads(), 3);
+    ui.hold();
+    const last = ui.manual();
+    ui.change(0);
+    ui.release();
+    await last;
+    assert.equal(ui.timers.size, 0);
 });

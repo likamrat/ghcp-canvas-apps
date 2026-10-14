@@ -5,6 +5,8 @@ const rows = document.getElementById("sessions");
 const search = document.getElementById("search");
 const archived = document.getElementById("archived");
 const refresh = document.getElementById("refresh");
+const autoRefresh = document.getElementById("auto-refresh");
+const refreshStatus = document.getElementById("refresh-status");
 const errorBox = document.getElementById("error");
 const count = document.getElementById("count");
 const sync = document.getElementById("sync");
@@ -16,6 +18,14 @@ let timer;
 const exact = (value) => value === null ? "Not reported" : value.toLocaleString();
 const compact = (value) => value === null ? "?" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 const levelLabel = { healthy: "Healthy", watch: "Watch", high: "High", unknown: "Not reported" };
+
+function scheduleRefresh() {
+    clearTimeout(timer);
+    const interval = Number(autoRefresh.value);
+    refreshStatus.textContent = interval === 0 ? "Read-only / auto-refresh off"
+        : `Read-only / refreshes every ${interval < 60000 ? `${interval / 1000}s` : `${interval / 60000}m`}`;
+    if (interval > 0 && !document.hidden && !loading) timer = setTimeout(load, interval);
+}
 
 function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -156,7 +166,7 @@ async function load() {
         rows.setAttribute("aria-busy", "false");
         loading = false;
         refresh.disabled = false;
-        if (!document.hidden) timer = setTimeout(load, 5000);
+        scheduleRefresh();
     }
 }
 
@@ -169,9 +179,10 @@ rows.addEventListener("click", (event) => {
 search.addEventListener("input", render);
 archived.addEventListener("change", render);
 refresh.addEventListener("click", load);
+autoRefresh.addEventListener("change", scheduleRefresh);
 document.addEventListener("visibilitychange", () => {
     clearTimeout(timer);
-    if (!document.hidden) load();
+    if (!document.hidden && Number(autoRefresh.value) > 0) load();
 });
 window.addEventListener("pagehide", () => clearTimeout(timer));
 load();

@@ -17,6 +17,17 @@
         <div class="toolbar">
             <div class="search"><label for="search">Find a session</label><input id="search" type="search" placeholder="Session, project, or model" autocomplete="off"></div>
             <label class="archive"><input id="archived" type="checkbox"> Include archived</label>
+            <div class="refresh-choice">
+                <label for="auto-refresh">Auto-refresh</label>
+                <select id="auto-refresh">
+                    <option value="0">Off</option>
+                    <option value="5000" selected>Every 5 seconds</option>
+                    <option value="10000">Every 10 seconds</option>
+                    <option value="30000">Every 30 seconds</option>
+                    <option value="60000">Every minute</option>
+                    <option value="300000">Every 5 minutes</option>
+                </select>
+            </div>
         </div>
         <div class="overview">
             <p id="count" role="status">Reading local sessions...</p>
@@ -30,7 +41,7 @@
         <div id="sessions" aria-label="Session hierarchy" aria-busy="true">
             <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
         </div>
-        <footer><span id="sync">Connecting to local app metadata</span><span>Read-only / refreshes every 5s</span></footer>
+        <footer><span id="sync">Connecting to local app metadata</span><span id="refresh-status">Read-only / refreshes every 5s</span></footer>
     </main>
 </body>
 </html>
