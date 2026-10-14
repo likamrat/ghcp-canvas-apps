@@ -2,14 +2,14 @@ export function tokenCount(value) {
     return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
-export function contextUsage(current, limit) {
+export function contextUsage(current, limit, thresholds = DEFAULT_THRESHOLDS) {
     const used = tokenCount(current);
     const capacity = tokenCount(limit);
     if (used === null || capacity === null || capacity === 0) {
         return { used, capacity, percent: null, level: "unknown" };
     }
     const percent = used / capacity * 100;
-    return { used, capacity, percent, level: percent >= 85 ? "high" : percent >= 65 ? "watch" : "healthy" };
+    return { used, capacity, percent, level: percent >= thresholds.high ? "high" : percent >= thresholds.watch ? "watch" : "healthy" };
 }
 
 export function resolveParents(sessions, identities) {
@@ -86,4 +86,13 @@ export function visibleTree(sessions, { search = "", includeArchived = false, co
         }
     }
     return result;
+}
+export const DEFAULT_THRESHOLDS = Object.freeze({ watch: 65, high: 85 });
+
+export function validateThresholds(thresholds) {
+    if (!thresholds || !Number.isInteger(thresholds.watch) || !Number.isInteger(thresholds.high) ||
+        thresholds.watch < 0 || thresholds.high > 100 || thresholds.watch >= thresholds.high) {
+        throw Object.assign(new Error("Use whole percentages from 0 to 100, with amber lower than rose."), { code: "invalid_input" });
+    }
+    return { watch: thresholds.watch, high: thresholds.high };
 }

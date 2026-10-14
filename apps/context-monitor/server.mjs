@@ -11,7 +11,7 @@ const assets = new Map([
     ["/fonts/GeistMono-Variable.woff2", ["fonts/GeistMono-Variable.woff2", "font/woff2"]],
 ]);
 
-export async function startServer(snapshot) {
+export async function startServer(snapshot, settings) {
     const token = randomBytes(32).toString("hex");
     const server = createServer(async (req, res) => {
         res.setHeader("Cache-Control", "no-store");
@@ -27,7 +27,24 @@ export async function startServer(snapshot) {
         }
         try {
             const url = new URL(req.url, origin);
-            if (req.method !== "GET") {
+            if (url.pathname === "/api/settings" && req.method === "POST" && settings) {
+                if (req.headers["x-monitor-token"] !== token || req.headers["content-type"] !== "application/json") {
+                    res.writeHead(403).end("Forbidden");
+                    return;
+                }
+                let body = "";
+                for await (const chunk of req) {
+                    body += chunk;
+                    if (Buffer.byteLength(body) > 4096) {
+                        throw Object.assign(new Error("Settings request is too large."), { code: "invalid_input" });
+                    }
+                }
+                let input;
+                try { input = JSON.parse(body); }
+                catch { throw Object.assign(new Error("Invalid settings JSON."), { code: "invalid_input" }); }
+                const result = settings.update(input);
+                res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
+            } else if (req.method !== "GET") {
                 res.writeHead(405, { Allow: "GET" }).end("Read-only monitor");
             } else if (assets.has(url.pathname)) {
                 const [file, type] = assets.get(url.pathname);
@@ -47,8 +64,9 @@ export async function startServer(snapshot) {
                 res.writeHead(404).end("Not found");
             }
         } catch (error) {
-            res.writeHead(503, { "Content-Type": "application/json" })
-                .end(JSON.stringify({ error: error.message, code: error.code ?? "monitor_unavailable" }));
+            res.writeHead(error.code === "settings_changed" ? 409 : error.code === "invalid_input" ? 400 : 503,
+                { "Content-Type": "application/json" })
+                .end(JSON.stringify({ error: error.message, code: error.code ?? "monitor_unavailable", settings: error.settings }));
         }
     });
     await new Promise((resolve, reject) => {

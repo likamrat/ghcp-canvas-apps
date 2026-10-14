@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { contextUsage, resolveParents, tokenCount } from "./model.mjs";
+import { contextUsage, resolveParents, tokenCount, DEFAULT_THRESHOLDS, validateThresholds } from "./model.mjs";
 
 export function databasePath(env = process.env) {
     return join(env.COPILOT_HOME || join(homedir(), ".copilot"), "data.db");
@@ -38,7 +38,8 @@ function selectRows(db, schema, table, fields) {
         ? `"${field}"` : `NULL AS "${field}"`).join(", ")} FROM "${table}"`).all();
 }
 
-export function readSnapshot({ path = databasePath(), now = () => new Date().toISOString() } = {}) {
+export function readSnapshot({ path = databasePath(), now = () => new Date().toISOString(), thresholds = DEFAULT_THRESHOLDS } = {}) {
+    validateThresholds(thresholds);
     if (!existsSync(path)) {
         throw sourceError("database_missing", "Copilot app data.db was not found. Run Context Monitor on the computer hosting the app; COPILOT_HOME can select its data directory.");
     }
@@ -117,7 +118,7 @@ export function readSnapshot({ path = databasePath(), now = () => new Date().toI
                 updatedAt: raw?.updated_at || workspace?.updated_at || null,
                 sampledAt: Number.isSafeInteger(timestamp) && timestamp >= 0 && timestamp <= 8640000000000000
                     ? new Date(timestamp).toISOString() : null,
-                context: contextUsage(raw?.context_current_tokens, raw?.context_input_token_limit),
+                context: contextUsage(raw?.context_current_tokens, raw?.context_input_token_limit, thresholds),
                 breakdown: {
                     system: tokenCount(raw?.context_system_tokens),
                     conversation: tokenCount(raw?.context_conversation_tokens),

@@ -1,4 +1,4 @@
-import { visibleTree } from "./model.mjs";
+import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS } from "./model.mjs";
 
 const token = document.querySelector('meta[name="monitor-token"]').content;
 const rows = document.getElementById("sessions");
@@ -10,11 +10,21 @@ const refreshStatus = document.getElementById("refresh-status");
 const errorBox = document.getElementById("error");
 const count = document.getElementById("count");
 const sync = document.getElementById("sync");
+const thresholdForm = document.getElementById("threshold-form");
+const thresholdControls = document.getElementById("threshold-controls");
+const amberThreshold = document.getElementById("amber-threshold");
+const roseThreshold = document.getElementById("rose-threshold");
+const resetThresholds = document.getElementById("reset-thresholds");
+const thresholdStatus = document.getElementById("threshold-status");
 const collapsed = new Set();
 const expanded = new Set();
 let snapshot = null;
 let loading = false;
 let timer;
+let preferences = null;
+let draftVersion = null;
+let draftDirty = false;
+let savingThresholds = false;
 const exact = (value) => value === null ? "Not reported" : value.toLocaleString();
 const compact = (value) => value === null ? "?" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 const levelLabel = { healthy: "Healthy", watch: "Watch", high: "High", unknown: "Not reported" };
@@ -25,6 +35,65 @@ function scheduleRefresh() {
     refreshStatus.textContent = interval === 0 ? "Read-only / auto-refresh off"
         : `Read-only / refreshes every ${interval < 60000 ? `${interval / 1000}s` : `${interval / 60000}m`}`;
     if (interval > 0 && !document.hidden && !loading) timer = setTimeout(load, interval);
+}
+
+function acceptSettings(next) {
+    validateThresholds(next.thresholds);
+    validateThresholds(next.defaults);
+    if (!preferences || next.version >= preferences.version) preferences = next;
+    if (!draftDirty && !savingThresholds) {
+        amberThreshold.value = String(preferences.thresholds.watch);
+        roseThreshold.value = String(preferences.thresholds.high);
+        draftVersion = preferences.version;
+    }
+    thresholdControls.disabled = savingThresholds;
+}
+
+function showThresholdStatus(message, invalid = false) {
+    thresholdStatus.textContent = message;
+    thresholdStatus.className = `threshold-status${invalid ? " invalid" : ""}`;
+    amberThreshold.setAttribute("aria-invalid", String(invalid));
+    roseThreshold.setAttribute("aria-invalid", String(invalid));
+}
+
+async function saveThresholds(reset = false) {
+    if (!preferences || savingThresholds) return;
+    try {
+        if (!reset && (!amberThreshold.value.trim() || !roseThreshold.value.trim())) {
+            throw new Error("Enter both threshold percentages.");
+        }
+        const thresholds = validateThresholds(reset ? preferences.defaults
+            : { watch: Number(amberThreshold.value), high: Number(roseThreshold.value) });
+        savingThresholds = true;
+        thresholdControls.disabled = true;
+        showThresholdStatus("Saving thresholds...");
+        const response = await fetch("/api/settings", {
+            method: "POST",
+            headers: { "x-monitor-token": token, "content-type": "application/json" },
+            body: JSON.stringify({ ...thresholds, version: draftVersion }),
+            signal: AbortSignal.timeout(10000),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            if (data.settings) {
+                acceptSettings(data.settings);
+                draftVersion = preferences.version;
+                render();
+            }
+            throw new Error(data.error || "Thresholds could not be saved.");
+        }
+        draftDirty = false;
+        savingThresholds = false;
+        acceptSettings(data);
+        showThresholdStatus(reset
+            ? `Default thresholds restored: amber ${data.defaults.watch}%, rose ${data.defaults.high}%.` : "Thresholds saved.");
+        render();
+    } catch (error) {
+        showThresholdStatus(error.message, true);
+    } finally {
+        savingThresholds = false;
+        thresholdControls.disabled = !preferences;
+    }
 }
 
 function element(tag, className, text) {
@@ -113,8 +182,15 @@ function sessionRow(session) {
 
 function render() {
     if (!snapshot) return;
-    const active = snapshot.sessions.filter((session) => archived.checked || !session.archived);
-    const visible = visibleTree(snapshot.sessions, { search: search.value, includeArchived: archived.checked, collapsed });
+    const thresholds = preferences?.thresholds ?? DEFAULT_THRESHOLDS;
+    const sessions = snapshot.sessions.map((session) => ({
+        ...session, context: contextUsage(session.context.used, session.context.capacity, thresholds),
+    }));
+    document.getElementById("legend-healthy").textContent = `Below ${thresholds.watch}%`;
+    document.getElementById("legend-watch").textContent = `${thresholds.watch} to <${thresholds.high}%`;
+    document.getElementById("legend-high").textContent = `${thresholds.high}%+`;
+    const active = sessions.filter((session) => archived.checked || !session.archived);
+    const visible = visibleTree(sessions, { search: search.value, includeArchived: archived.checked, collapsed });
     const high = active.filter((session) => session.context.level === "high").length;
     const missing = active.filter((session) => session.context.level === "unknown").length;
     count.textContent = `${active.length} sessions / ${high} high context${missing ? ` / ${missing} not reported` : ""}`;
@@ -150,6 +226,7 @@ async function load() {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Local metadata is unavailable.");
+        acceptSettings(data.settings);
         snapshot = data;
         errorBox.hidden = true;
         render();
@@ -180,6 +257,17 @@ search.addEventListener("input", render);
 archived.addEventListener("change", render);
 refresh.addEventListener("click", load);
 autoRefresh.addEventListener("change", scheduleRefresh);
+thresholdForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveThresholds();
+});
+for (const input of [amberThreshold, roseThreshold]) {
+    input.addEventListener("input", () => {
+        draftDirty = true;
+        showThresholdStatus("Unsaved changes.");
+    });
+}
+resetThresholds.addEventListener("click", () => saveThresholds(true));
 document.addEventListener("visibilitychange", () => {
     clearTimeout(timer);
     if (!document.hidden && Number(autoRefresh.value) > 0) load();

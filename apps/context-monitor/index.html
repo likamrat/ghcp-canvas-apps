@@ -31,10 +31,23 @@
                 </select>
             </div>
         </div>
+        <details class="threshold-settings">
+            <summary>Color thresholds</summary>
+            <form id="threshold-form" novalidate>
+                <fieldset id="threshold-controls" disabled>
+                    <div class="threshold-field"><label for="amber-threshold">Amber starts at (%)</label><input id="amber-threshold" type="number" min="0" max="100" step="1" value="65" required></div>
+                    <div class="threshold-field"><label for="rose-threshold">Rose starts at (%)</label><input id="rose-threshold" type="number" min="0" max="100" step="1" value="85" required></div>
+                    <button type="submit">Apply</button>
+                    <button id="reset-thresholds" type="button">Reset defaults</button>
+                </fieldset>
+                <p class="threshold-hint">Sage below amber, amber below rose, rose at or above its threshold. Saved across views.</p>
+                <p id="threshold-status" class="threshold-status" role="status"></p>
+            </form>
+        </details>
         <div class="overview">
             <p id="count" role="status">Reading local sessions...</p>
             <div class="legend" aria-label="Context thresholds">
-                <span class="healthy">Below 65%</span><span class="watch">65 to &lt;85%</span><span class="high">85%+</span>
+                <span id="legend-healthy" class="healthy">Below 65%</span><span id="legend-watch" class="watch">65 to &lt;85%</span><span id="legend-high" class="high">85%+</span>
             </div>
         </div>
         <p id="error" class="notice" role="alert" hidden></p>

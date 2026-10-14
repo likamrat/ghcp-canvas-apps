@@ -4,9 +4,10 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contextUsage, resolveParents, visibleTree } from "./model.mjs";
+import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds } from "./model.mjs";
 import { databasePath, readSnapshot } from "./source.mjs";
 import { startServer } from "./server.mjs";
+import { createSettings } from "./settings.mjs";
 import { runInNewContext } from "node:vm";
 
 function fixture(t, { optional = true } = {}) {
@@ -54,6 +55,20 @@ test("color boundaries use actual utilization, not lifetime usage", () => {
         assert.equal(contextUsage(used, 100000).level, level);
     }
     assert.ok(Math.abs(contextUsage(110000, 100000).percent - 110) < 1e-9);
+});
+
+test("custom thresholds apply at exact boundaries and reject invalid percentages", () => {
+    const thresholds = validateThresholds({ watch: 40, high: 70 });
+    for (const [used, level] of [[39999, "healthy"], [40000, "watch"], [69999, "watch"], [70000, "high"]]) {
+        assert.equal(contextUsage(used, 100000, thresholds).level, level);
+    }
+    assert.equal(contextUsage(null, 100000, thresholds).level, "unknown");
+    assert.deepEqual(validateThresholds({ watch: 0, high: 100 }), { watch: 0, high: 100 });
+    for (const value of [null, {}, { watch: 50, high: 50 }, { watch: 90, high: 60 },
+        { watch: -1, high: 85 }, { watch: 65, high: 101 }, { watch: 65.5, high: 85 },
+        { watch: "65", high: 85 }, { watch: NaN, high: 85 }]) {
+        assert.throws(() => validateThresholds(value), { code: "invalid_input" });
+    }
 });
 
 test("missing, negative, invalid, or zero capacity is not reported as healthy", () => {
@@ -146,6 +161,41 @@ test("historical alias parent and workspace parent identities both normalize", (
     assert.equal(readSnapshot({ path }).sessions.find((row) => row.id === "child").parentId, "root");
 });
 
+test("configured thresholds classify the data adapter's snapshots too", (t) => {
+    const snapshot = readSnapshot({ path: fixture(t), thresholds: { watch: 30, high: 60 } });
+    assert.equal(snapshot.sessions.find((row) => row.id === "root").context.level, "high");
+});
+
+test("threshold preferences persist, reset to defaults, and reject stale concurrent writes", (t) => {
+    const folder = mkdtempSync(join(tmpdir(), "context-monitor-settings-"));
+    const stores = new Set();
+    t.after(() => {
+        for (const store of stores) store.close();
+        rmSync(folder, { recursive: true, force: true });
+    });
+    const path = join(folder, "settings.sqlite");
+    const first = createSettings(path);
+    const second = createSettings(path);
+    stores.add(first);
+    stores.add(second);
+    assert.deepEqual(first.read().thresholds, DEFAULT_THRESHOLDS);
+    const saved = first.update({ watch: 40, high: 70, version: 1 });
+    assert.deepEqual(second.read(), saved);
+    assert.throws(() => second.update({ watch: 20, high: 50, version: 1 }), { code: "settings_changed" });
+    for (const input of [{ watch: 70, high: 40, version: 2 }, { watch: 20, high: 70, version: 2, extra: true },
+        { watch: 20, high: 70 }, { watch: 20, high: 70, version: 0 }]) {
+        assert.throws(() => first.update(input), { code: "invalid_input" });
+    }
+    assert.deepEqual(first.read(), saved);
+    first.close();
+    stores.delete(first);
+    const reopened = createSettings(path);
+    stores.add(reopened);
+    assert.deepEqual(reopened.read(), saved);
+    reopened.update({ ...reopened.read().defaults, version: saved.version });
+    assert.deepEqual(second.read().thresholds, DEFAULT_THRESHOLDS);
+});
+
 test("loopback API requires a page token and rejects foreign origins, writes, and unknown assets", async (t) => {
     const server = await startServer(() => ({ sessions: [], warnings: [] }));
     t.after(server.close);
@@ -181,6 +231,38 @@ test("source errors become visible retryable HTTP errors, not empty success data
     assert.deepEqual(await response.json(), { error: "Database not available", code: "database_missing" });
 });
 
+test("settings HTTP writes require the token, validate input, and report conflicts", async (t) => {
+    const folder = mkdtempSync(join(tmpdir(), "context-monitor-http-settings-"));
+    const settings = createSettings(join(folder, "settings.sqlite"));
+    const server = await startServer(() => ({ sessions: [], settings: settings.read() }), settings);
+    t.after(async () => {
+        await server.close();
+        settings.close();
+        rmSync(folder, { recursive: true, force: true });
+    });
+    const html = await (await fetch(server.url)).text();
+    const token = html.match(/name="monitor-token" content="([a-f0-9]+)"/)[1];
+    const url = new URL("api/settings", server.url);
+    const save = (input, headers = {}) => fetch(url, {
+        method: "POST", headers: { "x-monitor-token": token, "content-type": "application/json", ...headers },
+        body: typeof input === "string" ? input : JSON.stringify(input),
+    });
+    const input = { watch: 40, high: 70, version: 1 };
+    assert.equal((await save(input, { "x-monitor-token": "" })).status, 403);
+    assert.equal((await save(input, { Origin: "https://example.com" })).status, 403);
+    assert.equal((await save(input, { "content-type": "text/plain" })).status, 403);
+    assert.equal((await save("{")).status, 400);
+    assert.equal((await save(" ".repeat(4097))).status, 400);
+    assert.equal((await save({ ...input, high: 20 })).status, 400);
+    const response = await save(input);
+    assert.equal(response.status, 200);
+    const current = await response.json();
+    assert.deepEqual(current.thresholds, { watch: 40, high: 70 });
+    const conflict = await save(input);
+    assert.equal(conflict.status, 409);
+    assert.deepEqual((await conflict.json()).settings, current);
+});
+
 function renderer() {
     const node = () => ({
         value: "", hidden: false, textContent: "", listeners: new Map(),
@@ -205,16 +287,33 @@ function renderer() {
     let reads = 0;
     let pending;
     let hold = false;
+    let writes = 0;
+    let savedSettings = { thresholds: { ...DEFAULT_THRESHOLDS }, defaults: DEFAULT_THRESHOLDS, version: 1 };
     document.getElementById("auto-refresh").value = "5000";
     const code = readFileSync(new URL("./app.js", import.meta.url), "utf8").replace(/^import .*;\r?\n/, "");
     runInNewContext(code, {
-        document, window: { addEventListener() {} }, visibleTree, Intl, Date,
+        document, window: { addEventListener() {} }, visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, Intl, Date,
         AbortSignal: { timeout: () => ({}) },
         setTimeout(callback, delay) { timers.set(++id, { callback, due: clock + delay }); return id; },
         clearTimeout(timerId) { timers.delete(timerId); },
-        fetch() {
+        fetch(url, options) {
+            if (url === "/api/settings") {
+                writes++;
+                const input = JSON.parse(options.body);
+                if (input.version !== savedSettings.version) {
+                    return Promise.resolve({
+                        ok: false, json: async () => ({ error: "Thresholds changed in another view.", settings: savedSettings }),
+                    });
+                }
+                savedSettings = { thresholds: validateThresholds(input), defaults: DEFAULT_THRESHOLDS, version: input.version + 1 };
+                return Promise.resolve({ ok: true, json: async () => savedSettings });
+            }
             reads++;
-            const response = { ok: true, json: async () => ({ sessions: [], warnings: [], collectedAt: "2026-10-14T00:00:00Z" }) };
+            const data = {
+                sessions: [], warnings: [], collectedAt: "2026-10-14T00:00:00Z",
+                settings: savedSettings,
+            };
+            const response = { ok: true, json: async () => data };
             return hold ? new Promise((resolve) => { pending = () => resolve(response); }) : Promise.resolve(response);
         },
     });
@@ -222,6 +321,20 @@ function renderer() {
     return {
         document, timers, nodes, settle,
         reads: () => reads,
+        writes: () => writes,
+        saved: () => savedSettings,
+        draft(watch, high) {
+            for (const [id, value] of [["amber-threshold", watch], ["rose-threshold", high]]) {
+                const input = document.getElementById(id);
+                input.value = String(value);
+                input.listeners.get("input")();
+            }
+        },
+        submit: () => document.getElementById("threshold-form").listeners.get("submit")({ preventDefault() {} }),
+        reset: () => document.getElementById("reset-thresholds").listeners.get("click")(),
+        remoteChange(watch, high) {
+            savedSettings = { thresholds: { watch, high }, defaults: DEFAULT_THRESHOLDS, version: savedSettings.version + 1 };
+        },
         change(value) {
             const control = document.getElementById("auto-refresh");
             control.value = String(value);
@@ -313,4 +426,52 @@ test("changing intervals during a read schedules only the latest interval after 
     ui.release();
     await last;
     assert.equal(ui.timers.size, 0);
+});
+
+test("threshold controls apply, reject invalid drafts, and reset both inputs and saved values", async () => {
+    const ui = renderer();
+    await ui.settle();
+    ui.draft(40, 70);
+    ui.submit();
+    await ui.settle();
+    assert.deepEqual(ui.saved().thresholds, { watch: 40, high: 70 });
+    assert.equal(ui.nodes.get("legend-high").textContent, "70%+");
+    ui.draft(90, 50);
+    ui.submit();
+    await ui.settle();
+    assert.equal(ui.writes(), 1);
+    assert.match(ui.nodes.get("threshold-status").textContent, /amber lower than rose/);
+    assert.equal(ui.nodes.get("legend-high").textContent, "70%+");
+    await ui.reset();
+    assert.deepEqual(ui.saved().thresholds, DEFAULT_THRESHOLDS);
+    assert.equal(ui.nodes.get("amber-threshold").value, "65");
+    assert.equal(ui.nodes.get("rose-threshold").value, "85");
+    assert.equal(ui.nodes.get("legend-high").textContent, "85%+");
+});
+
+test("polling and conflicts preserve threshold drafts; stale snapshots never revert newly saved colors", async () => {
+    const ui = renderer();
+    await ui.settle();
+    ui.draft(40, 70);
+    ui.remoteChange(50, 80);
+    await ui.manual();
+    assert.equal(ui.nodes.get("amber-threshold").value, "40");
+    assert.equal(ui.nodes.get("legend-high").textContent, "80%+");
+    ui.submit();
+    await ui.settle();
+    assert.match(ui.nodes.get("threshold-status").textContent, /another view/);
+    assert.equal(ui.nodes.get("amber-threshold").value, "40");
+    ui.submit();
+    await ui.settle();
+    assert.deepEqual(ui.saved().thresholds, { watch: 40, high: 70 });
+    ui.hold();
+    const staleRead = ui.manual();
+    ui.draft(50, 90);
+    ui.submit();
+    await ui.settle();
+    assert.equal(ui.nodes.get("legend-high").textContent, "90%+");
+    ui.release();
+    await staleRead;
+    assert.equal(ui.nodes.get("legend-high").textContent, "90%+");
+    assert.equal(ui.nodes.get("rose-threshold").value, "90");
 });

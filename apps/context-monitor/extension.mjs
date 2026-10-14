@@ -1,9 +1,23 @@
 import { joinSession, createCanvas, CanvasError } from "@github/copilot-sdk/extension";
 import { readSnapshot } from "./source.mjs";
 import { startServer } from "./server.mjs";
+import { createSettings, settingsSchema } from "./settings.mjs";
 
 const servers = new Map();
+const settings = createSettings();
 const emptyInput = { type: "object", properties: {}, additionalProperties: false };
+function snapshot() {
+    const preferences = settings.read();
+    return { ...readSnapshot({ thresholds: preferences.thresholds }), settings: preferences };
+}
+function action(handler) {
+    return (ctx) => {
+        try { return handler(ctx); }
+        catch (error) {
+            throw new CanvasError(error.code ?? "context_monitor_error", error.message);
+        }
+    };
+}
 await joinSession({
     canvases: [
         createCanvas({
@@ -16,18 +30,25 @@ await joinSession({
                     name: "snapshot",
                     description: "Read current local app session metadata and context telemetry, including archived sessions.",
                     inputSchema: emptyInput,
-                    handler: () => {
-                        try { return readSnapshot(); }
-                        catch (error) {
-                            throw new CanvasError(error.code ?? "context_monitor_error", error.message);
-                        }
-                    },
+                    handler: action(snapshot),
+                },
+                {
+                    name: "get_settings",
+                    description: "Read saved color thresholds, built-in defaults, and the current settings version.",
+                    inputSchema: emptyInput,
+                    handler: action(() => settings.read()),
+                },
+                {
+                    name: "set_thresholds",
+                    description: "Save user-requested amber and rose thresholds using the latest settings version. Use the defaults from get_settings to reset.",
+                    inputSchema: settingsSchema,
+                    handler: action((ctx) => settings.update(ctx.input)),
                 },
             ],
             open: async (ctx) => {
                 let entry = servers.get(ctx.instanceId);
                 if (!entry) {
-                    entry = await startServer(readSnapshot);
+                    entry = await startServer(snapshot, settings);
                     servers.set(ctx.instanceId, entry);
                 }
                 return { title: "Context Monitor", url: entry.url };

@@ -45,11 +45,21 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .toolbar { display: flex; align-items: end; gap: 18px; margin-top: 26px; }
 .search { flex: 1; max-width: 420px; }
 .search label, .refresh-choice label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-input[type="search"], select { width: 100%; padding: 8px 11px; border: 1px solid var(--edge); border-radius: 6px; background: var(--surface); }
+input[type="search"], input[type="number"], select { width: 100%; padding: 8px 11px; border: 1px solid var(--edge); border-radius: 6px; background: var(--surface); }
 .refresh-choice { margin-left: auto; }
 input::placeholder { color: var(--muted); opacity: 1; }
 .archive { display: flex; gap: 7px; align-items: center; min-height: 40px; color: var(--muted); font-size: 13px; white-space: nowrap; }
 .archive input { accent-color: var(--sage); }
+.threshold-settings { margin-top: 14px; font-size: 13px; }
+.threshold-settings summary { width: fit-content; cursor: pointer; color: var(--muted); }
+.threshold-settings form { margin-top: 12px; }
+.threshold-settings fieldset { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; border: 0; padding: 0; margin: 0; }
+.threshold-field { width: 160px; }
+.threshold-field label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.threshold-settings button { min-height: 40px; }
+.threshold-hint, .threshold-status { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+.threshold-status:empty { display: none; }
+.threshold-status.invalid { color: var(--rose); }
 .overview { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 19px 0 12px; color: var(--muted); font-size: 13px; }
 .overview p { margin: 0; }
 .legend { display: flex; gap: 16px; font-size: 12px; }
