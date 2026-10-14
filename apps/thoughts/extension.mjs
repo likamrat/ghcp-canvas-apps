@@ -15,6 +15,7 @@ const canvas = createCanvas({
                     list: "Read the saved personal list and item versions.",
                     add: "Save a thought when the user asks; never capture chat content automatically.",
                     update: "Edit text or done status using the item's latest version; stale changes are rejected.",
+                    delete: "Permanently delete a thought only on explicit user request, using its current version.",
                 }[name],
                 inputSchema,
                 handler: (ctx) => {

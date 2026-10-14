@@ -4,9 +4,11 @@
   --text: var(--text-color-default, #202124);
   --muted: var(--text-color-muted, #62656b);
   --border: var(--border-color-default, #d4d6d8);
+  --danger: var(--true-color-red, #b3261e);
 }
 @media (prefers-color-scheme: dark) {
   :root { --surface: var(--background-color-default, #202124); --text: var(--text-color-default, #ececec); --muted: var(--text-color-muted, #acafb5); --border: var(--border-color-default, #505258); }
+  :root { --danger: var(--true-color-red, #ff8a80); }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--surface); color: var(--text); font-family: var(--font-sans, system-ui, sans-serif); font-size: var(--text-body-medium, 14px); line-height: var(--leading-body-medium, 20px); }
@@ -43,6 +45,13 @@ nav span { margin-left: 5px; font-variant-numeric: tabular-nums; color: var(--mu
 .item-actions { display: flex; align-items: center; gap: 2px; }
 .item .icon-button { display: grid; place-content: center; width: 30px; height: 30px; min-height: 30px; padding: 6px; border-color: transparent; color: var(--muted); }
 .icon-button svg { display: block; width: 16px; height: 16px; }
+.item .delete-button:hover, .item .delete-button:focus-visible { color: var(--danger); }
+#delete-dialog { width: calc(100% - 32px); max-width: 360px; padding: 20px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; }
+#delete-dialog::backdrop { background: rgb(0 0 0 / .35); }
+#delete-dialog h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
+#delete-dialog p { margin: 10px 0 0; color: var(--muted); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.confirm-delete { color: var(--danger); border-color: currentColor; }
 .sr-only, .clipboard-buffer { position: fixed; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .edit-actions { display: flex; gap: 8px; margin-top: 8px; }
 .empty { padding: 28px 0; color: var(--muted); }

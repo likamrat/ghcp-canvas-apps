@@ -41,6 +41,42 @@ test("saved ideas survive reopen; independent connections reject stale edits", (
     }
 });
 
+test("deleting a thought persists across restart and keeps other thoughts", () => {
+    const directory = mkdtempSync(join(tmpdir(), "thoughts-delete-test-"));
+    const path = join(directory, "thoughts.sqlite");
+    let store = createStore(path);
+    try {
+        store.run("add", { text: "Keep this thought" });
+        const removed = store.run("add", { text: "Delete this thought" });
+        store.run("delete", { id: removed.id, version: 1 });
+        store.close();
+        store = createStore(path);
+        assert.deepEqual(store.run("list", {}).items.map((item) => item.text), ["Keep this thought"]);
+    } finally {
+        store.close();
+        rmSync(directory, { recursive: true });
+    }
+});
+
+test("a stale deletion keeps a thought edited in another connection", () => {
+    const directory = mkdtempSync(join(tmpdir(), "thoughts-stale-delete-test-"));
+    const path = join(directory, "thoughts.sqlite");
+    const first = createStore(path);
+    const second = createStore(path);
+    try {
+        const thought = first.run("add", { text: "Original thought" });
+        second.run("update", { id: thought.id, version: 1, text: "Updated in another chat", done: true });
+        assert.throws(() => first.run("delete", { id: thought.id, version: 1 }), { code: "item_changed" });
+        assert.equal(first.run("list", {}).items[0].text, "Updated in another chat");
+        first.run("delete", { id: thought.id, version: 2 });
+        assert.deepEqual(second.run("list", {}).items, []);
+    } finally {
+        first.close();
+        second.close();
+        rmSync(directory, { recursive: true });
+    }
+});
+
 test("loopback renderer routes validate origin, token, body and stale writes", async () => {
     const directory = mkdtempSync(join(tmpdir(), "idea-inbox-http-test-"));
     const store = createStore(join(directory, "ideas.sqlite"));
@@ -64,6 +100,12 @@ test("loopback renderer routes validate origin, token, body and stale writes", a
         const update = { action: "update", input: { id: added.id, version: 1, done: true } };
         assert.equal((await post(update)).status, 200);
         assert.equal((await post(update)).status, 409);
+        assert.equal((await post({ action: "delete", input: { id: added.id } })).status, 400);
+        assert.equal((await post({ action: "delete", input: { id: added.id, version: 1 } })).status, 409);
+        const deleted = await post({ action: "delete", input: { id: added.id, version: 2 } });
+        assert.equal(deleted.status, 200);
+        assert.deepEqual((await deleted.json()).items, []);
+        assert.deepEqual((await (await post({ action: "list", input: {} })).json()).items, []);
         assert.equal((await fetch(`${entry.url}missing`)).status, 404);
         assert.equal((await fetch(`${entry.url}app.js`)).status, 200);
     } finally {
