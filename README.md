@@ -5,6 +5,7 @@ Small canvas apps for working alongside chats and coding agents in GitHub Copilo
 | App | What it does |
 | --- | --- |
 | [Thoughts](apps/thoughts/README.md) | Capture, revisit, edit, copy, and complete ideas across chats. |
+| [Context Monitor](apps/context-monitor/README.md) | See nested Copilot sessions, models, and context usage in one read-only view. |
 
 ## Structure
 
