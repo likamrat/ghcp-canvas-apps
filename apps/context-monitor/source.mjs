@@ -54,6 +54,7 @@ export function readSnapshot({ path = databasePath(), now = () => new Date().toI
             "context_current_tokens", "context_input_token_limit", "context_output_token_limit",
             "context_system_tokens", "context_conversation_tokens", "context_tool_definitions_tokens",
             "context_mcp_tools_tokens", "context_buffer_tokens",
+            "total_input_tokens", "total_output_tokens",
         ]);
         const workspaces = selectRows(db, schema, "workspaces", [
             "id", "name", "project_id", "session_id", "creator_session_id", "archived_at", "updated_at",
@@ -119,6 +120,10 @@ export function readSnapshot({ path = databasePath(), now = () => new Date().toI
                 sampledAt: Number.isSafeInteger(timestamp) && timestamp >= 0 && timestamp <= 8640000000000000
                     ? new Date(timestamp).toISOString() : null,
                 context: contextUsage(raw?.context_current_tokens, raw?.context_input_token_limit, thresholds),
+                usage: {
+                    input: tokenCount(raw?.total_input_tokens),
+                    output: tokenCount(raw?.total_output_tokens),
+                },
                 breakdown: {
                     system: tokenCount(raw?.context_system_tokens),
                     conversation: tokenCount(raw?.context_conversation_tokens),

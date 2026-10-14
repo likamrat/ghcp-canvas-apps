@@ -7,6 +7,8 @@ const assets = new Map([
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["/model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
+    ["/icons/caret-down.svg", ["icons/caret-down.svg", "image/svg+xml"]],
+    ["/icons/caret-up.svg", ["icons/caret-up.svg", "image/svg+xml"]],
     ["/fonts/Geist-Variable.woff2", ["fonts/Geist-Variable.woff2", "font/woff2"]],
     ["/fonts/GeistMono-Variable.woff2", ["fonts/GeistMono-Variable.woff2", "font/woff2"]],
 ]);

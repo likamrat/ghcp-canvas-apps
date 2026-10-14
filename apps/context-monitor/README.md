@@ -1,6 +1,6 @@
 # Context Monitor
 
-View your GitHub Copilot app sessions, models, and context usage in one canvas. Expand parent sessions, sort by usage, and choose when the view refreshes.
+View your GitHub Copilot app sessions, models, and context usage in one canvas. Show a parent's nested sessions, compare token usage, and choose when the view refreshes.
 
 <img src="screenshot.png" alt="Context Monitor showing parent and nested sessions, different models, and context usage" width="640">
 
@@ -21,18 +21,22 @@ Review the installation approval. Personal/user scope makes the canvas available
 
 | Control | What it does |
 | --- | --- |
-| Expand / Collapse | Show or hide a parent's nested sessions. Top-level parents start collapsed. |
+| Parent arrow icon | Show or hide nested sessions. Hover or focus the icon for its description; top-level parents start collapsed. |
 | Find a session | Search by name, project, model, or session ID. Matching children keep their parents visible. |
 | Sort sessions | Choose recent activity (default), most/least context used, highest/lowest percentage used, largest context window, or name A-Z/Z-A. |
 | Auto-refresh | Choose 5 seconds (default), 10 seconds, 30 seconds, 1 minute, 5 minutes, or Off. |
 | Usage warnings | Set the Warning and High usage percentages, then Apply. Reset defaults restores 65% / 85%. |
 | Session name | Show exact token counts, limits, and available breakdowns. |
-| Include archived | Include archived sessions, which are hidden initially. |
+| Include archived sessions | Include archived sessions, which are hidden initially. An empty checkbox means they are excluded. |
 | Refresh | Read the latest saved app metadata immediately. |
 
 Sorting keeps parent groups together. Context-based sorts rank each group by its highest or lowest matching value and expand it so relevant children are visible. Missing values go last. Auto-refresh preserves your sort and expansion choices, pauses while the canvas is hidden, and never overlaps reads. Off leaves manual Refresh available.
 
 Usage warning levels must be whole percentages from 0 to 100, with Warning below High usage. They are saved across views. The colored strip shows these ranges; the vertical marker shows actual usage. A fully colored strip does not mean the context window is full. Unknown usage is **N/A**, with a neutral dashed strip and no marker.
+
+**What the token numbers mean.** Tokens are pieces of text that the model processes. **Input total** counts the tokens the model has read across the session's requests, including messages, history, and tools. **Output total** counts the tokens it has generated. Both appear in each compact row, including short sessions, and are the app's reported totals.
+
+**Context** is different: it shows the tokens currently in the input window against that window's capacity. The percentage and strip use this reading, not the session's cumulative input/output totals. Select a session name for exact counts and explanations of **Input window limit** and **Reply output limit**. The latter is the maximum output for one response, not the amount already generated. Missing totals say **Not reported**; an actual zero remains zero.
 
 ## Data
 
@@ -56,11 +60,13 @@ node --test monitor.test.mjs
 
 Reload extensions after editing an installed copy. The repository's `.github/extensions/context-monitor/extension.mjs` entry loads the app for local development.
 
-`extension.mjs` wires the canvas and snapshot/settings actions. `source.mjs` reads app metadata; `model.mjs` handles usage, hierarchy, search, and sorting; `settings.mjs` saves warning preferences. `server.mjs` serves `index.html`, `app.js`, `style.css`, and local fonts.
+`extension.mjs` wires the canvas and snapshot/settings actions. `source.mjs` reads app metadata; `model.mjs` handles usage, hierarchy, search, and sorting; `settings.mjs` saves warning preferences. `server.mjs` serves `index.html`, `app.js`, `style.css`, local fonts, and icons.
 
 Tests cover synthetic SQLite data, read-only access, hierarchy, sorting, unknown telemetry, warning validation and conflicts, HTTP request checks, and refresh timing.
 
 Bundled [Geist fonts](https://github.com/vercel/geist-font) use the SIL Open Font License 1.1 ([license](fonts/LICENSE.txt)). No font CDN requests are needed.
+
+The trailing Show/Hide nested sessions icons use [Phosphor Icons](https://github.com/phosphor-icons/core) under MIT ([license](icons/LICENSE)), matching the icon family used in Thoughts.
 
 ## Publish
 

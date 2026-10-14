@@ -1,4 +1,4 @@
-import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort } from "./model.mjs";
+import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort, tokenCount } from "./model.mjs";
 
 const token = document.querySelector('meta[name="monitor-token"]').content;
 const rows = document.getElementById("sessions");
@@ -138,30 +138,51 @@ function sessionRow(session) {
         session.archived ? "Archived" : session.running === null ? "Status not reported" : session.running ? "Running" : "Idle",
     ].join(" / ")));
     identity.append(nameBlock);
+    const actions = element("div", "row-actions");
     if (isParent) {
-        const fold = element("button", "fold", isOpen ? "Collapse" : "Expand");
+        const fold = element("button", "fold icon-button");
         fold.type = "button";
         fold.dataset.action = "fold";
         fold.dataset.id = session.id;
-        fold.setAttribute("aria-label", `${isOpen ? "Collapse" : "Expand"} nested sessions under ${session.name}`);
+        const label = `${isOpen ? "Hide" : "Show"} nested sessions`;
+        fold.setAttribute("aria-label", `${label} for ${session.name}`);
         fold.setAttribute("aria-expanded", String(isOpen));
         fold.setAttribute("aria-controls", `children-${session.id}`);
         fold.disabled = Boolean(search.value.trim());
-        fold.title = search.value.trim() ? "Clear search to expand or collapse this branch." : `${session.descendantCount} nested sessions`;
-        identity.append(fold);
+        fold.title = search.value.trim() ? "Clear search to show or hide nested sessions." : `${label} (${session.descendantCount})`;
+        fold.dataset.tooltip = fold.title;
+        const icon = element("span", `disclosure-icon ${isOpen ? "hide-children" : "show-children"}`);
+        icon.setAttribute("aria-hidden", "true");
+        fold.append(icon);
+        actions.append(fold);
     }
     const modelBlock = element("div", "model-block");
     const model = element("div", "model", session.model || "Model not reported");
     model.title = session.model || "Model not reported";
     modelBlock.append(model, element("div", "model-note",
         [session.reasoningEffort, session.contextTier === "long_context" ? "Long context" : session.contextTier].filter(Boolean).join(" / ")));
+    const usage = {
+        input: tokenCount(session.usage?.input),
+        output: tokenCount(session.usage?.output),
+    };
+    const totals = element("dl", "token-totals");
+    for (const [label, value, explanation] of [
+        ["Input total", usage.input, "Tokens the model has read across this session's requests, not the current context size."],
+        ["Output total", usage.output, "Tokens the model has generated across this session's requests, not the reply limit."],
+    ]) {
+        const pair = element("div");
+        pair.title = explanation;
+        pair.append(element("dt", "", label), element("dd", "", value === null ? "Not reported" : compact(value)));
+        totals.append(pair);
+    }
+    modelBlock.append(totals);
     const context = element("div", `context ${session.context.level}`);
     const { used, capacity, percent, level } = session.context;
     context.setAttribute("aria-label", percent === null ? "Context usage not reported"
         : `${levelLabel[level]} context: ${percent.toFixed(1)} percent, ${exact(used)} of ${exact(capacity)} tokens`);
     const numbers = element("div", "numbers");
     numbers.append(element("span", "percent", percent === null ? "N/A" : `${percent.toFixed(1)}%`),
-        element("span", "tokens", `${compact(used)} / ${compact(capacity)}`));
+        element("span", "used-label", percent === null ? "Not reported" : "used"));
     const line = element("div", "line");
     line.setAttribute("aria-hidden", "true");
     if (percent !== null) {
@@ -172,21 +193,40 @@ function sessionRow(session) {
         line.title = `Normal below ${thresholds.watch}%, warning below ${thresholds.high}%, high usage from ${thresholds.high}%. Current usage: ${percent.toFixed(1)}%.`;
         line.append(element("span", "marker"));
     }
-    context.append(numbers, line);
-    row.append(identity, modelBlock, context);
+    const contextCount = element("div", "context-count");
+    const contextText = used !== null && capacity !== null && capacity > 0
+        ? `${compact(used)} of ${compact(capacity)} tokens`
+        : used !== null ? `${compact(used)} used; capacity not reported`
+        : capacity !== null && capacity > 0 ? `Not reported; ${compact(capacity)} capacity`
+        : "Not reported";
+    contextCount.append(element("span", "", "Context: "),
+        element("span", "tokens", contextText));
+    contextCount.title = used === null || capacity === null
+        ? "The app has not reported a complete context reading."
+        : `${exact(used)} tokens currently in the input window, out of ${exact(capacity)} tokens of input capacity.`;
+    context.append(numbers, line, contextCount);
+    row.append(identity, modelBlock, context, actions);
     container.append(row);
     const details = element("div", "details");
     details.id = `details-${session.id}`;
     details.hidden = !expanded.has(session.id);
     if (!details.hidden) {
         const list = element("dl");
-        for (const [label, value] of [
-            ["Current context", used], ["Input capacity", capacity], ["Output limit", session.breakdown.outputLimit],
-            ["System", session.breakdown.system], ["Conversation", session.breakdown.conversation],
-            ["Tool definitions", session.breakdown.tools], ["MCP tools", session.breakdown.mcp], ["Buffer", session.breakdown.buffer],
+        for (const [label, value, explanation] of [
+            ["Input total", usage.input, "Tokens read across requests in this session."],
+            ["Output total", usage.output, "Tokens generated across requests in this session."],
+            ["Current context", used, "Tokens currently in the model's input window."],
+            ["Input window limit", capacity, "Maximum tokens the input window can hold."],
+            ["Reply output limit", session.breakdown.outputLimit, "Maximum tokens the model can generate in one response."],
+            ["System", session.breakdown.system, "System instructions in the current window."],
+            ["Conversation", session.breakdown.conversation, "Conversation content in the current window."],
+            ["Tool definitions", session.breakdown.tools, "Tool descriptions supplied to the model."],
+            ["MCP tools", session.breakdown.mcp, "Reported MCP tool portion, when available."],
+            ["Buffer", session.breakdown.buffer, "Reported reserved context space, when available."],
         ]) {
             const pair = element("div");
-            pair.append(element("dt", "", label), element("dd", "", exact(value)));
+            pair.append(element("dt", "", label), element("dd", "", exact(value)),
+                element("p", "metric-help", explanation));
             list.append(pair);
         }
         details.append(list, element("p", "sample", session.sampledAt

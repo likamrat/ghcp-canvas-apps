@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort } from "./model.mjs";
+import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort, tokenCount } from "./model.mjs";
 import { databasePath, readSnapshot } from "./source.mjs";
 import { startServer } from "./server.mjs";
 import { createSettings } from "./settings.mjs";
@@ -37,6 +37,10 @@ function fixture(t, { optional = true } = {}) {
             ('pending-workspace', 'Not started', 'project', NULL, NULL, NULL, '2026-10-13');
     `);
     if (optional) db.exec(`
+        ALTER TABLE sessions ADD COLUMN total_input_tokens INTEGER;
+        ALTER TABLE sessions ADD COLUMN total_output_tokens INTEGER;
+        UPDATE sessions SET total_input_tokens = 1200000, total_output_tokens = 64000 WHERE id = 'root';
+        UPDATE sessions SET total_input_tokens = 0, total_output_tokens = 0 WHERE id = 'chat';
         CREATE TABLE projects (id TEXT PRIMARY KEY, name TEXT);
         INSERT INTO projects VALUES ('project', 'Sample project');
         CREATE TABLE workspace_session_aliases (session_id TEXT PRIMARY KEY, workspace_id TEXT);
@@ -174,6 +178,9 @@ test("reads canonical app sessions, aliases, archived parents, and exact token b
     assert.equal(root.context.percent, 64);
     assert.equal(root.breakdown.system, 4000);
     assert.equal(root.breakdown.mcp, null);
+    assert.deepEqual(root.usage, { input: 1200000, output: 64000 });
+    assert.deepEqual(snapshot.sessions.find((row) => row.id === "chat").usage, { input: 0, output: 0 });
+    assert.deepEqual(snapshot.sessions.find((row) => row.id === "pending-workspace").usage, { input: null, output: null });
     assert.equal(root.sampledAt, new Date(1791936000000).toISOString());
     assert.equal(child.parentId, "root");
     assert.equal(child.archived, true);
@@ -188,6 +195,7 @@ test("optional metadata missing is explicit and does not invent token details", 
     const snapshot = readSnapshot({ path: fixture(t, { optional: false }) });
     assert.ok(snapshot.warnings.some((warning) => warning.includes("Chat parent links")));
     assert.equal(snapshot.sessions.find((row) => row.id === "root").sampledAt, null);
+    assert.deepEqual(snapshot.sessions.find((row) => row.id === "root").usage, { input: null, output: null });
 });
 
 test("missing database never creates one; incompatible schemas fail explicitly", (t) => {
@@ -259,6 +267,12 @@ test("loopback API requires a page token and rejects foreign origins, writes, an
     assert.equal((await fetch(url, { method: "POST" })).status, 405);
     assert.equal((await fetch(new URL("source.mjs", server.url))).status, 404);
     assert.equal((await fetch(new URL("model.mjs", server.url))).status, 200);
+    for (const icon of ["caret-down.svg", "caret-up.svg"]) {
+        const response = await fetch(new URL(`icons/${icon}`, server.url));
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get("content-type"), "image/svg+xml");
+        assert.equal(await response.text(), readFileSync(new URL(`icons/${icon}`, import.meta.url), "utf8"));
+    }
     for (const font of ["Geist-Variable.woff2", "GeistMono-Variable.woff2"]) {
         const response = await fetch(new URL(`fonts/${font}`, server.url));
         assert.equal(response.headers.get("content-type"), "font/woff2");
@@ -350,7 +364,7 @@ function renderer({ sessions = [] } = {}) {
     const code = readFileSync(new URL("./app.js", import.meta.url), "utf8").replace(/^import .*;\r?\n/, "");
     runInNewContext(code, {
         document, window: { addEventListener() {} }, visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS,
-        SORT_PRESETS, isContextSort, Intl, Date,
+        SORT_PRESETS, isContextSort, tokenCount, Intl, Date,
         AbortSignal: { timeout: () => ({}) },
         setTimeout(callback, delay) { timers.set(++id, { callback, due: clock + delay }); return id; },
         clearTimeout(timerId) { timers.delete(timerId); },
@@ -390,6 +404,10 @@ function renderer({ sessions = [] } = {}) {
         document, timers, nodes, settle, elements,
         fold(id) {
             const button = elements().find((element) => element.dataset.action === "fold" && element.dataset.id === id);
+            document.getElementById("sessions").listeners.get("click")({ target: { closest: () => button } });
+        },
+        details(id) {
+            const button = elements().find((element) => element.dataset.action === "details" && element.dataset.id === id);
             document.getElementById("sessions").listeners.get("click")({ target: { closest: () => button } });
         },
         search(value) {
@@ -564,13 +582,19 @@ test("parent disclosure shows all nested levels, survives refresh, and search pr
     const articles = () => ui.elements().filter((element) => element.tag === "article");
     const button = (id) => ui.elements().find((element) => element.dataset.action === "fold" && element.dataset.id === id);
     assert.equal(articles().length, 2);
-    assert.equal(button("a").textContent, "Expand");
+    assert.equal(button("a").attributes.get("aria-label"), "Show nested sessions for Root");
+    assert.equal(button("a").textContent, "");
+    assert.equal(button("a").children[0].className, "disclosure-icon show-children");
+    assert.equal(button("a").parent.className, "row-actions");
+    assert.equal(button("a").parent.parent.children.at(-1), button("a").parent);
     assert.equal(button("a").attributes.get("aria-expanded"), "false");
     assert.ok(ui.elements().some((element) => element.textContent === "Parent session / 2 nested"));
     ui.fold("a");
     assert.equal(articles().length, 4);
-    assert.equal(button("a").textContent, "Collapse");
-    assert.equal(button("b").textContent, "Collapse");
+    assert.equal(button("a").attributes.get("aria-label"), "Hide nested sessions for Root");
+    assert.equal(button("b").attributes.get("aria-label"), "Hide nested sessions for Child");
+    assert.equal(button("a").children[0].className, "disclosure-icon hide-children");
+    assert.equal(button("a").dataset.tooltip, "Hide nested sessions (2)");
     const children = ui.elements().find((element) => element.id === "children-a");
     assert.equal(children.attributes.get("role"), "group");
     assert.ok(children.children.every((element) => element.tag === "article"));
@@ -588,7 +612,7 @@ test("parent disclosure shows all nested levels, survives refresh, and search pr
     assert.equal(articles().length, 2);
     ui.fold("a");
     assert.equal(articles().length, 3);
-    assert.equal(button("b").textContent, "Expand");
+    assert.equal(button("b").attributes.get("aria-label"), "Show nested sessions for Child");
 });
 
 test("context strips encode configured threshold segments and actual usage; unknown stays neutral", async () => {
@@ -635,4 +659,37 @@ test("context sorting reveals nested sessions and preserves ordering across refr
     ui.sort("name-za");
     assert.deepEqual(ids(), ["solo", "parent", "child"]);
     assert.match(ui.nodes.get("legend-watch").textContent, /Warning/);
+});
+
+test("compact rows explain cumulative input/output totals separately from current context", async () => {
+    const ui = renderer({ sessions: [
+        {
+            id: "reported", name: "Reported", model: "claude-sonnet-5.5", updatedAt: "2026-10-15",
+            context: { used: 40000, capacity: 100000 },
+            usage: { input: 1200000, output: 64000 },
+            breakdown: { outputLimit: 16000, system: 2000, conversation: 30000, tools: 8000, mcp: null, buffer: null },
+        },
+        { id: "zero", name: "Zero", updatedAt: "2026-10-14", context: { used: 0, capacity: 100000 }, usage: { input: 0, output: 0 } },
+        { id: "missing", name: "Missing", updatedAt: "2026-10-13", context: { used: null, capacity: 100000 } },
+    ] });
+    await ui.settle();
+    const totals = ui.elements().filter((node) => node.className === "token-totals");
+    assert.deepEqual(totals[0].children.map((pair) => pair.children.map((node) => node.textContent)),
+        [["Input total", "1.2M"], ["Output total", "64K"]]);
+    assert.deepEqual(totals[1].children.map((pair) => pair.children[1].textContent), ["0", "0"]);
+    assert.deepEqual(totals[2].children.map((pair) => pair.children[1].textContent), ["Not reported", "Not reported"]);
+    assert.ok(totals[0].children[0].title.includes("not the current context"));
+    const counts = ui.elements().filter((node) => node.className === "context-count");
+    assert.equal(counts[0].children[0].textContent, "Context: ");
+    assert.equal(counts[0].children[1].textContent, "40K of 100K tokens");
+    assert.equal(counts[2].children[1].textContent, "Not reported; 100K capacity");
+    ui.details("reported");
+    for (const text of ["Input total", "Output total", "Input window limit", "Reply output limit",
+        "Tokens read across requests in this session.", "Maximum tokens the model can generate in one response."]) {
+        assert.ok(ui.elements().some((node) => node.textContent === text), `Missing ${text}`);
+    }
+    const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+    assert.ok(html.includes("Include archived sessions"));
+    assert.ok(html.includes("Input/output totals add up across requests"));
+    assert.ok(html.includes("what it generates"));
 });
