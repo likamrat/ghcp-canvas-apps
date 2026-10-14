@@ -4,7 +4,7 @@
 
 Capture ideas in a canvas inside the GitHub Copilot app. Expand long thoughts, edit them, copy the full text, mark them done, or delete them.
 
-![Thoughts in the GitHub Copilot app](screenshot.png)
+<img src="screenshot.png" alt="Thoughts in the GitHub Copilot app" width="400">
 
 ## Use in the GitHub Copilot app
 
