@@ -19,8 +19,6 @@ Choose **Add thought** or press **Ctrl/Cmd + Enter** to save an idea. You can al
 
 The bin icon asks for confirmation before permanently deleting a thought.
 
-Thoughts runs locally in the GitHub Copilot app.
-
 ## Data
 
 Thoughts are saved locally in SQLite and shared across chats. They stay on your computer when you close the canvas or restart the app.
