@@ -123,10 +123,10 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .token-totals dt { white-space: nowrap; }
 .token-totals dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--ink); }
 .context { min-width: 0; }
-.numbers { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font: 12px/1.5 var(--monitor-mono); font-variant-numeric: tabular-nums; }
+.numbers { display: flex; gap: 8px; align-items: baseline; font: 12px/1.5 var(--monitor-mono); font-variant-numeric: tabular-nums; }
 .percent { font-size: 15px; font-weight: 600; }
 .tokens { color: var(--muted); white-space: nowrap; }
-.used-label { color: var(--muted); font: 12px/1.5 var(--monitor-sans); }
+.missing-usage { color: var(--muted); font: 12px/1.5 var(--monitor-sans); }
 .context-count { margin-top: 8px; color: var(--muted); font: 11px/1.5 var(--monitor-sans); }
 .context-count .tokens { font-variant-numeric: tabular-nums; white-space: normal; }
 .line { position: relative; height: 7px; margin: 11px 3px 5px; border-radius: 1px; background: linear-gradient(90deg, var(--strip-sage) 0 var(--watch), var(--strip-amber) var(--watch) var(--high), var(--strip-rose) var(--high) 100%); }

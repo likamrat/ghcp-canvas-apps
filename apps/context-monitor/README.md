@@ -2,7 +2,7 @@
 
 See your GitHub Copilot app sessions, models, and context usage in one canvas.
 
-<a href="screenshot-full.png"><img src="screenshot.png" alt="Context Monitor with sample GPT-6, GPT-6.1, and Claude sessions using different context windows" width="640"></a>
+<a href="screenshot-full.png?v=5147350d9e19"><img src="screenshot.png?v=38958cebc0b1" alt="Context Monitor with sample GPT-6, GPT-6.1, and Claude sessions using different context windows" width="640"></a>
 
 ## Use in the GitHub Copilot app
 

@@ -798,6 +798,10 @@ test("compact rows explain cumulative input/output totals separately from curren
     assert.equal(counts[0].children[0].textContent, "Context: ");
     assert.equal(counts[0].children[1].textContent, "40K of 100K tokens");
     assert.equal(counts[2].children[1].textContent, "Not reported; 100K capacity");
+    const usageLabels = ui.elements().filter((node) => node.className === "percent");
+    assert.deepEqual(usageLabels.map((node) => node.textContent), ["40.0% used", "0.0% used", "N/A"]);
+    assert.equal(ui.elements().some((node) => node.className === "used-label"), false);
+    assert.ok(ui.elements().some((node) => node.className === "missing-usage" && node.textContent === "Not reported"));
     ui.details("reported");
     for (const text of ["Input total", "Output total", "Input window limit", "Reply output limit",
         "Tokens read across requests in this session.", "Maximum tokens the model can generate in one response."]) {

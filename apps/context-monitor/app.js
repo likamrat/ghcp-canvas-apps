@@ -224,8 +224,8 @@ function sessionRow(session) {
     context.setAttribute("aria-label", percent === null ? "Context usage not reported"
         : `${levelLabel[level]} context: ${percent.toFixed(1)} percent, ${exact(used)} of ${exact(capacity)} tokens`);
     const numbers = element("div", "numbers");
-    numbers.append(element("span", "percent", percent === null ? "N/A" : `${percent.toFixed(1)}%`),
-        element("span", "used-label", percent === null ? "Not reported" : "used"));
+    numbers.append(element("span", "percent", percent === null ? "N/A" : `${percent.toFixed(1)}% used`));
+    if (percent === null) numbers.append(element("span", "missing-usage", "Not reported"));
     const line = element("div", "line");
     line.setAttribute("aria-hidden", "true");
     if (percent !== null) {
