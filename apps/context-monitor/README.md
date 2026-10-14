@@ -15,6 +15,8 @@ https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/context-monitor
 Open Context Monitor when installation is complete.
 ```
 
+Install in personal scope to make Context Monitor available from Canvas apps across chats.
+
 Filter by model, pinned sessions, or context usage. Use the arrow at the end of a parent row to show its nested sessions.
 
 Choose a refresh interval or refresh manually. Open Usage settings to change the warning levels or reset them to 65% and 85%. Select a session name for exact token counts.
