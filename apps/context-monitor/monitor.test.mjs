@@ -162,6 +162,13 @@ test("loopback API requires a page token and rejects foreign origins, writes, an
     assert.equal((await fetch(url, { method: "POST" })).status, 405);
     assert.equal((await fetch(new URL("source.mjs", server.url))).status, 404);
     assert.equal((await fetch(new URL("model.mjs", server.url))).status, 200);
+    for (const font of ["Geist-Variable.woff2", "GeistMono-Variable.woff2"]) {
+        const response = await fetch(new URL(`fonts/${font}`, server.url));
+        assert.equal(response.headers.get("content-type"), "font/woff2");
+        const bytes = Buffer.from(await response.arrayBuffer());
+        assert.equal(bytes.subarray(0, 4).toString("ascii"), "wOF2");
+        assert.deepEqual(bytes, readFileSync(new URL(`fonts/${font}`, import.meta.url)));
+    }
 });
 
 test("source errors become visible retryable HTTP errors, not empty success data", async (t) => {

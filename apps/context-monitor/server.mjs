@@ -7,6 +7,8 @@ const assets = new Map([
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["/model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
+    ["/fonts/Geist-Variable.woff2", ["fonts/Geist-Variable.woff2", "font/woff2"]],
+    ["/fonts/GeistMono-Variable.woff2", ["fonts/GeistMono-Variable.woff2", "font/woff2"]],
 ]);
 
 export async function startServer(snapshot) {
@@ -15,7 +17,7 @@ export async function startServer(snapshot) {
         res.setHeader("Cache-Control", "no-store");
         res.setHeader("X-Content-Type-Options", "nosniff");
         res.setHeader("Content-Security-Policy",
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'");
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'");
         const origin = `http://127.0.0.1:${server.address().port}`;
         if (req.headers.host !== new URL(origin).host ||
             (req.headers.origin && req.headers.origin !== origin) ||
@@ -29,8 +31,8 @@ export async function startServer(snapshot) {
                 res.writeHead(405, { Allow: "GET" }).end("Read-only monitor");
             } else if (assets.has(url.pathname)) {
                 const [file, type] = assets.get(url.pathname);
-                let content = await readFile(new URL(file, import.meta.url), "utf8");
-                if (file === "index.html") content = content.replace("__TOKEN__", token);
+                let content = await readFile(new URL(file, import.meta.url));
+                if (file === "index.html") content = content.toString("utf8").replace("__TOKEN__", token);
                 res.writeHead(200, { "Content-Type": type }).end(content);
             } else if (url.pathname === "/api/snapshot") {
                 if (req.headers["x-monitor-token"] !== token) {

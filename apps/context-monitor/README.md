@@ -50,7 +50,9 @@ node --test monitor.test.mjs
 
 No packages or build step are required. Copilot supplies `@github/copilot-sdk`. Reload extensions after editing, then open **Context Monitor**. The agent-facing `snapshot` action reads the same metadata as the UI.
 
-`extension.mjs` wires canvas lifecycle; `source.mjs` owns the read-only app adapter; `model.mjs` owns context thresholds and tree filtering; `server.mjs` serves the renderer in `index.html`, `app.js`, and `style.css`. The UI uses the host's documented theme/font tokens, with light/dark fallbacks, keyboard-accessible controls, and responsive rows.
+`extension.mjs` wires canvas lifecycle; `source.mjs` owns the read-only app adapter; `model.mjs` owns context thresholds and tree filtering; `server.mjs` serves the renderer in `index.html`, `app.js`, and `style.css`. The UI uses the host's documented color tokens, with light/dark fallbacks, keyboard-accessible controls, and responsive rows. Typography uses locally bundled **Geist Sans** and **Geist Mono**, with 15px session names, 14px body text, and more spacious rows.
+
+The unmodified variable WOFF2 fonts in `fonts/` come from [Vercel's Geist](https://github.com/vercel/geist-font), distributed in the `geist` 1.7.2 package under the SIL Open Font License 1.1. Their copyright notice and license are in `fonts/LICENSE.txt`. No font CDN requests or runtime packages are needed.
 
 Tests use disposable synthetic SQLite fixtures and cover thresholds, unknown telemetry, nesting, search, aliases, archives, schema errors, read-only behavior, and HTTP access restrictions. Renderer tests use a controlled clock to verify each refresh interval, Off/manual mode, hidden-canvas pausing, and interval changes during in-flight reads.
 
