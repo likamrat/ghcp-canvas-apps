@@ -4,6 +4,8 @@
 
 Capture ideas in a canvas inside the GitHub Copilot app. Expand long thoughts, edit them, copy the full text, mark them done, or delete them.
 
+![Thoughts in the GitHub Copilot app](screenshot.png)
+
 ## Use in the GitHub Copilot app
 
 In the GitHub Copilot app, ask your agent to install [Thoughts](https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/thoughts) as a personal canvas, then open it. Approve the installation when prompted.
