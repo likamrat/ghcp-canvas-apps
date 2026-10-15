@@ -57,6 +57,20 @@ function fixture(t, { optional = true } = {}) {
     return path;
 }
 
+test("canonical workspace parent links override stale creator identities", (t) => {
+    const path = fixture(t);
+    const db = new DatabaseSync(path);
+    db.exec(`
+        UPDATE workspaces SET creator_session_id = 'stale-creator' WHERE id = 'child-workspace';
+        CREATE TABLE workspace_parent_links (child_workspace_id TEXT, parent_workspace_id TEXT);
+        INSERT INTO workspace_parent_links VALUES ('child-workspace', 'root-workspace');
+    `);
+    db.close();
+    const snapshot = readSnapshot({ path });
+    assert.equal(snapshot.sessions.find((session) => session.id === "child").parentId, "root");
+    assert.equal(snapshot.sessions.find((session) => session.id === "chat").parentId, "child");
+});
+
 test("color boundaries use actual utilization, not lifetime usage", () => {
     for (const [used, level] of [[0, "healthy"], [64999, "healthy"], [65000, "watch"], [84999, "watch"], [85000, "high"], [110000, "high"]]) {
         assert.equal(contextUsage(used, 100000).level, level);
@@ -691,7 +705,7 @@ test("polling and conflicts preserve threshold drafts; stale snapshots never rev
     assert.equal(ui.nodes.get("rose-threshold").value, "90");
 });
 
-test("parent disclosure shows all nested levels, survives refresh, and search preserves collapse choices", async () => {
+test("parent disclosure expands one level at a time, survives refresh, and search preserves collapse choices", async () => {
     const ui = renderer({ sessions: tree.map((session) => ({ ...session, context: { used: 10, capacity: 100 } })) });
     await ui.settle();
     const articles = () => ui.elements().filter((element) => element.tag === "article");
@@ -700,11 +714,14 @@ test("parent disclosure shows all nested levels, survives refresh, and search pr
     assert.equal(button("a").attributes.get("aria-label"), "Show nested sessions for Root");
     assert.equal(button("a").textContent, "");
     assert.equal(button("a").children[0].className, "disclosure-icon show-children");
-    assert.equal(button("a").parent.className, "row-actions");
-    assert.equal(button("a").parent.parent.children.at(-1), button("a").parent);
+    assert.equal(button("a").parent.className, "identity");
+    assert.equal(button("a").parent.children[0], button("a"));
     assert.equal(button("a").attributes.get("aria-expanded"), "false");
     assert.ok(ui.elements().some((element) => element.textContent === "Parent session / 2 nested"));
     ui.fold("a");
+    assert.equal(articles().length, 3);
+    assert.equal(button("b").attributes.get("aria-label"), "Show nested sessions for Child");
+    ui.fold("b");
     assert.equal(articles().length, 4);
     assert.equal(button("a").attributes.get("aria-label"), "Hide nested sessions for Root");
     assert.equal(button("b").attributes.get("aria-label"), "Hide nested sessions for Child");

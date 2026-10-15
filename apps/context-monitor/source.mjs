@@ -15,7 +15,7 @@ function sourceError(code, message) {
 function schemaFor(db) {
     const tables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name));
     const schema = new Map();
-    for (const table of ["sessions", "workspaces", "projects", "workspace_session_aliases",
+    for (const table of ["sessions", "workspaces", "projects", "workspace_session_aliases", "workspace_parent_links",
         "chat_parent_links", "session_side_chats", "workspace_side_chats", "session_context_usage", "app_state"]) {
         schema.set(table, tables.has(table)
             ? new Set(db.prepare(`PRAGMA table_info("${table}")`).all().map((row) => row.name)) : new Set());
@@ -76,6 +76,9 @@ export function readSnapshot({ path = databasePath(), now = () => new Date().toI
         ]);
         const aliases = selectRows(db, schema, "workspace_session_aliases", ["session_id", "workspace_id"]);
         const projects = new Map(selectRows(db, schema, "projects", ["id", "name"]).map((row) => [row.id, row.name]));
+        const workspaceParents = new Map(selectRows(db, schema, "workspace_parent_links", ["child_workspace_id", "parent_workspace_id"])
+            .filter((row) => row.child_workspace_id && row.parent_workspace_id)
+            .map((row) => [row.child_workspace_id, row.parent_workspace_id]));
         const chats = new Map(selectRows(db, schema, "chat_parent_links", ["session_id", "parent_session_id"])
             .map((row) => [row.session_id, row.parent_session_id]));
         for (const link of selectRows(db, schema, "session_side_chats", ["session_id", "parent_session_id"])) {
@@ -126,7 +129,7 @@ export function readSnapshot({ path = databasePath(), now = () => new Date().toI
                 name: workspace?.name || raw?.title || "Untitled session",
                 project: projects.get(workspace?.project_id) ?? null,
                 kind: raw?.session_type ?? "project",
-                parentReference: workspace ? workspace.creator_session_id : chats.get(id),
+                parentReference: workspace ? workspaceParents.get(workspace.id) ?? workspace.creator_session_id : chats.get(id),
                 model: raw?.model || null,
                 reasoningEffort: raw?.reasoning_effort || null,
                 contextTier: raw?.context_tier || null,

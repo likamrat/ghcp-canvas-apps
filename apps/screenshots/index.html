@@ -14,7 +14,7 @@
     <section class="control-panel" aria-label="Screenshot controls">
         <div class="control-row session-controls">
             <label class="check-filter"><input id="include-archived" type="checkbox"> Include archived sessions</label>
-            <label class="check-filter"><input id="include-children" type="checkbox"> Include child sessions</label>
+            <label class="check-filter" title="Include screenshots from descendants of the selected session. Expanding the navigator does not change image scope."><input id="include-children" type="checkbox" aria-describedby="child-scope-help"> Include child screenshots</label>
         </div>
         <div class="control-row image-controls">
             <div class="field"><label for="filename">Search filenames</label><input id="filename" type="search" placeholder="Screenshot filename" autocomplete="off"></div>
@@ -51,6 +51,7 @@
                 <div id="session-options" role="listbox" aria-label="Matching sessions" hidden></div>
             </div>
             <p id="session-search-status" class="muted" role="status" hidden></p>
+            <p id="child-scope-help" class="session-scope-help">Expand a parent to browse its children. Child screenshots are excluded until enabled above.</p>
             <nav id="sessions" aria-label="Sessions" aria-busy="true"><p class="muted">Loading sessions...</p></nav>
         </aside>
         <section class="gallery-area" aria-label="Screenshot gallery">

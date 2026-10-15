@@ -52,6 +52,9 @@ export function readSessions(path) {
         const workspaces = rows(db, "workspaces", [], ["id", "name", "project_id", "session_id", "creator_session_id", "archived_at", "updated_at"]);
         const aliases = rows(db, "workspace_session_aliases", [], ["session_id", "workspace_id"]);
         const projects = new Map(rows(db, "projects", [], ["id", "name"]).map((row) => [row.id, row.name]));
+        const workspaceParents = new Map(rows(db, "workspace_parent_links", [], ["child_workspace_id", "parent_workspace_id"])
+            .filter((row) => row.child_workspace_id && row.parent_workspace_id)
+            .map((row) => [row.child_workspace_id, row.parent_workspace_id]));
         const parents = new Map();
         for (const table of ["chat_parent_links", "session_side_chats", "workspace_side_chats"]) {
             for (const row of rows(db, table, [], ["session_id", "parent_session_id", "workspace_id"])) {
@@ -70,7 +73,7 @@ export function readSessions(path) {
             const id = raw?.id ?? workspace.id;
             if (!safeId(id)) continue;
             for (const alias of ids) { identities.set(alias, id); associated.add(alias); }
-            records.push({ id, ids, raw, workspace, parent: workspace.creator_session_id });
+            records.push({ id, ids, raw, workspace, parent: workspaceParents.get(workspace.id) ?? workspace.creator_session_id });
         }
         for (const raw of sessions) {
             if (!safeId(raw.id) || associated.has(raw.id)) continue;

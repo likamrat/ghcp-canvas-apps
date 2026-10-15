@@ -209,3 +209,20 @@ test("uploaded assets survive missing files across UTF-8, CRLF, and stream chunk
     await writeFile(history, (await readFile(history, "utf8")).replace(assetId, `sha256:${"0".repeat(64)}`));
     await assert.rejects(catalog.openImage(result.images[0].id), /retained/);
 });
+
+test("canonical workspace hierarchy overrides stale creator references and child images remain opt-in", async (t) => {
+    const { home, events, image, catalog } = await fixture(t);
+    const db = new DatabaseSync(join(home, "data.db"));
+    db.exec(`
+        INSERT INTO sessions VALUES ('nested', 'Nested', 'workspace', NULL, NULL, 'local');
+        INSERT INTO workspaces VALUES ('nested-workspace', 'Nested app session', 'project', 'nested', 'stale-creator', NULL);
+        CREATE TABLE workspace_parent_links (child_workspace_id TEXT, parent_workspace_id TEXT, creator_session_id TEXT);
+        INSERT INTO workspace_parent_links VALUES ('nested-workspace', 'workspace', 'previous');
+    `);
+    db.close();
+    await events("current", []);
+    await events("nested", [{ type: "user.message", data: { attachments: [{ type: "file", path: image }] } }]);
+    assert.equal(catalog.sessions().sessions.find((session) => session.id === "nested").parentId, "current");
+    assert.equal((await catalog.images("current")).images.length, 0);
+    assert.equal((await catalog.images("current", { includeChildren: true })).images.length, 1);
+});

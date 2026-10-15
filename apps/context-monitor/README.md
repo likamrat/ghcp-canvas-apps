@@ -17,13 +17,13 @@ Open Context Monitor when installation is complete.
 
 Install in personal scope to make Context Monitor available from Canvas apps across chats.
 
-Filter by model, pinned sessions, or context usage. Use the arrow at the end of a parent row to show its nested sessions.
+Filter by model, pinned sessions, or context usage. Use the arrow beside a parent session's name to show its nested sessions. Branches start collapsed at every level, so opening a parent reveals its immediate children rather than all descendants. Indentation, branch connectors, and parent/nested labels show the hierarchy. Search and filters temporarily reveal matching branches; context-usage sorting reveals nested sessions for comparison.
 
 Choose a refresh interval or refresh manually. Open Usage settings to change the warning levels or reset them to 65% and 85%. Select a session name for exact token counts.
 
 ## Data
 
-Reads the app's local session database without changing it. Input totals count tokens read across requests; output totals count tokens generated. Context shows the current window usage.
+Reads the app's local session database without changing it. Explicit workspace parent links take precedence over legacy creator references, with historical session aliases resolved before rendering the hierarchy. Input totals count tokens read across requests; output totals count tokens generated. Context shows the current window usage.
 
 Warning settings are saved locally across chats. Filters are temporary. No conversations are read or uploaded. The extension must run on the computer hosting the app's metadata.
 

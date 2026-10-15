@@ -25,7 +25,7 @@ The panel below the title keeps image filters and display controls together, fol
 | --- | --- |
 | Search sessions | Located directly above the session navigator and compact picker, not in the image controls. Matching sessions appear beneath the search as you type, with project names and a live result count. Click a result, press Enter for the first match, or use Arrow keys and Enter. No-match feedback is explicit. The navigator also filters while retaining matching children's parent context. |
 | Include archived sessions | Show archived sessions and allow their images in the selected scope. Off initially. |
-| Include child sessions | Include descendants of the selected session, with owning-session labels on images. Off initially. |
+| Include child screenshots | Include screenshots from descendants of the selected session, with owning-session labels on images. Off initially. This changes gallery scope, not whether a navigator branch is expanded. |
 | Search filenames / Source | Combine a filename search with Uploaded, Tool-generated, or Unknown provenance. |
 | From / To date | Inclusive local calendar dates. Invalid ranges show an error without applying an invalid query. |
 | Sort by / Order | Timestamp, filename, or file size, ascending or descending. Missing values stay last; image IDs break ties consistently. |
@@ -36,7 +36,9 @@ The panel below the title keeps image filters and display controls together, fol
 | Refresh | Re-read local metadata and image references, preserving valid filters and selection. No automatic refresh. |
 | Clear filters | Clear session search, filename search, source, and dates. Keep session selection, scope toggles, sort, grouping, and thumbnail size. |
 
-Initially the gallery uses newest timestamps first, grouped by day, with medium thumbnails and eight screenshots per page. Changing session scope, image filters, sorting, grouping, or page size returns to page 1. Refresh preserves the current page when possible and clamps it to the last page if results shrink. Clear filters keeps the page size but returns to page 1. Select a session from the navigator, or use the compact session picker in a narrow canvas. Its scrollable menu always opens below the field. Arrow keys, Home/End, and typing navigate the options; Enter selects and Escape dismisses. Expand/collapse buttons only change the navigator; they do not change image scope.
+Initially the gallery uses newest timestamps first, grouped by day, with medium thumbnails and eight screenshots per page. Parent branches start collapsed at every level; opening or selecting a nested session reveals only its ancestor path so the selection remains visible. Chevrons beside names expand one level at a time; indentation, connector lines, child counts, and Child of labels make the hierarchy explicit. Search temporarily reveals matching branches without changing collapse preferences. Expanding a branch never includes child screenshots automatically.
+
+Changing session scope, image filters, sorting, grouping, or page size returns to page 1. Refresh preserves the current page when possible and clamps it to the last page if results shrink. Clear filters keeps the page size but returns to page 1. Select a session from the navigator, or use the compact session picker in a narrow canvas. Its scrollable menu always opens below the field. Arrow keys, Home/End, and typing navigate the options; Enter selects and Escape dismisses. The picker also identifies children by parent name.
 
 Select a thumbnail to open its full-size preview. Use Fit, Actual size, zoom, Previous/Next, or the left/right arrow keys. Escape closes the viewer. Navigation follows the current filtered order, including images beyond the currently rendered gallery page.
 
@@ -46,7 +48,7 @@ Explicit download clicks save through the extension to `Downloads` under the loc
 
 ## Sources and limitations
 
-Screenshots reads the local app's `data.db` in read-only mode, resolves workspace/session aliases and parent relationships, and scans only the selected sessions' retained `events.jsonl` files. `COPILOT_HOME` selects the data directory; otherwise it uses `~/.copilot`.
+Screenshots reads the local app's `data.db` in read-only mode, resolves workspace/session aliases and parent relationships, and scans only the selected sessions' retained `events.jsonl` files. Explicit `workspace_parent_links` take precedence over legacy creator references; chat links and historical aliases are also resolved. `COPILOT_HOME` selects the data directory; otherwise it uses `~/.copilot`.
 
 Supported references:
 

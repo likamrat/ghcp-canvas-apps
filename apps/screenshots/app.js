@@ -7,6 +7,7 @@ const fields = { sessionSearch: "session-search", includeArchived: "include-arch
 const scopeGate = createRequestGate();
 const sessionGate = createRequestGate();
 const collapsed = new Set();
+const initializedParents = new Set();
 const counts = new Map();
 let sessions = [], images = [], ordered = [], selected = null, previewId = null, previewTrigger = null;
 let imageWarnings = [], sessionWarnings = [], page = 1, sessionLimit = 300;
@@ -41,6 +42,12 @@ const bytes = (value) => value == null ? "Unknown size" : value < 1024 ? `${valu
 const imageUrl = (id) => new URL(`image/${id}?revision=${imageRevision}`, location.href).href;
 
 function renderSessions() {
+    for (const session of sessions) {
+        if (session.parentId && !initializedParents.has(session.parentId)) {
+            initializedParents.add(session.parentId);
+            collapsed.add(session.parentId);
+        }
+    }
     const rows = sessionTree(sessions, view, collapsed);
     $("session-count").textContent = `(${rows.length})`;
     $("sessions").replaceChildren();
@@ -49,26 +56,35 @@ function renderSessions() {
     $("session-picker").disabled = !sessionTree(sessions, view).length;
     if (!$("session-options").hidden) closeSessionPicker($("session-options").contains(document.activeElement));
     for (const session of rows.slice(0, sessionLimit)) {
-        const row = node("div", null, "session-row");
+        const row = node("div", null, `session-row${session.depth ? " is-nested" : ""}${session.childCount ? " is-parent" : ""}`);
         row.style.setProperty("--depth", String(session.depth));
         if (session.childCount) {
-            const fold = node("button", collapsed.has(session.id) ? "+" : "-", "fold");
+            const fold = node("button", null, "fold");
+            const caret = node("span", null, "tree-caret");
+            caret.setAttribute("aria-hidden", "true");
+            fold.append(caret);
             fold.type = "button";
             fold.dataset.sessionId = session.id;
             fold.setAttribute("aria-label", `${collapsed.has(session.id) ? "Expand" : "Collapse"} ${session.name}`);
             fold.setAttribute("aria-expanded", String(!collapsed.has(session.id) || Boolean(view.sessionSearch)));
+            fold.disabled = Boolean(view.sessionSearch.trim());
+            fold.title = view.sessionSearch.trim() ? "Clear session search to collapse matching branches." : `${session.childCount} child session${session.childCount === 1 ? "" : "s"}`;
             fold.onclick = () => {
                 if (collapsed.has(session.id)) collapsed.delete(session.id); else collapsed.add(session.id);
                 renderSessions();
                 $("sessions").querySelector(`.fold[data-session-id="${CSS.escape(session.id)}"]`)?.focus();
             };
             row.append(fold);
-        }
+        } else row.append(node("span", null, "fold-spacer"));
 
         const button = node("button", null, "session-button");
         button.type = "button";
         button.setAttribute("aria-current", String(session.id === selected));
         button.append(node("span", session.name, "session-name"));
+        const parent = sessions.find((candidate) => candidate.id === session.parentId);
+        const hierarchy = [session.childCount ? `${session.childCount} child session${session.childCount === 1 ? "" : "s"}` : null,
+            session.depth && parent ? `Child of ${parent.name}` : null].filter(Boolean).join(" / ");
+        if (hierarchy) button.append(node("span", hierarchy, "session-hierarchy"));
         const count = counts.get(session.id);
         const label = [session.project, session.archived ? "Archived" : null,
             count == null ? "Images not loaded" : `${count} known image${count === 1 ? "" : "s"}`].filter(Boolean).join(" / ");
@@ -103,7 +119,8 @@ function openSessionPicker(last = false, focusOptions = true, fromSearch = false
     (fromSearch ? $("session-search").parentElement : $("session-search").closest(".session-discovery")).append(menu);
     menu.replaceChildren();
     for (const session of rows) {
-        const option = node("button", `${session.name}${session.project ? ` / ${session.project}` : ""}${session.archived ? " (archived)" : ""}`, "session-option");
+        const parent = sessions.find((candidate) => candidate.id === session.parentId);
+        const option = node("button", `${session.name}${session.project ? ` / ${session.project}` : ""}${session.depth && parent ? ` / Child of ${parent.name}` : ""}${session.archived ? " (archived)" : ""}`, "session-option");
         option.type = "button";
         option.tabIndex = -1;
         option.style.paddingLeft = `${8 + (view.sessionSearch.trim() ? 0 : Math.min(session.depth, 8) * 12)}px`;
@@ -228,9 +245,19 @@ function renderGallery() {
     }
 }
 
+function revealSessionAncestors(id) {
+    const seen = new Set([id]);
+    let parent = sessions.find((session) => session.id === id)?.parentId;
+    while (parent && !seen.has(parent)) {
+        seen.add(parent); initializedParents.add(parent); collapsed.delete(parent);
+        parent = sessions.find((session) => session.id === parent)?.parentId;
+    }
+}
+
 function selectSession(id) {
     if (!id || id === selected) return;
     selected = id; images = []; imageWarnings = []; collectedAt = null; page = 1;
+    revealSessionAncestors(id);
     if ($("viewer").open) $("viewer").close();
     renderSessions();
     requestImages();
@@ -272,6 +299,8 @@ async function refresh() {
     try {
         const result = await api("api/sessions");
         if (!sessionGate.current(revision)) return;
+        const firstLoad = sessions.length === 0;
+        const previousSelected = selected;
         sessions = result.sessions; sessionWarnings = result.warnings;
         const eligible = sessions.filter((session) => view.includeArchived || !session.archived);
         if (!eligible.some((session) => session.id === selected)) {
@@ -281,6 +310,7 @@ async function refresh() {
             images = []; imageWarnings = [];
             page = 1;
         }
+        if (firstLoad || selected !== previousSelected) revealSessionAncestors(selected);
         notice("error", null);
         renderSessions();
         await requestImages();
