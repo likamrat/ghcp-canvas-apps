@@ -41,7 +41,7 @@ From this app's folder:
 node --test store.test.mjs
 ```
 
-Reload extensions after editing an installed copy. Cross-app browser and favicon checks are in `tests/`.
+After updating an installed copy, reload extensions and reopen existing browser tabs to load the current code and favicon. Cross-app browser and favicon checks are in `tests/`.
 
 Interface icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](PHOSPHOR-LICENSE.txt)).
 

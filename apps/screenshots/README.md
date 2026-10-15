@@ -18,7 +18,7 @@ Paste into a GitHub Copilot chat once published to `main`:
 Install or update this as a persistent personal canvas extension:
 https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/screenshots
 
-Preserve existing data. Reload extensions and verify Screenshots appears in
+Reuse an existing installation and preserve its data. Reload extensions and verify Screenshots appears in
 Canvas apps as "Canvas · Personal" with "New session". If you cannot inspect
 the list, say so. Then open Screenshots.
 ```
@@ -50,6 +50,6 @@ Node 24+. No build step. From this folder:
 node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs
 ```
 
-Reload extensions after edits. Keep private images, histories, and databases out of the repository.
+After updating an installed copy, reload extensions and reopen existing browser tabs to load the current code and favicon. Keep private images, histories, and databases out of the repository.
 
 Logo: Lucide **Images** ([license](icons/LICENSE)) and Bricolage Grotesque ([license](FONT-LICENSE.txt)).
