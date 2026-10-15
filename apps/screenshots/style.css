@@ -29,20 +29,24 @@ button:active { transform: translateY(1px); }
 button:disabled { opacity: .55; cursor: default; }
 button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 button[aria-pressed="true"] { background: var(--selected); border-color: var(--accent); }
-input:not([type="checkbox"]), select { width: 100%; min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 6px; background: var(--surface); }
+input:not([type="checkbox"]), select { width: 100%; min-width: 0; height: 32px; padding: 4px 8px; font-size: 12px; line-height: 20px; border: 1px solid var(--edge); border-radius: 6px; background: var(--surface); }
 input::placeholder { color: var(--muted); opacity: 1; }
 .field { min-width: 0; }
-.field > label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-.control-panel { margin-top: 18px; border: 1px solid var(--edge); border-radius: 8px; padding: 16px; }
-.control-row { display: grid; align-items: end; gap: 12px; }
-.control-row + .control-row { margin-top: 14px; }
-.session-controls { grid-template-columns: minmax(180px, 1fr) auto auto; padding-bottom: 14px; border-bottom: 1px solid var(--edge); margin-bottom: 14px; }
-.image-controls { grid-template-columns: minmax(180px, 1.5fr) minmax(130px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr); }
-.display-controls { grid-template-columns: repeat(4, minmax(110px, 1fr)) auto; }
-.control-panel > .display-controls { margin-top: 14px; }
-.check-filter { display: flex; align-items: center; gap: 7px; min-height: 40px; font-size: 13px; color: var(--muted); cursor: pointer; }
-.check-filter input { width: 17px; height: 17px; margin: 0; accent-color: var(--accent); }
-.control-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.field > label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.control-panel { margin-top: 16px; border: 1px solid var(--edge); border-radius: 8px; padding: 12px; }
+.control-row { display: grid; align-items: end; gap: 10px; }
+.control-row + .control-row { margin-top: 10px; }
+.session-controls { grid-template-columns: minmax(160px, 1fr) auto auto; padding-bottom: 10px; border-bottom: 1px solid var(--edge); margin-bottom: 10px; }
+.image-controls { grid-template-columns: minmax(160px, 1fr) minmax(120px, 180px) repeat(2, minmax(120px, 150px)); }
+.display-controls { grid-template-columns: repeat(4, minmax(96px, 140px)) minmax(0, 1fr); }
+.control-panel > .display-controls { margin-top: 10px; }
+.check-filter { display: flex; align-items: center; gap: 7px; min-height: 32px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.check-filter input { appearance: none; display: grid; place-content: center; flex: 0 0 14px; width: 14px; height: 14px; margin: 0; border: 1.5px solid var(--muted); border-radius: 3px; background: transparent; cursor: pointer; }
+.check-filter input:checked { background: var(--ink); border-color: var(--ink); }
+.check-filter input:checked::before { content: ""; width: 4px; height: 7px; border: solid var(--surface); border-width: 0 1.5px 1.5px 0; transform: translateY(-1px) rotate(45deg); }
+.check-filter input:disabled { opacity: .55; cursor: default; }
+.control-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-self: end; }
+.control-actions button { min-height: 32px; padding: 5px 10px; font-size: 12px; }
 #refresh { border-color: var(--ink); }
 .quiet { color: var(--muted); }
 .overview { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; margin: 18px 0 14px; font-size: 13px; color: var(--muted); }
@@ -62,7 +66,14 @@ aside h2 { color: var(--muted); font-size: 12px; }
 .session-button[aria-current="true"] { background: var(--selected); border-color: var(--edge); }
 .session-name { display: block; font-size: 13px; overflow-wrap: anywhere; }
 .session-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
-.compact-picker { display: none; }
+.compact-picker { display: none; position: relative; }
+#session-picker { width: 100%; min-width: 0; min-height: 32px; height: 32px; display: flex; align-items: center; gap: 12px; text-align: left; padding: 4px 8px; font-size: 12px; }
+#session-picker-value { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#session-picker::after { content: ""; width: 6px; height: 6px; flex-shrink: 0; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
+#session-options { position: absolute; z-index: 1; top: calc(100% + 4px); left: 0; right: 0; max-height: 220px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; border: 1px solid var(--edge); border-radius: 6px; background: var(--surface); }
+.session-option { display: block; width: 100%; min-height: 30px; padding: 5px 8px; border: 0; border-radius: 3px; font-size: 12px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.session-option[aria-selected="true"] { background: var(--selected); font-weight: 600; }
+.session-option:focus-visible { outline-offset: -2px; }
 .gallery-area { min-width: 0; }
 .image-group + .image-group { margin-top: 24px; }
 .group-heading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; font-weight: 500; margin-bottom: 12px; }
@@ -101,6 +112,7 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
 #details dd { font-size: 12px; margin: 3px 0 0; overflow-wrap: anywhere; }
 #details .path-detail { grid-column: 1 / -1; }
 @media (max-width: 1000px) {
+    .image-controls { grid-template-columns: minmax(140px, 1fr) repeat(3, minmax(100px, 1fr)); }
     .display-controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .control-actions { grid-column: 1 / -1; justify-content: end; }
     .session-controls { grid-template-columns: 1fr 1fr; }
@@ -111,9 +123,10 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
     .control-panel { padding: 12px; }
     .control-row { gap: 10px; }
     .image-controls, .display-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .image-controls .field:first-child { grid-column: 1 / -1; }
-    .session-controls { grid-template-columns: minmax(0, 1fr); }
-    .session-controls .field { grid-column: auto; }
+    .image-controls .field:first-child { grid-column: auto; }
+    .session-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .session-controls .field { grid-column: 1 / -1; }
+    .check-filter { min-height: 28px; font-size: 11px; gap: 6px; }
     .browse { grid-template-columns: minmax(0, 1fr); gap: 18px; }
     aside { border: 0; padding: 0; }
     aside h2, #sessions { display: none; }
@@ -123,8 +136,13 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
     .preview-controls { gap: 6px; }
     .preview-stage { height: 45dvh; }
 }
-@media (max-width: 380px) {
+@media (max-width: 320px) {
     .image-controls, .display-controls { grid-template-columns: minmax(0, 1fr); }
     .image-controls .field:first-child { grid-column: auto; }
     .control-actions { justify-content: start; }
+}
+@media (forced-colors: active) {
+    .check-filter input { appearance: auto; background: revert; border: revert; }
+    .check-filter input::before { display: none; }
+    .session-option[aria-selected="true"] { outline: 1px solid Highlight; }
 }

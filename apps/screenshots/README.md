@@ -34,7 +34,7 @@ The panel below the title keeps the browsing controls together, following Contex
 | Refresh | Re-read local metadata and image references, preserving valid filters and selection. No automatic refresh. |
 | Clear filters | Clear session search, filename search, source, and dates. Keep session selection, scope toggles, sort, grouping, and thumbnail size. |
 
-Initially the gallery uses newest timestamps first, grouped by day, with medium thumbnails. Select a session from the navigator, or use the session picker in a narrow canvas. Expand/collapse buttons only change the navigator; they do not change image scope.
+Initially the gallery uses newest timestamps first, grouped by day, with medium thumbnails. Select a session from the navigator, or use the compact session picker in a narrow canvas. Its scrollable menu always opens below the field. Arrow keys, Home/End, and typing navigate the options; Enter selects and Escape dismisses. Expand/collapse buttons only change the navigator; they do not change image scope.
 
 Select a thumbnail to open its full-size preview. Use Fit, Actual size, zoom, Previous/Next, or the left/right arrow keys. Escape closes the viewer. Navigation follows the current filtered order, including images beyond the currently rendered gallery page.
 

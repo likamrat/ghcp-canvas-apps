@@ -38,7 +38,11 @@
     <div class="browse">
         <aside aria-label="Session navigator">
             <h2>Sessions <span id="session-count"></span></h2>
-            <div class="compact-picker field"><label for="session-picker">Selected session</label><select id="session-picker"><option value="">Select a session</option></select></div>
+            <div class="compact-picker field">
+                <label id="session-picker-label" for="session-picker">Selected session</label>
+                <button id="session-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="session-options" aria-labelledby="session-picker-label session-picker-value"><span id="session-picker-value">Select a session</span></button>
+                <div id="session-options" role="listbox" aria-labelledby="session-picker-label" hidden></div>
+            </div>
             <nav id="sessions" aria-label="Sessions" aria-busy="true"><p class="muted">Loading sessions...</p></nav>
         </aside>
         <section class="gallery-area" aria-label="Screenshot gallery">

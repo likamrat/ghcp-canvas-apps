@@ -42,11 +42,10 @@ function renderSessions() {
     const rows = sessionTree(sessions, view, collapsed);
     $("session-count").textContent = `(${rows.length})`;
     $("sessions").replaceChildren();
-    $("session-picker").replaceChildren(new Option("Select a session", ""));
-    for (const session of sessionTree(sessions, view)) {
-        $("session-picker").add(new Option(`${"  ".repeat(Math.min(session.depth, 8))}${session.name}${session.archived ? " (archived)" : ""}`, session.id));
-    }
-    $("session-picker").value = selected || "";
+    const current = sessions.find((session) => session.id === selected);
+    $("session-picker-value").textContent = current ? `${current.name}${current.archived ? " (archived)" : ""}` : "Select a session";
+    $("session-picker").disabled = !sessionTree(sessions, view).length;
+    if (!$("session-options").hidden) closeSessionPicker($("session-options").contains(document.activeElement));
     for (const session of rows.slice(0, sessionLimit)) {
         const row = node("div", null, "session-row");
         row.style.setProperty("--depth", String(session.depth));
@@ -63,6 +62,7 @@ function renderSessions() {
             };
             row.append(fold);
         }
+
         const button = node("button", null, "session-button");
         button.type = "button";
         button.setAttribute("aria-current", String(session.id === selected));
@@ -82,6 +82,39 @@ function renderSessions() {
     }
     if (!rows.length) $("sessions").append(node("p", sessions.length ? "No sessions match these controls." : "No local sessions found.", "muted"));
     $("sessions").setAttribute("aria-busy", String(loadingSessions));
+}
+
+function closeSessionPicker(restoreFocus = false) {
+    $("session-options").hidden = true;
+    $("session-picker").setAttribute("aria-expanded", "false");
+    if (restoreFocus) $("session-picker").focus();
+}
+
+function openSessionPicker(last = false) {
+    const rows = sessionTree(sessions, view);
+    if (!rows.length) return;
+    pickerSearch = "";
+    const menu = $("session-options");
+    menu.replaceChildren();
+    for (const session of rows) {
+        const option = node("button", `${session.name}${session.archived ? " (archived)" : ""}`, "session-option");
+        option.type = "button";
+        option.tabIndex = -1;
+        option.style.paddingLeft = `${8 + Math.min(session.depth, 8) * 12}px`;
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", String(session.id === selected));
+        option.onclick = () => {
+            closeSessionPicker(true);
+            selectSession(session.id);
+        };
+        menu.append(option);
+    }
+    menu.hidden = false;
+    $("session-picker").setAttribute("aria-expanded", "true");
+    const options = [...menu.children];
+    const active = options.find((option) => option.getAttribute("aria-selected") === "true") ?? (last ? options.at(-1) : options[0]);
+    active.focus({ preventScroll: true });
+    menu.scrollTop = active.offsetTop - menu.clientHeight / 2;
 }
 
 function empty(title, help) {
@@ -318,7 +351,47 @@ $("clear").onclick = () => {
     limit = 120; renderSessions(); renderGallery();
 };
 $("refresh").onclick = refresh;
-$("session-picker").onchange = (event) => selectSession(event.target.value);
+$("session-picker").onclick = () => {
+    if ($("session-options").hidden) openSessionPicker(); else closeSessionPicker();
+};
+$("session-picker").onkeydown = (event) => {
+    if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+        event.preventDefault();
+        openSessionPicker(event.key === "ArrowUp");
+    }
+};
+let pickerSearch = "", pickerSearchAt = 0;
+$("session-options").onkeydown = (event) => {
+    const options = [...$("session-options").children];
+    const index = options.indexOf(document.activeElement);
+    let next;
+    if (event.key === "ArrowDown") next = Math.min(index + 1, options.length - 1);
+    if (event.key === "ArrowUp") next = Math.max(index - 1, 0);
+    if (event.key === "Home") next = 0;
+    if (event.key === "End") next = options.length - 1;
+    if (event.key === "Escape") {
+        event.preventDefault(); event.stopPropagation(); closeSessionPicker(true); return;
+    }
+    if (event.key.length === 1 && event.key !== " " && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        const now = Date.now();
+        pickerSearch = `${now - pickerSearchAt > 700 ? "" : pickerSearch}${event.key.toLowerCase()}`;
+        pickerSearchAt = now;
+        next = options.findIndex((option) => option.textContent.trim().toLowerCase().startsWith(pickerSearch));
+    }
+    if (next !== undefined && next >= 0) {
+        event.preventDefault();
+        options[next].focus({ preventScroll: true });
+        const menu = $("session-options"), option = options[next];
+        if (option.offsetTop < menu.scrollTop) menu.scrollTop = option.offsetTop;
+        if (option.offsetTop + option.offsetHeight > menu.scrollTop + menu.clientHeight) menu.scrollTop = option.offsetTop + option.offsetHeight - menu.clientHeight;
+    }
+};
+document.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest(".compact-picker")) closeSessionPicker();
+});
+$("session-options").addEventListener("focusout", (event) => {
+    if (!event.relatedTarget?.closest(".compact-picker")) closeSessionPicker();
+});
 $("more").onclick = () => { limit += 120; renderGallery(); };
 $("close-preview").onclick = () => $("viewer").close();
 $("viewer").addEventListener("close", () => {
