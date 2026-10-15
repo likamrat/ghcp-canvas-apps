@@ -68,7 +68,8 @@ export async function startServer(catalog, { sessionId } = {}) {
                 image = await catalog.openImage(route.slice(6));
                 res.writeHead(200, { "Content-Type": image.mime, "Content-Length": image.size,
                     "Content-Disposition": "inline" });
-                await pipeline(image.file.createReadStream({ autoClose: false }), res);
+                if (image.data) res.end(image.data);
+                else await pipeline(image.file.createReadStream({ autoClose: false }), res);
             } else {
                 res.writeHead(404).end("Not found");
             }
@@ -78,7 +79,7 @@ export async function startServer(catalog, { sessionId } = {}) {
                     error.code === "image_changed" ? 409 : 503;
                 res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify({ error: error.message, code: error.code ?? "screenshots_unavailable" }));
             } else res.destroy(error);
-        } finally { await image?.file.close(); }
+        } finally { await image?.file?.close(); }
     });
     await new Promise((resolve, reject) => {
         server.once("error", reject);

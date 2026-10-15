@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, appendFile, readFile, truncate, rm } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { createHash } from "node:crypto";
 import { createCatalog } from "./source.mjs";
 import { startServer } from "./server.mjs";
 
@@ -154,4 +155,57 @@ test("history and image size limits produce explicit warnings and unavailable re
     const largeImage = await catalog.images("current");
     assert.equal(largeImage.images[0].availability, "unavailable");
     assert.match(largeImage.images[0].reason, /32 MiB/);
+});
+
+test("retained binary assets recover removed captures without indexing Markdown inside viewed source code", async (t) => {
+    const { home, events, image, catalog } = await fixture(t);
+    const bytes = await readFile(image);
+    const assetId = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    const removed = join(home, "removed.png");
+    await events("current", [
+        { type: "session.start", data: { context: { cwd: home } } },
+        { type: "tool.execution_start", data: { toolCallId: "read", toolName: "view", arguments: { path: "source.test.mjs" } } },
+        { type: "tool.execution_complete", data: { toolCallId: "read", success: true, result: { content: 'const sample = "[Screenshot](missing.png)";' } } },
+        { type: "tool.execution_start", data: { toolCallId: "denied", toolName: "playwright-browser_take_screenshot", arguments: { filename: "denied.png" } } },
+        { type: "tool.execution_complete", data: { toolCallId: "denied", success: true, result: { content: "MCP server 'playwright': ### Error\nFile access denied." } } },
+        { type: "tool.execution_start", data: { toolCallId: "shot", toolName: "playwright-browser_take_screenshot", arguments: { filename: removed } } },
+        { type: "tool.execution_complete", data: { toolCallId: "shot", success: true, result: { content: `[Screenshot](${removed})` } } },
+        { type: "session.binary_asset", data: { assetId, type: "image", mimeType: "image/png", byteLength: bytes.length, data: bytes.toString("base64") } },
+        { type: "tool.execution_start", data: { toolCallId: "preview", toolName: "view", arguments: { path: removed } } },
+        { type: "tool.execution_complete", data: { toolCallId: "preview", success: true, result: { content: "Viewed image file successfully.", binaryResultsForLlm: [{ type: "image", assetId, mimeType: "image/png" }] } } },
+    ]);
+    const result = await catalog.images("current");
+    assert.deepEqual(result.images.map((item) => item.name), ["removed.png"]);
+    assert.equal(result.images[0].availability, "available");
+    assert.equal(result.images[0].storage, "session");
+    assert.equal(result.images[0].source, "generated");
+    assert.equal(Object.hasOwn(result.images[0], "retainedAsset"), false);
+    const recovered = await catalog.openImage(result.images[0].id);
+    assert.deepEqual(recovered.data, bytes);
+    const server = await startServer(catalog);
+    t.after(() => server.close());
+    const response = await fetch(new URL(`image/${result.images[0].id}`, server.url));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "image/png");
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), bytes);
+});
+
+test("uploaded assets survive missing files across UTF-8, CRLF, and stream chunks, and reject changed asset records", async (t) => {
+    const { home, events, catalog } = await fixture(t);
+    const bytes = await readFile(new URL("./screenshot.png", import.meta.url));
+    assert.ok(bytes.length > 64 * 1024);
+    const assetId = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    await events("current", [
+        { type: "user.message", data: { content: "\u00e9\u65e5\u672c" } },
+        { type: "session.binary_asset", data: { assetId, type: "image", mimeType: "image/png", byteLength: bytes.length, data: bytes.toString("base64") } },
+        { type: "user.message", data: { attachments: [{ type: "file", path: join(home, "removed-upload.png"), assetId }] } },
+    ]);
+    const history = join(home, "session-state", "current", "events.jsonl");
+    await writeFile(history, (await readFile(history, "utf8")).replaceAll("\n", "\r\n"));
+    const result = await catalog.images("current");
+    assert.equal(result.images[0].storage, "session");
+    assert.equal(result.images[0].source, "uploaded");
+    assert.deepEqual((await catalog.openImage(result.images[0].id)).data, bytes);
+    await writeFile(history, (await readFile(history, "utf8")).replace(assetId, `sha256:${"0".repeat(64)}`));
+    await assert.rejects(catalog.openImage(result.images[0].id), /retained/);
 });

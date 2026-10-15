@@ -182,6 +182,7 @@ function renderGallery() {
             caption.append(node("span", image.name, "image-name"));
             caption.append(node("span", `${dateText(image)} (${image.timestampBasis})`, "image-meta"));
             caption.append(node("span", [SOURCE_LABELS[image.source], view.includeChildren ? image.sessionName : null].filter(Boolean).join(" / "), "image-meta"));
+            if (image.storage === "session") caption.append(node("span", "Retained session image", "image-meta"));
             button.append(thumbnail, caption);
             button.onclick = () => openPreview(image.id, button);
             grid.append(button);
@@ -295,7 +296,8 @@ function renderPreview() {
         ["Session", image.sessionName], ["Source", SOURCE_LABELS[image.source]], ["Tool", image.tool || "Not reported"],
         ["Timestamp", `${dateText(image)} (${image.timestampBasis})`],
         ["Dimensions", image.width ? `${image.width} x ${image.height}` : "Unknown"], ["File size", bytes(image.size)],
-        ["Location", image.path || "No retained local path"],
+        ["Preview source", image.storage === "session" ? "Retained session image (may be resized)" : "Original file"],
+        ["Location", image.path ? `${image.path}${image.storage === "session" ? " (original unavailable)" : ""}` : "No original local path"],
     ];
     for (const [label, value] of details) {
         const field = node("div", null, label === "Location" ? "path-detail" : "");

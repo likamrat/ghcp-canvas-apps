@@ -45,12 +45,13 @@ Screenshots reads the local app's `data.db` in read-only mode, resolves workspac
 Supported references:
 
 - File attachments recorded on `user.message` events.
-- Local image links in successful tool-result Markdown, including Playwright screenshot results.
+- Local image links in successful screenshot-tool results, including Playwright. Links in viewed source code, test fixtures, general tool output, and code blocks are not treated as captures.
 - A successful screenshot tool call's `filename` or `path` argument when its result has no usable image link. Relative paths resolve against the recorded session working directory.
+- Recorded image assets attached to uploads or actual binary tool results. Reading a source file containing an image path is not image evidence.
 
-PNG, JPEG, GIF, and WebP are supported after checking their file headers. Inline-only attachments appear as unavailable when their metadata survives, but their image bytes are not reconstructed. Screenshots does not scan whole workspaces, inspect arbitrary images on disk, extract images from conversation prose, or collect new screenshots through hooks.
+PNG, JPEG, GIF, and WebP are supported after checking their file headers. When an original file is missing or unreadable, Screenshots can read its existing `session.binary_asset` from retained history if an attachment or binary tool result links that asset to the image. Asset bytes are checked against their SHA-256 identity and preview limits. No files are recreated or copied. These previews are labeled **Retained session image** and may have been resized by the tool; dimensions describe the available preview, not the lost original. Inline attachments without retained bytes remain unavailable. Screenshots does not scan whole workspaces, inspect arbitrary images on disk, extract images from conversation prose, or collect new screenshots through hooks.
 
-Some tools return images without retaining a local path. Screenshots cannot recover those bytes, files deleted with temporary workspaces, or files held only on cloud/remote hosts. Missing/unreadable references and unsupported history are shown explicitly. A known-image count is not a guarantee that every screenshot ever produced by a session is recoverable.
+Some tools retain neither an image asset nor a usable local file. Screenshots cannot recover those bytes, images whose files and retained assets were both deleted, or files held only on cloud/remote hosts. Missing/unreadable references and unsupported history are shown explicitly. A known-image count is not a guarantee that every screenshot ever produced by a session is recoverable.
 
 Timestamps use the recorded session event time, not a claim of exact capture time. If that is absent, file modification time is labeled as a fallback. Unknown timestamps stay visible without a date filter and are excluded when a date range is active. Day groups use this computer's local calendar dates; the browser uses its local timezone for displayed dates.
 
@@ -58,7 +59,7 @@ Discovery is bounded to 64 MiB of history per session identity, 128 MiB of histo
 
 ## Privacy and storage
 
-Original images, session histories, and app metadata are never modified. Filters, catalog state, and zoom are temporary and do not survive extension reloads. No screenshot database, copied image collection, or background daemon is created.
+Original images, session histories, and app metadata are never modified. Filters, catalog state, and zoom are temporary and do not survive extension reloads. Existing retained image assets are read on demand from indexed history offsets, not duplicated into a screenshot cache. No screenshot database, copied image collection, or background daemon is created.
 
 Only attachment metadata and tool-result image references are extracted from the selected histories; message prose is not indexed. No data is uploaded, no remote URLs are fetched, and no OCR or AI image analysis runs. Image delivery uses a loopback-only HTTP server, per-panel capability URLs, indexed image IDs, and file identity checks rather than arbitrary-path HTTP access. Do not share a live capability URL.
 

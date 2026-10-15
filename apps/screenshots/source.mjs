@@ -1,7 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { open, realpath } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { createInterface } from "node:readline";
 import { homedir } from "node:os";
 import { basename, extname, isAbsolute, join, resolve } from "node:path";
 
@@ -14,6 +13,25 @@ export const sourceError = (code, message) => Object.assign(new Error(message), 
 const safeId = (id) => typeof id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(id);
 const timestamp = (value) => typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : null;
 const digest = (value) => createHash("sha256").update(value).digest("hex");
+const validAssetId = (value) => typeof value === "string" && /^sha256:[a-f0-9]{64}$/.test(value);
+const screenshotTool = (name) => typeof name === "string" && /(?:^|[-_])(?:browser_take_screenshot|take_screenshot|screenshot)$/.test(name);
+
+async function* journalLines(file, size) {
+    let parts = [], length = 0, offset = 0;
+    for await (const chunk of file.createReadStream({ autoClose: false, end: Math.max(0, size - 1) })) {
+        let start = 0, end;
+        while ((end = chunk.indexOf(10, start)) !== -1) {
+            parts.push(chunk.subarray(start, end + 1));
+            length += end + 1 - start;
+            const line = parts.length === 1 ? parts[0] : Buffer.concat(parts, length);
+            yield { text: line.toString("utf8"), offset, length };
+            offset += length;
+            parts = []; length = 0; start = end + 1;
+        }
+        if (start < chunk.length) { parts.push(chunk.subarray(start)); length += chunk.length - start; }
+    }
+    if (length) yield { text: Buffer.concat(parts, length).toString("utf8"), offset, length };
+}
 
 function rows(db, table, required, optional = []) {
     const columns = new Set(db.prepare(`PRAGMA table_info("${table}")`).all().map((row) => row.name));
@@ -133,7 +151,7 @@ function dimensions(buffer, mime) {
 
 async function inspectImage(reference) {
     const item = { ...reference, availability: "missing", reason: "The referenced file is no longer present.",
-        size: null, width: null, height: null, realPath: null, fingerprint: null };
+        size: null, width: null, height: null, realPath: null, fingerprint: null, storage: "file" };
     if (!item.path) {
         return { ...item, availability: "unavailable", reason: "No usable local image path was retained." };
     }
@@ -169,21 +187,78 @@ async function inspectImage(reference) {
     return item;
 }
 
+async function retainedImage(asset) {
+    if (!asset || !validAssetId(asset.assetId) || asset.length <= 0 || asset.length > MAX_LOG) {
+        throw sourceError("asset_unavailable", "No retained session image is available.");
+    }
+    let file;
+    try {
+        file = await open(asset.path, "r");
+        const buffer = Buffer.alloc(asset.length);
+        let read = 0;
+        while (read < buffer.length) {
+            const { bytesRead } = await file.read(buffer, read, buffer.length - read, asset.offset + read);
+            if (!bytesRead) throw sourceError("asset_changed", "The retained image history changed. Refresh to retry.");
+            read += bytesRead;
+        }
+        const event = JSON.parse(buffer.toString("utf8"));
+        const data = event?.data;
+        if (event.type !== "session.binary_asset" || data?.assetId !== asset.assetId ||
+            data.type !== "image" || ![...formats.values()].includes(data.mimeType) ||
+            typeof data.data !== "string" || data.data.length > Math.ceil(MAX_IMAGE / 3) * 4 ||
+            !Number.isSafeInteger(data.byteLength) || data.byteLength <= 0 || data.byteLength > MAX_IMAGE) {
+            throw sourceError("asset_invalid", "The retained image metadata is unsupported or exceeds the preview limit.");
+        }
+        const bytes = Buffer.from(data.data, "base64");
+        if (bytes.length !== data.byteLength || `sha256:${digest(bytes)}` !== asset.assetId) {
+            throw sourceError("asset_invalid", "The retained image failed its content-integrity check.");
+        }
+        const size = dimensions(bytes.subarray(0, 256 * 1024), data.mimeType);
+        if (!size || size.some((value) => !value) || size[0] * size[1] > 100000000) {
+            throw sourceError("asset_invalid", "The retained image header is unsupported or exceeds the preview limit.");
+        }
+        return { data: bytes, mime: data.mimeType, size: bytes.length, width: size[0], height: size[1] };
+    } catch (error) {
+        throw sourceError(error.code ?? "asset_unavailable", `Cannot read the retained session image: ${error.message}`);
+    } finally { await file?.close(); }
+}
+
+async function inspectReference(reference, assets) {
+    const image = await inspectImage(reference);
+    if (image.availability === "available" || !reference.assetId) return image;
+    const asset = assets.get(reference.assetId);
+    if (!asset) return image;
+    try {
+        const retained = await retainedImage(asset);
+        return { ...image, availability: "available", reason: null, storage: "session", retainedAsset: asset,
+            mime: retained.mime, size: retained.size, width: retained.width, height: retained.height };
+    } catch (error) {
+        return { ...image, reason: `${image.reason} ${error.message}` };
+    }
+}
+
 async function discover(home, session, warnings, budget) {
     const references = new Map();
+    const assets = new Map();
     let truncated = false;
     let histories = 0;
-    const add = (value, cwd, source, date, tool, fallbackId) => {
+    const add = (value, cwd, source, date, tool, fallbackId, assetId) => {
         const path = localPath(value, cwd);
         if (!path && typeof value === "string" && !formats.has(extname(value).toLowerCase())) return;
-        const key = path ? (process.platform === "win32" ? path.toLowerCase() : path) : `inline:${fallbackId}`;
-        if (references.has(key)) return;
+        const key = path ? (process.platform === "win32" ? path.toLowerCase() : path) : validAssetId(assetId) ? assetId : `inline:${fallbackId}`;
+        const existing = references.get(key);
+        if (existing) {
+            if (validAssetId(assetId)) existing.assetId = assetId;
+            if (existing.source === "unknown" && source !== "unknown") { existing.source = source; existing.tool = tool || null; }
+            return;
+        }
         if (references.size >= MAX_IMAGES) { truncated = true; return; }
         references.set(key, {
             id: digest(`${session.id}\0${key}`), sessionId: session.id, sessionName: session.name,
-            name: path ? basename(path) : "Unavailable inline image",
+            name: path ? basename(path) : validAssetId(assetId) ? "Retained image" : "Unavailable inline image",
             path, source, tool: tool || null, mime: path ? formats.get(extname(path).toLowerCase()) : null,
             timestamp: timestamp(date), timestampBasis: timestamp(date) ? "session event" : "unknown",
+            assetId: validAssetId(assetId) ? assetId : null,
         });
     };
     if (session.location !== "local") {
@@ -208,27 +283,30 @@ async function discover(home, session, warnings, budget) {
             budget.bytes -= info.size;
             let cwd = null;
             const tools = new Map();
-            const lines = createInterface({ input: file.createReadStream({ autoClose: false, end: Math.max(0, info.size - 1) }), crlfDelay: Infinity });
             let lineNumber = 0;
-            for await (const line of lines) {
+            for await (const line of journalLines(file, info.size)) {
                 lineNumber++;
-                if (!line.trim()) continue;
+                if (!line.text.trim()) continue;
                 let event;
-                try { event = JSON.parse(line); }
+                try { event = JSON.parse(line.text); }
                 catch {
                     warnings.push(`${session.name}: an incomplete or invalid history record was skipped.`);
                     continue;
                 }
                 const data = event?.data;
                 if (!data || typeof data !== "object") continue;
+                if (event.type === "session.binary_asset" && validAssetId(data.assetId) && data.type === "image") {
+                    assets.set(data.assetId, { assetId: data.assetId, path: eventPath, offset: line.offset, length: line.length });
+                    continue;
+                }
                 if (event.type === "session.start") cwd = data.context?.cwd ?? null;
                 if (event.type === "user.message" && Array.isArray(data.attachments)) {
                     for (const [index, attachment] of data.attachments.entries()) {
                         if (!attachment || typeof attachment !== "object") continue;
                         if (attachment.type === "file" && typeof attachment.path === "string") {
-                            add(attachment.path, cwd, "uploaded", event.timestamp, null, `${alias}:${lineNumber}:${index}`);
+                            add(attachment.path, cwd, "uploaded", event.timestamp, null, `${alias}:${lineNumber}:${index}`, attachment.assetId);
                         } else if (typeof attachment.mimeType === "string" && [...formats.values()].includes(attachment.mimeType)) {
-                            add(null, cwd, "uploaded", event.timestamp, null, `${alias}:${lineNumber}:${index}`);
+                            add(null, cwd, "uploaded", event.timestamp, null, `${alias}:${lineNumber}:${index}`, attachment.assetId);
                         }
                     }
                 }
@@ -240,9 +318,11 @@ async function discover(home, session, warnings, budget) {
                     tools.delete(data.toolCallId);
                     if (data.success !== true) continue;
                     const content = typeof data.result?.content === "string" ? data.result.content : "";
+                    if (data.result?.error || data.result?.isError === true || /^(?:### Error\b|MCP server [^\r\n]*: ### Error\b)/.test(content)) continue;
+                    const capture = screenshotTool(tool?.name);
                     let found = false;
-                    // Only explicit image links are extracted; conversation prose is never indexed.
-                    for (const match of content.matchAll(/\[[^\]\r\n]*\]\(([^)\r\n]+)\)/g)) {
+                    const resultText = capture ? content.split(/^### Ran /m)[0].replace(/```[\s\S]*?(?:```|$)/g, "") : "";
+                    for (const match of resultText.matchAll(/\[[^\]\r\n]*\]\(([^)\r\n]+)\)/g)) {
                         let value = match[1].replace(/^<|>$/g, "");
                         try { value = decodeURIComponent(value); } catch { /* A literal percent is also a valid filename. */ }
                         if (localPath(value, cwd)) {
@@ -250,10 +330,17 @@ async function discover(home, session, warnings, budget) {
                             found = true;
                         }
                     }
-                    if (/screenshot|take_screenshot/i.test(tool?.name ?? "") && !found) {
+                    if (capture && !found) {
                         const value = tool?.args?.filename ?? tool?.args?.path;
                         if (typeof value === "string") add(value, cwd, "generated", event.timestamp, tool.name, `${alias}:${lineNumber}`);
                         else warnings.push(`${session.name}: a screenshot result has no retained local file path.`);
+                    }
+                    if (Array.isArray(data.result?.binaryResultsForLlm)) {
+                        for (const [index, binary] of data.result.binaryResultsForLlm.entries()) {
+                            if (binary?.type !== "image" || !validAssetId(binary.assetId) || ![...formats.values()].includes(binary.mimeType)) continue;
+                            const path = tool?.name === "view" ? tool.args?.path : capture ? tool.args?.filename ?? tool.args?.path : null;
+                            add(path, cwd, capture ? "generated" : "unknown", event.timestamp, tool?.name, `${alias}:${lineNumber}:${index}`, binary.assetId);
+                        }
                     }
                 }
             }
@@ -267,12 +354,12 @@ async function discover(home, session, warnings, budget) {
     const result = [];
     const refs = [...references.values()];
     for (let index = 0; index < refs.length; index += 16) {
-        result.push(...await Promise.all(refs.slice(index, index + 16).map(inspectImage)));
+        result.push(...await Promise.all(refs.slice(index, index + 16).map((reference) => inspectReference(reference, assets))));
     }
     return result;
 }
 
-export function publicImage({ realPath, fingerprint, ...item }) { return item; }
+export function publicImage({ realPath, fingerprint, retainedAsset, ...item }) { return item; }
 
 export function createCatalog({ home = process.env.COPILOT_HOME || join(homedir(), ".copilot"), database = join(home, "data.db") } = {}) {
     let snapshot = null;
@@ -328,6 +415,7 @@ export function createCatalog({ home = process.env.COPILOT_HOME || join(homedir(
         async openImage(id) {
             const image = imagesById.get(id);
             if (!image || image.availability !== "available") throw sourceError("image_unavailable", "The indexed image is unavailable. Refresh and retry.");
+            if (image.storage === "session") return retainedImage(image.retainedAsset);
             let file;
             try {
                 if (await realpath(image.path) !== image.realPath) throw sourceError("image_changed", "The image path changed. Refresh before opening it.");
