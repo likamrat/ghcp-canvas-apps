@@ -1,10 +1,8 @@
 <p align="center">
-  <img src="logo.svg" alt="Thoughts logo" width="560">
+  <img src="logo.svg" alt="Thoughts logo" width="440">
 </p>
 
-# Thoughts
-
-Capture ideas in a canvas inside the GitHub Copilot app. Edit, copy, complete, or delete them, and expand longer thoughts.
+Ideas often show up while you're in the middle of something else. Thoughts keeps them in one place across your Copilot chats, so you can stay with the task at hand and come back to them later.
 
 <img src="screenshot.png" alt="Thoughts showing sample ideas, copy and edit actions, and completion controls" width="400">
 

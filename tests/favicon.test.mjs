@@ -63,9 +63,11 @@ test("each app has one complete background-backed logo and a matching Lucide app
         const projectIcon = await readFile(new URL(`../.github/extensions/${app}/icon.png`, import.meta.url));
         assert.deepEqual(projectIcon, png, "Project discovery and personal installation must use the same app icon");
         const readme = await readFile(new URL("README.md", base), "utf8");
-        const header = `<p align="center">\n  <img src="logo.svg" alt="${name} logo" width="560">\n</p>\n\n# ${name}\n`;
+        const header = `<p align="center">\n  <img src="logo.svg" alt="${name} logo" width="440">\n</p>\n\n`;
         assert.ok(readme.replaceAll("\r\n", "\n").startsWith(header),
-            "Center the complete logo in HTML before the plain heading and description");
+            "Center a compact complete logo above the introduction");
+        assert.doesNotMatch(readme, /^# /m, "The logo already names the app; do not repeat it as a title");
+        assert.doesNotMatch(readme, /[\u2014\u2013]/, "Keep README prose free of decorative dashes");
         assert.equal((readme.match(/src="logo.svg"/g) ?? []).length, 1);
         assert.doesNotMatch(readme, /<picture>|prefers-color-scheme|logo-(?:light|dark)/);
         const logo = await readFile(new URL("logo.svg", base), "utf8");

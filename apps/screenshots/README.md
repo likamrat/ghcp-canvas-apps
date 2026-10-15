@@ -1,10 +1,8 @@
 <p align="center">
-  <img src="logo.svg" alt="Screenshots logo" width="560">
+  <img src="logo.svg" alt="Screenshots logo" width="440">
 </p>
 
-# Screenshots
-
-Browse, preview, and download screenshots from your Copilot sessions.
+When screenshots pile up across Copilot sessions, finding the one you need means digging through old chats. Screenshots gives you a visual history of each session so you can find the image and get back to your work.
 
 <a href="screenshot.png"><img src="screenshot.png" alt="Sample session hierarchy and screenshot gallery" width="640"></a>
 

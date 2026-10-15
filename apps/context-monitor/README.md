@@ -1,10 +1,8 @@
 <p align="center">
-  <img src="logo.svg" alt="Context Monitor logo" width="560">
+  <img src="logo.svg" alt="Context Monitor logo" width="440">
 </p>
 
-# Context Monitor
-
-See your GitHub Copilot app sessions, models, and context usage in one canvas.
+With several Copilot sessions running, it's hard to tell which ones are nearing their context limit. Context Monitor shows where each session stands, so you can decide where to keep working and where to start fresh.
 
 <a href="screenshot-full.png"><img src="screenshot.png" alt="Context Monitor with sample parent and nested sessions, model filters, and context usage" width="640"></a>
 
