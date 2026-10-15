@@ -1,4 +1,6 @@
-<h1><img src="icon.svg" width="48" height="48" alt="" align="middle"> Context Monitor</h1>
+# Context Monitor
+
+<img src="logo.svg" alt="Context Monitor logo" width="560">
 
 See your GitHub Copilot app sessions, models, and context usage in one canvas.
 
@@ -45,7 +47,7 @@ Reload extensions after editing an installed copy. Cross-app browser and favicon
 
 Fonts use [Geist](https://github.com/vercel/geist-font) ([license](fonts/LICENSE.txt)). Interface icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](icons/LICENSE)).
 
-App icon: Lucide **Chart Column Increasing**, also available in `lucide-react` ([license](LUCIDE-LICENSE.txt)).
+Logo: Lucide **Chart Column Increasing** ([license](LUCIDE-LICENSE.txt)) and Space Grotesk ([license](FONT-LICENSE.txt)).
 
 ## Publish
 

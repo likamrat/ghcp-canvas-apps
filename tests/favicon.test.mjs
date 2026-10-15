@@ -33,7 +33,7 @@ test("all apps declare and serve bundled favicons in standalone browser views", 
     }
 });
 
-test("README app icons use one scalable Lucide glyph with sufficient light and dark contrast", async () => {
+test("each app has one complete background-backed logo and a matching Lucide app icon", async () => {
     const luminance = (hex) => {
         const rgb = hex.match(/[a-f0-9]{2}/gi).map((part) => parseInt(part, 16) / 255)
             .map((value) => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
@@ -42,22 +42,30 @@ test("README app icons use one scalable Lucide glyph with sufficient light and d
     for (const [app, name] of [["screenshots", "Screenshots"], ["context-monitor", "Context Monitor"], ["thoughts", "Thoughts"]]) {
         const base = new URL(`../apps/${app}/`, import.meta.url);
         const svg = await readFile(new URL("icon.svg", base), "utf8");
-        assert.match(svg, /viewBox="0 0 24 24"/);
+        assert.match(svg, /viewBox="0 0 64 64"/);
         assert.match(svg, /stroke-width="2"/);
         const stroke = svg.match(/stroke="(#[a-f0-9]{6})"/i)?.[1];
-        assert.ok(stroke, "Use a fixed visible stroke, independent of GitHub's theme or inherited CSS");
-        for (const background of ["#ffffff", "#f6f8fa", "#0d1117", "#161b22", "#22272e"]) {
-            const values = [luminance(stroke), luminance(background)].sort((a, b) => b - a);
-            assert.ok((values[0] + .05) / (values[1] + .05) >= 3, `${app} icon needs 3:1 contrast on ${background}`);
-        }
+        const background = svg.match(/<rect width="64" height="64"[^>]*fill="(#[a-f0-9]{6})"/i)?.[1];
+        assert.ok(stroke && background, "Use an explicit solid background and foreground");
+        const values = [luminance(stroke), luminance(background)].sort((a, b) => b - a);
+        assert.ok((values[0] + .05) / (values[1] + .05) >= 3, `${app} icon needs contrast against its own background`);
         const png = await readFile(new URL("icon.png", base));
         assert.equal(png.readUInt32BE(16), 512);
         assert.equal(png.readUInt32BE(20), 512);
-        assert.equal(png[25], 6, "PNG app icon must retain its alpha channel");
         const projectIcon = await readFile(new URL(`../.github/extensions/${app}/icon.png`, import.meta.url));
         assert.deepEqual(projectIcon, png, "Project discovery and personal installation must use the same app icon");
         const readme = await readFile(new URL("README.md", base), "utf8");
-        assert.ok(readme.startsWith('<h1><img src="icon.svg"'));
-        assert.ok(readme.split("\n")[0].includes(name));
+        assert.equal(readme.split(/\r?\n/)[0], `# ${name}`, "Keep the original Markdown heading");
+        assert.match(readme, /src="logo.svg"/);
+        assert.doesNotMatch(readme, /<picture>|prefers-color-scheme|logo-(?:light|dark)/);
+        const logo = await readFile(new URL("logo.svg", base), "utf8");
+        assert.ok(logo.includes(`<title>${name}</title>`));
+        assert.match(logo, /viewBox="0 0 920 220"/);
+        assert.match(logo, /<rect width="920" height="220"[^>]*fill="#191c22"/);
+        assert.match(logo, /<g[^>]+aria-label=/, "The logo must contain the outlined wordmark");
+        assert.doesNotMatch(logo, /<text|<script|<image|@font-face|prefers-color-scheme/, "One logo must work without font, image, or theme dependencies");
+        const wordmark = logo.slice(logo.indexOf(`<g aria-label="${name}"`));
+        assert.equal((wordmark.match(/<path transform=/g) ?? []).length, name.length - 1,
+            "The symbol replaces one letter; every other wordmark glyph belongs in the image");
     }
 });
