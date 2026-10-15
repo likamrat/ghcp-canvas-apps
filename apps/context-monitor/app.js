@@ -1,7 +1,9 @@
-import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters } from "./model.mjs";
+import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters, buildUsageScale, usageColor } from "./model.mjs";
 
 const token = document.querySelector('meta[name="monitor-token"]').content;
 const rows = document.getElementById("sessions");
+const heatmap = document.getElementById("heatmap");
+const heatmapRegion = document.getElementById("heatmap-region");
 const search = document.getElementById("search");
 const archived = document.getElementById("archived");
 const pinnedOnly = document.getElementById("pinned-only");
@@ -33,6 +35,8 @@ let draftVersion = null;
 let draftDirty = false;
 let savingThresholds = false;
 let listedModels = null;
+let heatFocusId = null;
+let currentGradient = null;
 const exact = (value) => value === null ? "Not reported" : value.toLocaleString();
 const compact = (value) => value === null ? "?" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 const levelLabel = { healthy: "Normal", watch: "Warning", high: "High usage", unknown: "Not reported" };
@@ -152,11 +156,65 @@ function toggle(set, id) {
     else set.add(id);
 }
 
-function sessionRow(session) {
+function readUsageScale() {
+    const colors = getComputedStyle(document.documentElement);
+    const palette = Object.fromEntries(["low", "soft", "sage", "warning", "high", "max"]
+        .map((key) => [key, colors.getPropertyValue(`--usage-${key}`).trim()]));
+    return buildUsageScale(preferences?.thresholds ?? DEFAULT_THRESHOLDS, palette);
+}
+
+function renderHeatmap(sessions, scale) {
+    heatmapRegion.hidden = sessions.length === 0;
+    document.getElementById("heatmap-count").textContent = `${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`;
+    document.getElementById("heatmap-scale").style.setProperty("--usage-gradient", scale.gradient);
+    if (!sessions.some((session) => session.id === heatFocusId)) heatFocusId = sessions[0]?.id ?? null;
+    const fragment = document.createDocumentFragment();
+    for (const session of sessions) {
+        const color = usageColor(session.context.percent, scale);
+        const tile = element("button", `heat-cell${color === null ? " unknown" : ""}`);
+        tile.type = "button";
+        tile.dataset.action = "heat-session";
+        tile.dataset.id = session.id;
+        tile.tabIndex = session.id === heatFocusId ? 0 : -1;
+        tile.title = [
+            session.name, session.model || "Model not reported",
+            session.context.percent === null ? "Context not reported" : `${session.context.percent.toFixed(1)}% used (${levelLabel[session.context.level]})`,
+        ].join("\n");
+        tile.setAttribute("aria-label", tile.title.replaceAll("\n", ". "));
+        if (color !== null) tile.style.setProperty("--heat-color", color);
+        fragment.append(tile);
+    }
+    heatmap.replaceChildren(fragment);
+}
+
+function showHeatSession(id) {
+    const byId = new Map(snapshot.sessions.map((session) => [session.id, session]));
+    const seen = new Set();
+    let current = byId.get(id);
+    while (current && !seen.has(current.id)) {
+        seen.add(current.id);
+        collapsed.delete(current.id);
+        current = byId.get(current.parentId);
+    }
+    heatFocusId = id;
+    expanded.add(id);
+    render();
+    const target = document.getElementById(`session-${id}`);
+    if (!target) {
+        errorBox.textContent = "That session is no longer in this view. Refresh to try again.";
+        errorBox.hidden = false;
+        return;
+    }
+    target.scrollIntoView({ block: "center", behavior: "instant" });
+    target.querySelector(".name").focus({ preventScroll: true });
+}
+
+function sessionRow(session, scale) {
     const isParent = session.descendantCount > 0;
     const isOpen = !collapsed.has(session.id) || isFiltering();
     const container = element("article",
         `session${session.depth ? " is-nested" : " is-root"}${isParent ? " is-parent" : ""}${isParent && isOpen ? " is-expanded" : ""}`);
+    container.id = `session-${session.id}`;
     const row = element("div", "session-row");
     row.style.setProperty("--depth", session.depth);
     const identity = element("div", `identity${session.depth ? " nested" : ""}`);
@@ -230,8 +288,7 @@ function sessionRow(session) {
     line.setAttribute("aria-hidden", "true");
     if (percent !== null) {
         const thresholds = preferences?.thresholds ?? DEFAULT_THRESHOLDS;
-        line.style.setProperty("--watch", `${thresholds.watch}%`);
-        line.style.setProperty("--high", `${thresholds.high}%`);
+        line.style.setProperty("--usage-gradient", scale.gradient);
         line.style.setProperty("--usage", `${Math.min(100, Math.max(0, percent))}%`);
         line.title = `Normal below ${thresholds.watch}%, warning below ${thresholds.high}%, high usage from ${thresholds.high}%. Current usage: ${percent.toFixed(1)}%.`;
         line.append(element("span", "marker"));
@@ -283,7 +340,13 @@ function sessionRow(session) {
 
 function render() {
     if (!snapshot) return;
+    const focused = document.activeElement;
+    const focusId = focused?.dataset.id;
+    const focusAction = focused?.dataset.action;
+    if (focusAction === "heat-session") heatFocusId = focusId;
     const thresholds = preferences?.thresholds ?? DEFAULT_THRESHOLDS;
+    const scale = readUsageScale();
+    currentGradient = scale.gradient;
     const sessions = snapshot.sessions.map((session) => ({
         ...session, context: contextUsage(session.context.used, session.context.capacity, thresholds),
     }));
@@ -300,6 +363,9 @@ function render() {
     }
     const visible = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, collapsed, sort: sortBy.value });
     const matching = active.filter((session) => matchesFilters(session, filters()));
+    const heatSessions = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, sort: sortBy.value })
+        .filter((session) => session.matching);
+    renderHeatmap(heatSessions, scale);
     const high = matching.filter((session) => session.context.level === "high").length;
     const missing = matching.filter((session) => session.context.level === "unknown").length;
     const parentsShown = visible.filter((session) => !session.matching).length;
@@ -316,7 +382,7 @@ function render() {
     } else {
         const groups = new Map();
         for (const session of visible) {
-            const article = sessionRow(session);
+            const article = sessionRow(session, scale);
             (session.depth ? groups.get(session.parentId) : fragment).append(article);
             if (session.descendantCount) {
                 const children = element("div", "session-children");
@@ -329,13 +395,12 @@ function render() {
             }
         }
     }
-    const focused = document.activeElement;
-    const focusId = focused?.dataset.id;
-    const focusAction = focused?.dataset.action;
     rows.replaceChildren(fragment);
     if (focusId && focusAction) {
-        [...rows.querySelectorAll("button")].find((button) =>
-            button.dataset.id === focusId && button.dataset.action === focusAction)?.focus({ preventScroll: true });
+        const target = [...rows.querySelectorAll("button"), ...heatmap.querySelectorAll("button")].find((button) =>
+            button.dataset.id === focusId && button.dataset.action === focusAction);
+        const fallback = focusAction === "heat-session" ? heatmap.querySelector("button[tabindex='0']") : null;
+        (target ?? fallback)?.focus({ preventScroll: true });
     }
     const warnings = document.getElementById("warnings");
     warnings.textContent = snapshot.warnings.join(" ");
@@ -348,6 +413,7 @@ async function load() {
     loading = true;
     refresh.disabled = true;
     rows.setAttribute("aria-busy", "true");
+    heatmap.setAttribute("aria-busy", "true");
     try {
         const response = await fetch("/api/snapshot", {
             headers: { "x-monitor-token": token }, signal: AbortSignal.timeout(10000),
@@ -370,6 +436,7 @@ async function load() {
         }
     } finally {
         rows.setAttribute("aria-busy", "false");
+        heatmap.setAttribute("aria-busy", "false");
         loading = false;
         refresh.disabled = false;
         scheduleRefresh();
@@ -381,6 +448,28 @@ rows.addEventListener("click", (event) => {
     if (!button) return;
     toggle(button.dataset.action === "fold" ? collapsed : expanded, button.dataset.id);
     render();
+});
+heatmap.addEventListener("click", (event) => {
+    const tile = event.target.closest("button[data-action='heat-session']");
+    if (tile) showHeatSession(tile.dataset.id);
+});
+heatmap.addEventListener("keydown", (event) => {
+    const tile = event.target.closest("button[data-action='heat-session']");
+    if (!tile) return;
+    const buttons = [...heatmap.querySelectorAll("button")];
+    const index = buttons.indexOf(tile);
+    const columns = getComputedStyle(heatmap).gridTemplateColumns.split(/\s+/).length;
+    const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns };
+    let next;
+    if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = buttons.length - 1;
+    else if (Object.hasOwn(moves, event.key)) next = Math.max(0, Math.min(buttons.length - 1, index + moves[event.key]));
+    else return;
+    event.preventDefault();
+    tile.tabIndex = -1;
+    buttons[next].tabIndex = 0;
+    heatFocusId = buttons[next].dataset.id;
+    buttons[next].focus();
 });
 search.addEventListener("input", render);
 archived.addEventListener("change", render);
@@ -412,4 +501,12 @@ document.addEventListener("visibilitychange", () => {
     if (!document.hidden && Number(autoRefresh.value) > 0) load();
 });
 window.addEventListener("pagehide", () => clearTimeout(timer));
+function refreshTheme() {
+    if (snapshot && readUsageScale().gradient !== currentGradient) render();
+}
+const themeObserver = new MutationObserver(refreshTheme);
+const themeAttributes = ["data-color-mode", "data-dark-theme", "data-light-theme", "class", "style"];
+themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: themeAttributes });
+themeObserver.observe(document.body, { attributes: true, attributeFilter: themeAttributes });
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshTheme);
 load();

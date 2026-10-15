@@ -4,11 +4,45 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters } from "./model.mjs";
+import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters, buildUsageScale, usageColor } from "./model.mjs";
 import { databasePath, readSnapshot } from "./source.mjs";
 import { startServer } from "./server.mjs";
 import { createSettings } from "./settings.mjs";
 import { runInNewContext } from "node:vm";
+
+const palette = Object.freeze({
+    low: "#d5eadc", soft: "#b1d6bc", sage: "#79ad91",
+    warning: "#d8bc80", high: "#cf8f97", max: "#a9425b",
+});
+
+test("continuous usage colors share exact gradient stops and clamp only the visual scale", () => {
+    const scale = buildUsageScale(DEFAULT_THRESHOLDS, palette);
+    assert.equal(usageColor(0, scale), palette.low);
+    assert.equal(usageColor(65, scale), palette.warning);
+    assert.equal(usageColor(85, scale), palette.high);
+    assert.equal(usageColor(100, scale), palette.max);
+    assert.equal(usageColor(135, scale), palette.max);
+    assert.equal(new Set(Array.from({ length: 101 }, (_, value) => usageColor(value, scale))).size, 101);
+    assert.match(scale.gradient, /^linear-gradient\(90deg in srgb,/);
+    for (const stop of scale.stops) {
+        assert.equal(usageColor(stop.at, scale), stop.color);
+        assert.ok(scale.gradient.includes(`${stop.color} ${stop.at}%`));
+    }
+    for (const value of [null, undefined, NaN, Infinity, -1]) assert.equal(usageColor(value, scale), null);
+    const custom = buildUsageScale({ watch: 40, high: 70 }, palette);
+    assert.equal(usageColor(40, custom), palette.warning);
+    assert.equal(usageColor(70, custom), palette.high);
+    assert.notEqual(usageColor(50, custom), usageColor(50, scale));
+    for (const thresholds of [{ watch: 0, high: 1 }, { watch: 0, high: 100 }, { watch: 99, high: 100 }]) {
+        const edge = buildUsageScale(thresholds, palette);
+        assert.equal(usageColor(0, edge), palette.low);
+        assert.equal(usageColor(100, edge), palette.max);
+        assert.ok(edge.stops.every((stop, index) => index === 0 || stop.at > edge.stops[index - 1].at));
+        assert.match(usageColor(50, edge), /^#[\da-f]{6}$/);
+    }
+    assert.throws(() => buildUsageScale(DEFAULT_THRESHOLDS, { ...palette, low: "invalid" }), /Invalid context color/);
+    assert.throws(() => buildUsageScale({ watch: 85, high: 65 }, palette), { code: "invalid_input" });
+});
 
 function fixture(t, { optional = true } = {}) {
     const folder = mkdtempSync(join(tmpdir(), "context-monitor-"));
@@ -441,6 +475,7 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
     const nodes = new Map();
     const document = {
         hidden: false, activeElement: null, listeners: new Map(),
+        documentElement: node("html"), body: node("body"),
         querySelector: () => ({ content: "test-token" }),
         getElementById(id) {
             if (!nodes.has(id)) nodes.set(id, node());
@@ -458,13 +493,18 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
     let hold = false;
     let writes = 0;
     let savedSettings = { thresholds: { ...DEFAULT_THRESHOLDS }, defaults: DEFAULT_THRESHOLDS, version: 1 };
+    let currentPalette = palette;
+    const themeCallbacks = [];
     document.getElementById("auto-refresh").value = "5000";
     document.getElementById("sort-by").value = "recent";
     const code = readFileSync(new URL("./app.js", import.meta.url), "utf8").replace(/^import .*;\r?\n/, "");
     runInNewContext(code, {
-        document, window: { addEventListener() {} }, visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS,
+        document, window: { addEventListener() {}, matchMedia: () => ({ addEventListener() {} }) },
+        visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS,
         SORT_PRESETS, isContextSort, tokenCount, Intl, Date,
-        availableModels, matchesFilters,
+        availableModels, matchesFilters, buildUsageScale, usageColor,
+        getComputedStyle: () => ({ getPropertyValue: (name) => currentPalette[name.replace("--usage-", "")] ?? "" }),
+        MutationObserver: class { constructor(callback) { themeCallbacks.push(callback); } observe() {} },
         AbortSignal: { timeout: () => ({}) },
         setTimeout(callback, delay) { timers.set(++id, { callback, due: clock + delay }); return id; },
         clearTimeout(timerId) { timers.delete(timerId); },
@@ -502,6 +542,16 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
     };
     return {
         document, timers, nodes, settle, elements,
+        heatCells: () => document.getElementById("heatmap").children,
+        theme(next) {
+            currentPalette = next;
+            for (const callback of themeCallbacks) callback();
+        },
+        includeArchived(checked) {
+            const control = document.getElementById("archived");
+            control.checked = checked;
+            control.listeners.get("change")();
+        },
         fold(id) {
             const button = elements().find((element) => element.dataset.action === "fold" && element.dataset.id === id);
             document.getElementById("sessions").listeners.get("click")({ target: { closest: () => button } });
@@ -730,7 +780,7 @@ test("parent disclosure shows all nested levels, survives refresh, and search pr
     assert.equal(button("b").attributes.get("aria-label"), "Show nested sessions for Child");
 });
 
-test("context strips encode configured threshold segments and actual usage; unknown stays neutral", async () => {
+test("context bars and heat tiles share one continuous scale; unknown stays neutral", async () => {
     const ui = renderer({ sessions: [
         { id: "measured", name: "Measured", context: { used: 234, capacity: 1000 } },
         { id: "overflow", name: "Overflow", context: { used: 1100, capacity: 1000 } },
@@ -740,8 +790,11 @@ test("context strips encode configured threshold segments and actual usage; unkn
     const lines = () => ui.elements().filter((element) => element.className === "line");
     const atMeasuredUsage = (line) => Math.abs(Number.parseFloat(line.style.values.get("--usage")) - 23.4) < 1e-9;
     const known = lines().find(atMeasuredUsage);
-    assert.equal(known.style.values.get("--watch"), "65%");
-    assert.equal(known.style.values.get("--high"), "85%");
+    const originalScale = buildUsageScale(DEFAULT_THRESHOLDS, palette);
+    assert.equal(known.style.values.get("--usage-gradient"), originalScale.gradient);
+    assert.equal(ui.nodes.get("heatmap-scale").style.values.get("--usage-gradient"), originalScale.gradient);
+    assert.equal(ui.heatCells().find((tile) => tile.dataset.id === "measured").style.values.get("--heat-color"),
+        usageColor(23.4, originalScale));
     assert.deepEqual(known.children.map((child) => child.className), ["marker"]);
     assert.ok(lines().some((line) => line.style.values.get("--usage") === "100%"));
     const unknown = lines().find((line) => line.parent.className === "context unknown");
@@ -751,8 +804,10 @@ test("context strips encode configured threshold segments and actual usage; unkn
     ui.submit();
     await ui.settle();
     const updated = lines().find(atMeasuredUsage);
-    assert.equal(updated.style.values.get("--watch"), "40%");
-    assert.equal(updated.style.values.get("--high"), "70%");
+    const customScale = buildUsageScale({ watch: 40, high: 70 }, palette);
+    assert.equal(updated.style.values.get("--usage-gradient"), customScale.gradient);
+    assert.equal(ui.heatCells().find((tile) => tile.dataset.id === "measured").style.values.get("--heat-color"),
+        usageColor(23.4, customScale));
 });
 
 test("context sorting reveals nested sessions and preserves ordering across refresh", async () => {
@@ -885,4 +940,55 @@ test("usage filtering updates immediately after threshold changes and survives r
     assert.deepEqual(ids(), ["low"]);
     await ui.reset();
     assert.equal(ui.nodes.get("usage-filter").value, "");
+});
+
+test("heat map includes collapsed descendants, excludes context-only parents, and follows every filter and sort", async () => {
+    const sessions = [
+        { id: "root", name: "Root", model: "gpt-6.1-sol", pinned: false, context: { used: 20, capacity: 100 } },
+        { id: "child", name: "Child", parentId: "root", model: "claude-sonnet-5.5", pinned: true, context: { used: 70, capacity: 100 } },
+        { id: "high", name: "High", model: "gpt-6.1-sol", pinned: true, context: { used: 95, capacity: 100 } },
+        { id: "unknown", name: "Unknown", model: null, pinned: false, context: { used: null, capacity: 100 } },
+        { id: "archived", name: "Archived", model: "gpt-6.1-sol", pinned: true, archived: true, context: { used: 10, capacity: 100 } },
+    ];
+    const ui = renderer({ sessions });
+    await ui.settle();
+    const ids = () => ui.heatCells().map((tile) => tile.dataset.id);
+    assert.equal(ui.elements().filter((node) => node.tag === "article").length, 3);
+    assert.equal(ids().length, 4);
+    assert.ok(ids().includes("child"));
+    assert.equal(ui.heatCells().filter((tile) => tile.tabIndex === 0).length, 1);
+    const missing = ui.heatCells().find((tile) => tile.dataset.id === "unknown");
+    assert.equal(missing.style.values.has("--heat-color"), false);
+    assert.equal(missing.className, "heat-cell unknown");
+    assert.match(missing.title, /Context not reported/);
+    ui.fold("root");
+    assert.equal(ids().length, 4);
+    ui.onlyPinned(true);
+    ui.filterModel("claude-sonnet-5.5");
+    ui.usageLevel("watch");
+    assert.deepEqual(ids(), ["child"]);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "1 session");
+    assert.ok(ui.elements().some((node) => node.textContent === "Parent of matching sessions"));
+    ui.search("no match");
+    assert.equal(ui.nodes.get("heatmap-region").hidden, true);
+    assert.equal(ids().length, 0);
+    ui.search("");
+    ui.onlyPinned(false);
+    ui.filterModel("");
+    ui.usageLevel("");
+    ui.includeArchived(true);
+    assert.equal(ids().length, 5);
+    ui.sort("name-az");
+    assert.deepEqual(ids(), ["archived", "high", "root", "child", "unknown"]);
+    await ui.manual();
+    assert.deepEqual(ids(), ["archived", "high", "root", "child", "unknown"]);
+    const before = ui.heatCells().find((tile) => tile.dataset.id === "child").style.values.get("--heat-color");
+    const nextPalette = { ...palette, low: "#cbe8d6", warning: "#d6b77d", max: "#b34e68" };
+    ui.theme(nextPalette);
+    const after = ui.heatCells().find((tile) => tile.dataset.id === "child").style.values.get("--heat-color");
+    assert.notEqual(after, before);
+    assert.equal(after, usageColor(70, buildUsageScale(DEFAULT_THRESHOLDS, nextPalette)));
+    sessions[1] = { ...sessions[1], context: { used: 88, capacity: 100 } };
+    await ui.advance(5000);
+    assert.match(ui.heatCells().find((tile) => tile.dataset.id === "child").title, /88.0% used/);
 });

@@ -92,6 +92,15 @@
         </div>
         <p id="error" class="notice" role="alert" hidden></p>
         <p id="warnings" class="notice" hidden></p>
+        <section id="heatmap-region" class="heatmap-section" aria-labelledby="heatmap-title" hidden>
+            <div class="heatmap-heading">
+                <h2 id="heatmap-title">Context overview</h2>
+                <span id="heatmap-count"></span>
+            </div>
+            <div id="heatmap" class="heatmap-grid" role="group" aria-label="Session context usage" aria-describedby="heatmap-help" aria-busy="true"></div>
+            <div class="heatmap-key"><span>0%</span><span id="heatmap-scale" class="scale-key" aria-hidden="true"></span><span>100%</span><span class="unknown-key">Not reported</span></div>
+            <p id="heatmap-help" class="sr-only">One tile per matching session, including collapsed nested sessions. Use arrow keys to move between tiles, then Enter to show that session.</p>
+        </section>
         <div class="column-head" aria-hidden="true"><span>Session</span><span>Model / token totals</span><span>Context window</span><span></span></div>
         <div id="sessions" aria-label="Session hierarchy" aria-busy="true">
             <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>

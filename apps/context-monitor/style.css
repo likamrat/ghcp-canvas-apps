@@ -15,16 +15,19 @@
     --sage: #42755e;
     --amber: #896423;
     --rose: #aa505e;
-    --strip-sage: #509c83;
-    --strip-amber: #b28736;
-    --strip-rose: #bf667e;
+    --usage-low: #d5eadc;
+    --usage-soft: #b1d6bc;
+    --usage-sage: #79ad91;
+    --usage-warning: #d8bc80;
+    --usage-high: #cf8f97;
+    --usage-max: #a9425b;
     --hover: color-mix(in srgb, var(--ink) 4%, var(--surface));
 }
 @media (prefers-color-scheme: dark) {
-    :root { --surface: var(--background-color-default, #1b1e22); --ink: var(--text-color-default, #e4e8ec); --muted: var(--text-color-muted, #a0a9b4); --edge: var(--border-color-default, #353c44); --sage: #91bea5; --amber: #d3b57c; --rose: #d996a0; --strip-sage: #6bb99e; --strip-amber: #dfb765; --strip-rose: #d47e92; }
+    :root { --surface: var(--background-color-default, #1b1e22); --ink: var(--text-color-default, #e4e8ec); --muted: var(--text-color-muted, #a0a9b4); --edge: var(--border-color-default, #353c44); --sage: #91bea5; --amber: #d3b57c; --rose: #d996a0; --usage-low: #cbe8d6; --usage-soft: #a8d5bb; --usage-sage: #74b295; --usage-warning: #d6b77d; --usage-high: #cf8a96; --usage-max: #b34e68; }
 }
-:root[data-color-mode="light"] { --sage: #42755e; --amber: #896423; --rose: #aa505e; --strip-sage: #509c83; --strip-amber: #b28736; --strip-rose: #bf667e; }
-:root[data-color-mode="dark"] { --sage: #91bea5; --amber: #d3b57c; --rose: #d996a0; --strip-sage: #6bb99e; --strip-amber: #dfb765; --strip-rose: #d47e92; }
+:root[data-color-mode="light"] { --sage: #42755e; --amber: #896423; --rose: #aa505e; --usage-low: #d5eadc; --usage-soft: #b1d6bc; --usage-sage: #79ad91; --usage-warning: #d8bc80; --usage-high: #cf8f97; --usage-max: #a9425b; }
+:root[data-color-mode="dark"] { --sage: #91bea5; --amber: #d3b57c; --rose: #d996a0; --usage-low: #cbe8d6; --usage-soft: #a8d5bb; --usage-sage: #74b295; --usage-warning: #d6b77d; --usage-high: #cf8a96; --usage-max: #b34e68; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--surface); color: var(--ink); font: 14px/1.6 var(--monitor-sans); }
 main { max-width: 1160px; margin: 0 auto; padding: 28px 24px 18px; }
@@ -72,13 +75,28 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .overview p { margin: 0; }
 .legend { display: flex; gap: 16px; font-size: 12px; }
 .legend span::before { content: ""; display: inline-block; vertical-align: middle; width: 12px; height: 5px; margin-right: 5px; background: currentColor; }
-.legend .healthy::before { background: var(--strip-sage); }
-.legend .watch::before { background: var(--strip-amber); }
-.legend .high::before { background: var(--strip-rose); }
+.legend .healthy::before { background: var(--usage-sage); }
+.legend .watch::before { background: var(--usage-warning); }
+.legend .high::before { background: var(--usage-high); }
 .healthy { color: var(--sage); }
 .watch { color: var(--amber); }
 .high { color: var(--rose); }
 .unknown { color: var(--muted); }
+.heatmap-section { margin: 16px 0 20px; padding: 0 8px; }
+.heatmap-section[hidden] { display: none; }
+.heatmap-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.heatmap-heading h2 { margin: 0; font-size: 13px; font-weight: 500; }
+#heatmap-count { font-size: 11px; color: var(--muted); }
+.heatmap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14px, 1fr)); gap: 4px; }
+.heat-cell { aspect-ratio: 1; min-width: 0; padding: 0; border: 1px solid color-mix(in srgb, var(--heat-color), var(--ink) 50%); border-radius: 3px; background: var(--heat-color); }
+.heat-cell:hover { background: var(--heat-color); border-color: var(--ink); }
+.heat-cell:focus-visible { position: relative; z-index: 1; }
+.heat-cell.unknown { border: 1px dashed var(--muted); background: var(--hover); }
+.heat-cell.unknown:hover { background: var(--hover); border-color: var(--ink); }
+.heatmap-key { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 6px; margin-top: 10px; font-size: 10px; color: var(--muted); }
+.scale-key { width: 100px; height: 6px; border-radius: 1px; background: var(--usage-gradient); }
+.unknown-key { margin-left: 8px; }
+.unknown-key::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: -1px; border: 1px dashed var(--muted); border-radius: 2px; background: var(--hover); }
 .token-guide { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 10px 0 0; max-width: 85ch; }
 .token-guide strong { color: var(--ink); font-weight: 500; }
 .column-head, .session-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(175px, 1fr) 32px; gap: 16px; align-items: center; }
@@ -121,7 +139,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .missing-usage { color: var(--muted); font: 12px/1.5 var(--monitor-sans); }
 .context-count { margin-top: 8px; color: var(--muted); font: 11px/1.5 var(--monitor-sans); }
 .context-count .tokens { font-variant-numeric: tabular-nums; white-space: normal; }
-.line { position: relative; height: 7px; margin: 11px 3px 5px; border-radius: 1px; background: linear-gradient(90deg, var(--strip-sage) 0 var(--watch), var(--strip-amber) var(--watch) var(--high), var(--strip-rose) var(--high) 100%); }
+.line { position: relative; height: 7px; margin: 11px 3px 5px; border-radius: 1px; background: var(--usage-gradient); }
 .marker { position: absolute; left: var(--usage); top: -3px; width: 3px; height: 13px; background: var(--ink); border: 1px solid var(--surface); border-radius: 1px; transform: translateX(-50%); }
 .unknown .line { background: repeating-linear-gradient(90deg, var(--edge) 0 8px, transparent 8px 12px); }
 .details { padding: 0 12px 15px 35px; }
@@ -162,4 +180,8 @@ footer { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wr
     .check-filter input { appearance: auto; background: revert; border: revert; }
     .check-filter input::before { display: none; }
     .disclosure-icon { background: ButtonText; }
+    .heat-cell, .scale-key, .line { forced-color-adjust: none; }
+    .heat-cell { border-color: CanvasText; }
+    .heat-cell.unknown { background: Canvas; border-color: GrayText; }
+    .marker { background: CanvasText; border-color: Canvas; }
 }

@@ -2,7 +2,7 @@
 
 See your GitHub Copilot app sessions, models, and context usage in one canvas.
 
-<a href="screenshot-full.png?v=17e33e5bb36b"><img src="screenshot.png?v=c96b0b4a19b6" alt="Context Monitor with sample GPT-6, GPT-6.1, and Claude sessions using different context windows" width="640"></a>
+<a href="screenshot-full.png?v=54f2dd2eabd8"><img src="screenshot.png?v=b4bfce3d0b81" alt="Context Monitor with a session heat map, gradient usage bars, and sample GPT-6, GPT-6.1, and Claude sessions" width="640"></a>
 
 ## Use in the GitHub Copilot app
 
@@ -18,6 +18,8 @@ Open Context Monitor when installation is complete.
 Install in personal scope to make Context Monitor available from Canvas apps across chats.
 
 Filter by model, pinned sessions, or context usage. Use the arrow at the end of a parent row to show its nested sessions.
+
+The heat map includes collapsed sessions. Hover for usage or select a tile to inspect it.
 
 Choose a refresh interval or refresh manually. Open Usage settings to change the warning levels or reset them to 65% and 85%. Select a session name for exact token counts.
 

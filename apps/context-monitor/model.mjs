@@ -172,3 +172,44 @@ export function validateThresholds(thresholds) {
     }
     return { watch: thresholds.watch, high: thresholds.high };
 }
+
+export function buildUsageScale(thresholds, palette) {
+    const { watch, high } = validateThresholds(thresholds);
+    for (const key of ["low", "soft", "sage", "warning", "high", "max"]) {
+        if (!/^#[\da-f]{6}$/i.test(palette?.[key])) {
+            throw new Error(`Invalid context color: ${key}.`);
+        }
+    }
+    const stops = [
+        { at: 0, color: palette.low },
+        ...[
+            { at: watch * .35, color: palette.soft },
+            { at: watch * .75, color: palette.sage },
+            { at: watch, color: palette.warning },
+            { at: high, color: palette.high },
+        ].filter((stop) => stop.at > 0 && stop.at < 100),
+        { at: 100, color: palette.max },
+    ];
+    return {
+        stops,
+        gradient: `linear-gradient(90deg in srgb, ${stops.map((stop) => `${stop.color} ${stop.at}%`).join(", ")})`,
+    };
+}
+
+export function usageColor(percent, scale) {
+    if (!Number.isFinite(percent) || percent < 0) return null;
+    const value = Math.min(percent, 100);
+    for (let index = 1; index < scale.stops.length; index++) {
+        const left = scale.stops[index - 1];
+        const right = scale.stops[index];
+        if (value > right.at) continue;
+        const fraction = (value - left.at) / (right.at - left.at);
+        const channels = [1, 3, 5].map((offset) => {
+            const from = Number.parseInt(left.color.slice(offset, offset + 2), 16);
+            const to = Number.parseInt(right.color.slice(offset, offset + 2), 16);
+            return Math.round(from + (to - from) * fraction).toString(16).padStart(2, "0");
+        });
+        return `#${channels.join("")}`;
+    }
+    return scale.stops.at(-1).color.toLowerCase();
+}
