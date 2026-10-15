@@ -112,3 +112,22 @@ test("each extension closes ordinary canvases but keeps explicit browser views a
         assert.equal(started, 2, `${app}: re-open should reuse the retained server`);
     }
 });
+
+test("Screenshots defaults to the opening session and allows an explicit session override", async () => {
+    const source = (await readFile(new URL("screenshots/extension.mjs", apps), "utf8")).replace(/^import .*;\r?\n/gm, "");
+    let declaration;
+    const opened = [];
+    await runInNewContext(`(async () => { ${source}\n })()`, {
+        joinSession: async (options) => { declaration = options.canvases[0]; },
+        createCanvas: (options) => ({ ...options, declaration: {} }), CanvasError: Error,
+        createCatalog: () => ({}), querySchema: {}, queryImages: () => ({}),
+        startServer: async (_catalog, options) => {
+            opened.push(options);
+            return { url: "http://127.0.0.1:12345/" };
+        },
+    });
+    await declaration.open({ instanceId: "session-a", sessionId: "opening-a", input: {} });
+    await declaration.open({ instanceId: "session-b", sessionId: "opening-b" });
+    await declaration.open({ instanceId: "explicit", sessionId: "opening-a", input: { sessionId: "chosen-session" } });
+    assert.deepEqual(opened.map((options) => options.sessionId), ["opening-a", "opening-b", "chosen-session"]);
+});

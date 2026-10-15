@@ -370,9 +370,11 @@ export function publicImage({ realPath, fingerprint, retainedAsset, ...item }) {
 export function createCatalog({ home = process.env.COPILOT_HOME || join(homedir(), ".copilot"), database = join(home, "data.db") } = {}) {
     let snapshot = null;
     const imagesById = new Map();
-    const sessions = () => {
+    const sessions = (preferredSessionId) => {
         snapshot = readSessions(database);
-        return { ...snapshot, sessions: snapshot.sessions.map(({ aliases, ...session }) => session), collectedAt: new Date().toISOString() };
+        const preferred = snapshot.sessions.find((session) => session.id === preferredSessionId || session.aliases.includes(preferredSessionId));
+        return { ...snapshot, sessions: snapshot.sessions.map(({ aliases, ...session }) => session),
+            defaultSessionId: preferred?.id ?? null, collectedAt: new Date().toISOString() };
     };
     return {
         sessions,

@@ -115,7 +115,8 @@ export async function startServer(catalog, { sessionId, downloadDirectory, launc
                 const content = await readFile(new URL(file, import.meta.url));
                 res.writeHead(200, { "Content-Type": mime }).end(content);
             } else if (route === "api/sessions") {
-                res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(catalog.sessions()));
+                const requested = url.searchParams.get("sessionId") || sessionId;
+                res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(catalog.sessions(requested)));
             } else if (route === "api/images") {
                 const { sessionId, input } = imageInput(url.searchParams);
                 if (scanning) throw sourceError("source_busy", "Image discovery is still running. Retry when it finishes.");

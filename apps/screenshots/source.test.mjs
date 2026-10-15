@@ -47,6 +47,9 @@ test("workspace aliases retain uploaded and successful tool image references wit
     const sessions = catalog.sessions();
     assert.equal(sessions.sessions.length, 1);
     assert.equal(sessions.sessions[0].name, "Gallery work");
+    assert.equal(catalog.sessions("previous").defaultSessionId, "current");
+    assert.equal(catalog.sessions("workspace").defaultSessionId, "current");
+    assert.equal(catalog.sessions("not-retained").defaultSessionId, null);
     const result = await catalog.images("current");
     assert.equal(result.images.length, 2);
     assert.equal(result.images.find((item) => item.source === "uploaded").availability, "available");
@@ -260,4 +263,15 @@ test("later capture evidence upgrades a tool preview without creating a duplicat
     assert.equal(result.images.length, 1);
     assert.equal(result.images[0].source, "generated");
     assert.equal(result.images[0].tool, "playwright-browser_take_screenshot");
+});
+
+test("session-list HTTP resolves the opening session and a browser view's requested session independently", async (t) => {
+    const { catalog } = await fixture(t);
+    const server = await startServer(catalog, { sessionId: "previous" });
+    t.after(() => server.close());
+    assert.equal(new URL(server.url).searchParams.get("session"), "previous");
+    const initial = await (await fetch(new URL("api/sessions", server.url))).json();
+    assert.equal(initial.defaultSessionId, "current");
+    const browserView = await (await fetch(new URL("api/sessions?sessionId=workspace", server.url))).json();
+    assert.equal(browserView.defaultSessionId, "current");
 });

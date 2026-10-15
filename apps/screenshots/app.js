@@ -306,15 +306,15 @@ async function refresh() {
     const revision = sessionGate.next();
     loadingSessions = true; busy();
     try {
-        const result = await api("api/sessions");
+        const requested = new URL(location.href).searchParams.get("session");
+        const result = await api(`api/sessions${requested ? `?${new URLSearchParams({ sessionId: requested })}` : ""}`);
         if (!sessionGate.current(revision)) return;
         const firstLoad = sessions.length === 0;
         const previousSelected = selected;
         sessions = result.sessions; sessionWarnings = result.warnings;
         const eligible = sessions.filter((session) => view.includeArchived || !session.archived);
         if (!eligible.some((session) => session.id === selected)) {
-            const requested = new URL(location.href).searchParams.get("session");
-            selected = eligible.find((session) => session.id === requested)?.id ||
+            selected = eligible.find((session) => session.id === result.defaultSessionId || session.id === requested)?.id ||
                 [...eligible].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]?.id || null;
             images = []; imageWarnings = [];
             page = 1;

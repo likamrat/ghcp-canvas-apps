@@ -37,7 +37,7 @@ const canvas = createCanvas({
         open: async (ctx) => {
             let entry = servers.get(ctx.instanceId);
             if (!entry) {
-                entry = await startServer(createCatalog(), ctx.input ?? {});
+                entry = await startServer(createCatalog(), { sessionId: ctx.input?.sessionId ?? ctx.sessionId });
                 servers.set(ctx.instanceId, entry);
             }
             return { title: "Screenshots", url: entry.url };

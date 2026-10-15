@@ -25,6 +25,8 @@ the list, say so. Then open Screenshots.
 
 ## Use
 
+Opens with the current Copilot session selected. You can choose another session in the navigator.
+
 - Search sessions and expand parents. **Include child screenshots** adds their images to the gallery.
 - Filter by filename, source, or date; sort and group results. Pages show **8**, **16**, or **32** images.
 - Select an image to zoom. **Reset zoom** restores its opening size; **Actual size** shows 100%. Arrow keys navigate; Escape closes.
