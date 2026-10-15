@@ -1,6 +1,8 @@
-# Context Monitor
+<p align="center">
+  <img src="logo.svg" alt="Context Monitor logo" width="560">
+</p>
 
-<img src="logo.svg" alt="Context Monitor logo" width="560">
+# Context Monitor
 
 See your GitHub Copilot app sessions, models, and context usage in one canvas.
 

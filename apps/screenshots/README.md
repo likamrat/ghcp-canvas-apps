@@ -1,6 +1,8 @@
-# Screenshots
+<p align="center">
+  <img src="logo.svg" alt="Screenshots logo" width="560">
+</p>
 
-<img src="logo.svg" alt="Screenshots logo" width="560">
+# Screenshots
 
 Browse, preview, and download screenshots from your Copilot sessions.
 

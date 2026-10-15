@@ -1,6 +1,8 @@
-# Thoughts
+<p align="center">
+  <img src="logo.svg" alt="Thoughts logo" width="560">
+</p>
 
-<img src="logo.svg" alt="Thoughts logo" width="560">
+# Thoughts
 
 Capture ideas in a canvas inside the GitHub Copilot app. Edit, copy, complete, or delete them, and expand longer thoughts.
 
