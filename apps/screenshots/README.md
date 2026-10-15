@@ -34,6 +34,8 @@ the list, say so. Then open Screenshots.
 
 Local only. Original images and session metadata stay unchanged. Supports PNG, JPEG, GIF, and WebP. Missing files can use a retained session image, sometimes resized; images without a local file or retained bytes remain unavailable. Remote files are not fetched.
 
+**Tool image** means a tool returned the image for viewing; **Tool-generated** means a screenshot tool recorded its capture. **Unknown** is reserved for references without tool provenance.
+
 Dates use local time and labeled event/file timestamps. Previews are limited to 32 MiB; ZIPs to 128 MiB. Discovery limits produce warnings.
 
 ## Develop

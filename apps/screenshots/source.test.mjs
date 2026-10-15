@@ -226,3 +226,38 @@ test("canonical workspace hierarchy overrides stale creator references and child
     assert.equal((await catalog.images("current")).images.length, 0);
     assert.equal((await catalog.images("current", { includeChildren: true })).images.length, 1);
 });
+
+test("images returned by a viewing tool have a known tool-image source without claiming they were captured there", async (t) => {
+    const { events, image, catalog } = await fixture(t);
+    const bytes = await readFile(image);
+    const assetId = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    await events("current", [
+        { type: "session.binary_asset", data: { assetId, type: "image", mimeType: "image/png", byteLength: bytes.length, data: bytes.toString("base64") } },
+        { type: "tool.execution_start", data: { toolCallId: "preview", toolName: "view", arguments: { path: image } } },
+        { type: "tool.execution_complete", data: { toolCallId: "preview", success: true,
+            result: { content: "Viewed image file successfully.", binaryResultsForLlm: [{ type: "image", assetId, mimeType: "image/png" }] } } },
+    ]);
+    const result = await catalog.images("current");
+    assert.equal(result.images.length, 1);
+    assert.equal(result.images[0].source, "tool");
+    assert.equal(result.images[0].tool, "view");
+    assert.equal(result.images[0].availability, "available");
+});
+
+test("later capture evidence upgrades a tool preview without creating a duplicate image", async (t) => {
+    const { events, image, catalog } = await fixture(t);
+    const bytes = await readFile(image);
+    const assetId = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    await events("current", [
+        { type: "tool.execution_start", data: { toolCallId: "view", toolName: "view", arguments: { path: image } } },
+        { type: "tool.execution_complete", data: { toolCallId: "view", success: true, result: {
+            binaryResultsForLlm: [{ type: "image", assetId, mimeType: "image/png" }],
+        } } },
+        { type: "tool.execution_start", data: { toolCallId: "capture", toolName: "playwright-browser_take_screenshot", arguments: { filename: image } } },
+        { type: "tool.execution_complete", data: { toolCallId: "capture", success: true, result: { content: `[Screenshot](${image})` } } },
+    ]);
+    const result = await catalog.images("current");
+    assert.equal(result.images.length, 1);
+    assert.equal(result.images[0].source, "generated");
+    assert.equal(result.images[0].tool, "playwright-browser_take_screenshot");
+});

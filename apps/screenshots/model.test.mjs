@@ -78,3 +78,13 @@ test("preview zoom starts at the original preview scale and zoom-out never incre
     const tiny = previewScale(1000, 100000, 500, 500);
     assert.ok(nextZoom(null, .8, tiny) < tiny);
 });
+
+test("tool images can be filtered and grouped separately from captured screenshots", () => {
+    const records = [
+        { id: "viewed", name: "concept.png", source: "tool", timestamp: null, size: 10 },
+        { id: "captured", name: "page.png", source: "generated", timestamp: null, size: 20 },
+    ];
+    const result = queryImages(records, { source: "tool", group: "source" });
+    assert.deepEqual(result.images.map((image) => image.id), ["viewed"]);
+    assert.equal(result.groups[0].label, "Tool image");
+});

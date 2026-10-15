@@ -3,7 +3,7 @@
   <rect width="920" height="220" fill="#191c22"/>
   <g aria-label="Thoughts">
     <g class="word-prefix" fill="#f4f1ea" transform="translate(59.175 147.19375) scale(0.1375 -0.1375)"><path transform="translate(0 0)" d="M244 -12Q153 -12 109 34.5Q65 81 65 178L65 407L6 407L6 504L12 504Q70 512 94.5 543.5Q119 575 125 639L126 646L216 646L216 527L339 527L339 403L216 403L216 192Q216 154 234.5 137.5Q253 121 280 121Q295 121 310.5 125.5Q326 130 339 137L339 3Q309 -6 285.5 -9Q262 -12 244 -12Z"/><path transform="translate(355.81060606060606 0)" d="M37 0L37 272L37 698L191 698L191 565Q191 544 188.5 510Q186 476 181.5 437Q177 398 172.5 362Q168 326 165 300L174 300Q183 384 205 437.5Q227 491 265.5 516Q304 541 358 541Q443 541 484 480Q525 419 525 297L525 0L372 0L372 290Q372 350 356 378Q340 406 304 406Q271 406 245.5 382Q220 358 205.5 307Q191 256 191 176L191 0Z"/></g>
-    <circle class="icon-halo" cx="228.50833333333333" cy="110.96249999999999" r="41.971875" fill="#ff9e8f" fill-opacity=".09"/>
+    <circle class="icon-halo" cx="228.50833333333333" cy="110.96249999999999" r="41.971875" fill="#252930" stroke="#7c858e" stroke-width="1.25"/>
     <g class="word-icon" transform="translate(199.96745833333333 82.42162499999999) scale(2.3784062500000003)" color="#ff9e8f" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/>
   <path d="M9 18h6"/>

@@ -252,7 +252,10 @@ async function discover(home, session, warnings, budget) {
         const existing = references.get(key);
         if (existing) {
             if (validAssetId(assetId)) existing.assetId = assetId;
-            if (existing.source === "unknown" && source !== "unknown") { existing.source = source; existing.tool = tool || null; }
+            if ((existing.source === "unknown" && source !== "unknown") ||
+                (existing.source === "tool" && ["uploaded", "generated"].includes(source))) {
+                existing.source = source; existing.tool = tool || null;
+            }
             return;
         }
         if (references.size >= MAX_IMAGES) { truncated = true; return; }
@@ -342,7 +345,7 @@ async function discover(home, session, warnings, budget) {
                         for (const [index, binary] of data.result.binaryResultsForLlm.entries()) {
                             if (binary?.type !== "image" || !validAssetId(binary.assetId) || ![...formats.values()].includes(binary.mimeType)) continue;
                             const path = tool?.name === "view" ? tool.args?.path : capture ? tool.args?.filename ?? tool.args?.path : null;
-                            add(path, cwd, capture ? "generated" : "unknown", event.timestamp, tool?.name, `${alias}:${lineNumber}:${index}`, binary.assetId);
+                            add(path, cwd, capture ? "generated" : tool?.name ? "tool" : "unknown", event.timestamp, tool?.name, `${alias}:${lineNumber}:${index}`, binary.assetId);
                         }
                     }
                 }

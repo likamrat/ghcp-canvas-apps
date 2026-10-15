@@ -1,4 +1,4 @@
-export const SOURCE_LABELS = Object.freeze({ uploaded: "Uploaded", generated: "Tool-generated", unknown: "Unknown" });
+export const SOURCE_LABELS = Object.freeze({ uploaded: "Uploaded", generated: "Tool-generated", tool: "Tool image", unknown: "Unknown" });
 export const defaultView = () => ({
     sessionSearch: "", includeArchived: false, includeChildren: false,
     filename: "", source: "", from: "", to: "",
@@ -143,7 +143,7 @@ export const querySchema = {
         sessionId: { type: "string", minLength: 1, maxLength: 128 },
         includeChildren: { type: "boolean" }, includeArchived: { type: "boolean" },
         filename: { type: "string", maxLength: 500 },
-        source: { enum: ["", "uploaded", "generated", "unknown"] },
+        source: { enum: ["", "uploaded", "generated", "tool", "unknown"] },
         from: { type: "string", maxLength: 10 }, to: { type: "string", maxLength: 10 },
         sort: { enum: ["timestamp", "name", "size"] }, order: { enum: ["asc", "desc"] }, group: { enum: ["day", "source", "none"] },
         offset: { type: "integer", minimum: 0, maximum: 10000 }, limit: { type: "integer", minimum: 1, maximum: 120 },

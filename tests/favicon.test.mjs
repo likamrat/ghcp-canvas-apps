@@ -67,6 +67,14 @@ test("each app has one complete background-backed logo and a matching Lucide app
         assert.match(logo, /data-typeface="Bricolage Grotesque"/);
         assert.match(logo, /data-replaced-letter="o"/);
         assert.match(logo, /<circle[^>]+class="icon-halo"/, "The letter replacement must have a subtle circular background");
+        const halo = logo.match(/<circle class="icon-halo"[^>]+>/)?.[0];
+        assert.match(halo, /fill="#252930"/);
+        assert.match(halo, /stroke="#7c858e" stroke-width="1.25"/);
+        assert.match(svg, /fill="#252930" stroke="#7c858e" stroke-width="1"/);
+        for (const surface of ["#ffffff", "#0d1117", "#22272e", "#252930"]) {
+            const tones = [luminance("#7c858e"), luminance(surface)].sort((a, b) => b - a);
+            assert.ok((tones[0] + .05) / (tones[1] + .05) >= 3, "Neutral ring needs visible contrast on light and dark surfaces");
+        }
         const metrics = logo.match(/data-optical-gaps="([\d.]+) ([\d.]+)"/);
         assert.ok(metrics, "Record the glyph-edge spacing used to center the circle");
         assert.ok(Math.abs(Number(metrics[1]) - Number(metrics[2])) < .01,
