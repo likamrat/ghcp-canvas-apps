@@ -8,6 +8,8 @@ const assets = new Map([
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
     ["/browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
+    ["/icon.png", ["icon.png", "image/png"]],
+    ["/favicon.ico", ["icon.png", "image/png"]],
 ]);
 
 export async function startServer(store, { launchBrowser } = {}) {
@@ -34,14 +36,10 @@ export async function startServer(store, { launchBrowser } = {}) {
                 res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
                 return;
             }
-            if (req.method === "GET" && url.pathname === "/favicon.ico") {
-                res.writeHead(204).end();
-                return;
-            }
             if (req.method === "GET" && assets.has(url.pathname)) {
                 const [file, type] = assets.get(url.pathname);
-                let content = await readFile(new URL(file, import.meta.url), "utf8");
-                if (file === "index.html") content = content.replace("__TOKEN__", token);
+                let content = await readFile(new URL(file, import.meta.url));
+                if (file === "index.html") content = content.toString("utf8").replace("__TOKEN__", token);
                 res.setHeader("Content-Type", type);
                 res.end(content);
                 return;

@@ -9,6 +9,8 @@ const assets = new Map([
     ["/model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
     ["/browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
+    ["/favicon.svg", ["favicon.svg", "image/svg+xml"]],
+    ["/favicon.ico", ["favicon.svg", "image/svg+xml"]],
     ["/icons/caret-down.svg", ["icons/caret-down.svg", "image/svg+xml"]],
     ["/icons/caret-up.svg", ["icons/caret-up.svg", "image/svg+xml"]],
     ["/fonts/Geist-Variable.woff2", ["fonts/Geist-Variable.woff2", "font/woff2"]],
@@ -69,8 +71,6 @@ export async function startServer(snapshot, settings, { launchBrowser } = {}) {
                 }
                 const data = await snapshot();
                 res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(data));
-            } else if (url.pathname === "/favicon.ico") {
-                res.writeHead(204).end();
             } else {
                 res.writeHead(404).end("Not found");
             }

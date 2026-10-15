@@ -13,6 +13,8 @@ const assets = new Map([
     ["style.css", ["style.css", "text/css; charset=utf-8"]],
     ["icons/download.svg", ["icons/download.svg", "image/svg+xml"]],
     ["browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
+    ["favicon.svg", ["favicon.svg", "image/svg+xml"]],
+    ["favicon.ico", ["favicon.svg", "image/svg+xml"]],
 ]);
 
 function imageInput(params) {
@@ -106,9 +108,7 @@ export async function startServer(catalog, { sessionId, downloadDirectory, launc
                 return;
             }
             if (req.method !== "GET") { res.writeHead(405, { Allow: "GET" }).end("Read-only screenshots"); return; }
-            if (route === "favicon.ico") {
-                res.writeHead(204).end();
-            } else if (assets.has(route)) {
+            if (assets.has(route)) {
                 const [file, mime] = assets.get(route);
                 const content = await readFile(new URL(file, import.meta.url));
                 res.writeHead(200, { "Content-Type": mime }).end(content);

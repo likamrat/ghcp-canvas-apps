@@ -6,26 +6,4 @@ Small productivity apps for developers working in the GitHub Copilot app. Each o
 | --- | --- |
 | [Thoughts](apps/thoughts/README.md) | Save and revisit ideas across chats. |
 | [Context Monitor](apps/context-monitor/README.md) | View nested sessions, filter by pins or model, and compare context usage. |
-| [Screenshots](apps/screenshots/README.md) | Browse session uploads and tool screenshots with filters, sorting, and full-size previews. |
-
-## Install into Canvas apps
-
-Use the ready-made installation prompt in each app's README. It requests a persistent **personal (user)** canvas extension, reloads extensions, and verifies the app's SDK canvas registration. Opening a temporary canvas or browser page is not installation.
-
-After installation, find the app in GitHub Copilot's **Canvas apps** list as **Canvas · Personal**, then choose **New session**. Personal apps remain available across projects and chats. **Canvas · Project** entries are repository development copies and do not replace a personal installation.
-
-Installation prompts for new apps must explicitly require personal scope, preserve existing data/settings when updating, and verify registration and the expected Canvas apps entry before claiming completion. If the installer cannot inspect the app UI, it must distinguish verified runtime registration from an unverified menu check.
-
-## Open in a browser
-
-Every app includes **Open in browser** in its header. It hands the local app URL to the operating system's default browser handler, opening the normal system browser with its usual tabs, controls, and settings. It does not force Edge, use app/kiosk mode, or create an isolated browser profile. Tab versus window behavior follows your browser settings. The canvas stays open; closing it does not stop the external browser view.
-
-Browser views use the same local app server and saved data. Keep the owning Copilot session running. Ending that session, exiting Copilot, or reloading extensions stops the old browser URL; reopen the canvas and use the button again. Filters and unsaved drafts are independent between views. Screenshots carries the selected session into the browser view.
-
-## Default for new apps
-
-Include a compact **Open in browser** header button and visible launch/error status in every new canvas app. Use a validated, authenticated same-origin POST to launch only the app's own loopback URL; never accept arbitrary URLs or commands from the page. Always use the native default-browser URL handler, not a forced browser executable, `--app` mode, or a Copilot browser canvas.
-
-Keep servers alive after canvas close only when a browser view has explicitly been opened, and release them when the extension exits. Ordinary canvas-only instances still close their servers normally. No persistent daemon or extension-global setting is required.
-
-Each app is independently installable, so `browser.mjs` and `browser.js` are bundled inside each app folder rather than imported from a sibling. Keep those copies identical; `tests/browser.test.mjs` checks the shared contract across all three apps. Run `node --test tests/browser.test.mjs` from the repository root.
+| [Screenshots](apps/screenshots/README.md) | Browse and filter session screenshots, preview images, and download a ZIP. |
