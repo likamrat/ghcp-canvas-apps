@@ -9,6 +9,7 @@ const assets = new Map([
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
     ["/browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
     ["/icon.png", ["icon.png", "image/png"]],
+    ["/icon.svg", ["icon.svg", "image/svg+xml"]],
     ["/favicon.ico", ["icon.png", "image/png"]],
 ]);
 

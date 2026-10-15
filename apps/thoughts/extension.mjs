@@ -42,6 +42,6 @@ const canvas = createCanvas({
                 }
             },
         });
-// The runtime supports PNG icon metadata; this SDK's factory does not yet copy it.
+// The runtime accepts icon metadata that this SDK factory does not yet copy.
 canvas.declaration.icon = "icon.png";
 await joinSession({ canvases: [canvas] });

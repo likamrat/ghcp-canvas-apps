@@ -13,8 +13,10 @@ const assets = new Map([
     ["style.css", ["style.css", "text/css; charset=utf-8"]],
     ["icons/download.svg", ["icons/download.svg", "image/svg+xml"]],
     ["browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
-    ["favicon.svg", ["favicon.svg", "image/svg+xml"]],
-    ["favicon.ico", ["favicon.svg", "image/svg+xml"]],
+    ["icon.svg", ["icon.svg", "image/svg+xml"]],
+    ["icon.png", ["icon.png", "image/png"]],
+    ["favicon.svg", ["icon.svg", "image/svg+xml"]],
+    ["favicon.ico", ["icon.png", "image/png"]],
 ]);
 
 function imageInput(params) {

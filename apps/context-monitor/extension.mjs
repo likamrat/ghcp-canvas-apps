@@ -18,9 +18,7 @@ function action(handler) {
         }
     };
 }
-await joinSession({
-    canvases: [
-        createCanvas({
+const canvas = createCanvas({
             id: "context-monitor",
             displayName: "Context Monitor",
             description: "See Copilot app sessions, nested children, models, and context usage in one read-only view.",
@@ -60,6 +58,7 @@ await joinSession({
                     await entry.close();
                 }
             },
-        }),
-    ],
 });
+// The runtime accepts icon metadata that this SDK factory does not yet copy.
+canvas.declaration.icon = "icon.png";
+await joinSession({ canvases: [canvas] });

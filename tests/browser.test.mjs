@@ -100,6 +100,7 @@ test("each extension closes ordinary canvases but keeps explicit browser views a
             startServer: async () => { started++; return fakeServer; },
         };
         await runInNewContext(`(async () => { ${source}\n })()`, context);
+        assert.equal(declaration.declaration.icon, "icon.png", `${app}: declare a package-relative app icon`);
         await declaration.open({ instanceId: "ordinary", input: {} });
         await declaration.onClose({ instanceId: "ordinary" });
         assert.equal(closed, 1, `${app}: ordinary close must release the server`);

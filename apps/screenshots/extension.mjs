@@ -12,8 +12,7 @@ const action = (handler) => async (ctx) => {
     catch (error) { throw new CanvasError(error.code ?? "screenshots_error", error.message); }
 };
 
-await joinSession({
-    canvases: [createCanvas({
+const canvas = createCanvas({
         id: "screenshots",
         displayName: "Screenshots",
         description: "Browse session uploads and tool-generated screenshots with filters, sorting, and full-size previews.",
@@ -47,5 +46,7 @@ await joinSession({
             const entry = servers.get(instanceId);
             if (entry && !entry.hasBrowserWindow()) { servers.delete(instanceId); await entry.close(); }
         },
-    })],
 });
+// The runtime accepts icon metadata that this SDK factory does not yet copy.
+canvas.declaration.icon = "icon.png";
+await joinSession({ canvases: [canvas] });

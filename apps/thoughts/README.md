@@ -1,4 +1,4 @@
-# Thoughts
+<h1><img src="icon.svg" width="48" height="48" alt="" align="middle"> Thoughts</h1>
 
 Capture ideas in a canvas inside the GitHub Copilot app. Edit, copy, complete, or delete them, and expand longer thoughts.
 
@@ -39,7 +39,9 @@ node --test store.test.mjs
 
 Reload extensions after editing an installed copy. Cross-app browser and favicon checks are in `tests/`.
 
-Icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](PHOSPHOR-LICENSE.txt)).
+Interface icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](PHOSPHOR-LICENSE.txt)).
+
+App icon: Lucide **Lightbulb**, also available in `lucide-react` ([license](LUCIDE-LICENSE.txt)).
 
 ## Publish
 

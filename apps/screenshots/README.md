@@ -1,4 +1,4 @@
-# Screenshots
+<h1><img src="icon.svg" width="48" height="48" alt="" align="middle"> Screenshots</h1>
 
 Browse uploaded images and tool screenshots by GitHub Copilot session, without changing the originals.
 
@@ -54,7 +54,7 @@ Cross-app browser and favicon checks are in `tests/`. Reload extensions after ed
 
 Canvas ID: `screenshots`. Read-only actions: `list_sessions`, `query_images`, and `get_image`. The app folder is independently installable, like Thoughts and Context Monitor.
 
-Icons use [Lucide](https://lucide.dev) ([license](icons/LICENSE)).
+App icon: Lucide **Images**, also available in `lucide-react`. Icons use [Lucide](https://lucide.dev) ([license](icons/LICENSE)).
 
 ## Publish
 
