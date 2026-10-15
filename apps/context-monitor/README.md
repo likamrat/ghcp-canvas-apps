@@ -2,7 +2,7 @@
 
 See your GitHub Copilot app sessions, models, and context usage in one canvas.
 
-<a href="screenshot-full.png?v=37b4d151da0b"><img src="screenshot.png?v=fc7c961b61e9" alt="Context Monitor with paged sessions, a heat map, gradient usage bars, and sample GPT-6, GPT-6.1, and Claude sessions" width="640"></a>
+<a href="screenshot-full.png?v=088408fb0ae2"><img src="screenshot.png?v=d14737e9fe6e" alt="Context Monitor with a 600-session mock heat map, filters, pagination, and GPT and Claude sessions" width="640"></a>
 
 ## Use in the GitHub Copilot app
 
