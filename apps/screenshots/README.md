@@ -17,7 +17,7 @@ Open Screenshots when installation is complete.
 
 Personal installation makes Screenshots available across projects and chats. The extension must run on the computer that holds the app's local metadata and image files.
 
-Choose **Open in browser** in the header for a dedicated Edge/Chrome/Chromium window, carrying the selected session. If no supported dedicated-window browser is found, the app reports a fallback to your default browser. The canvas remains open, and closing it does not stop the popped-out view. Keep the owning Copilot session running; extension reload or session exit ends the old browser URL. Filters are independent between views.
+Choose **Open in browser** in the header to open the selected session in your normal system-default browser. The app uses the OS URL handler, with no app-mode window, forced Edge executable, or isolated browser profile; tab/window behavior follows your browser settings. The canvas remains open, and closing it does not stop the external browser view. Keep the owning Copilot session running; extension reload or session exit ends the old browser URL. Filters are independent between views.
 
 ## Controllers area
 

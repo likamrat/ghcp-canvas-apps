@@ -9,29 +9,17 @@ export function browserCommand(value, { platform = process.platform, env = proce
     if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || !url.port || url.username || url.password) {
         throw failure("invalid_input", "Only this app's local browser URL may be opened.", 400);
     }
-    const candidates = platform === "win32" ? [
-        [env["ProgramFiles(x86)"], "Microsoft", "Edge", "Application", "msedge.exe"],
-        [env.ProgramFiles, "Microsoft", "Edge", "Application", "msedge.exe"],
-        [env.LOCALAPPDATA, "Microsoft", "Edge", "Application", "msedge.exe"],
-        [env.ProgramFiles, "Google", "Chrome", "Application", "chrome.exe"],
-        [env.LOCALAPPDATA, "Google", "Chrome", "Application", "chrome.exe"],
-    ].filter((parts) => parts[0]).map((parts) => join(...parts)) : platform === "darwin" ? [
-        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    ] : ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
-    const executable = candidates.find(exists);
-    if (executable) return { executable, args: [`--app=${url.href}`, "--new-window"], mode: "window",
-        browser: /edge/i.test(executable) ? "Microsoft Edge" : /chrome/i.test(executable) ? "Google Chrome" : "Chromium" };
-    const fallback = platform === "win32" ? join(env.WINDIR || "C:\\Windows", "explorer.exe")
+    const executable = platform === "win32" ? join(env.WINDIR || "C:\\Windows", "System32", "rundll32.exe")
         : platform === "darwin" ? "/usr/bin/open" : "/usr/bin/xdg-open";
-    if (!exists(fallback)) throw failure("browser_unavailable", "No supported browser launcher was found.");
-    return { executable: fallback, args: [url.href], mode: "browser", browser: "your default browser" };
+    if (!exists(executable)) throw failure("browser_unavailable", "The system browser launcher was not found.");
+    const args = platform === "win32" ? ["url.dll,FileProtocolHandler", url.href] : [url.href];
+    return { executable, args, mode: "browser", browser: "your default system browser" };
 }
 
 export async function launchBrowserWindow(url) {
     const command = browserCommand(url);
     await new Promise((resolve, reject) => {
-        const child = spawn(command.executable, command.args, { stdio: "ignore", windowsHide: true, detached: true, shell: false });
+        const child = spawn(command.executable, command.args, { stdio: "ignore", windowsHide: false, detached: true, shell: false });
         let timer, settled = false;
         const finish = (error) => {
             if (settled) return;

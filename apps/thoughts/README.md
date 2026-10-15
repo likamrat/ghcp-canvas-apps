@@ -17,7 +17,7 @@ Open Thoughts when installation is complete.
 
 Choose **Add thought** or press **Ctrl/Cmd + Enter** to save an idea. You can also tell your agent what to save.
 
-Choose **Open in browser** in the header for a dedicated Edge/Chrome/Chromium window. If none is found, the app reports a fallback to your default browser. Both views use the same saved thoughts; unsaved drafts are independent. Closing the canvas does not stop an explicitly opened browser view, but ending the owning Copilot session or reloading extensions does. Reopen through the canvas after a reload.
+Choose **Open in browser** in the header to use your normal system-default browser through the OS URL handler. No browser executable, app-mode window, or isolated profile is forced; tab/window behavior follows your browser settings. Both views use the same saved thoughts; unsaved drafts are independent. Closing the canvas does not stop an explicitly opened browser view, but ending the owning Copilot session or reloading extensions does. Reopen through the canvas after a reload.
 
 The bin icon asks for confirmation before permanently deleting a thought.
 

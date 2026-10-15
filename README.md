@@ -10,13 +10,13 @@ Small productivity apps for developers working in the GitHub Copilot app. Each o
 
 ## Open in a browser
 
-Every app includes **Open in browser** in its header. It opens a dedicated app-style Edge, Chrome, or Chromium window when a supported installation is available. Otherwise it explicitly falls back to the system browser, which may use a tab. The canvas stays open; closing it does not stop a view that was popped out.
+Every app includes **Open in browser** in its header. It hands the local app URL to the operating system's default browser handler, opening the normal system browser with its usual tabs, controls, and settings. It does not force Edge, use app/kiosk mode, or create an isolated browser profile. Tab versus window behavior follows your browser settings. The canvas stays open; closing it does not stop the external browser view.
 
 Browser views use the same local app server and saved data. Keep the owning Copilot session running. Ending that session, exiting Copilot, or reloading extensions stops the old browser URL; reopen the canvas and use the button again. Filters and unsaved drafts are independent between views. Screenshots carries the selected session into the browser view.
 
 ## Default for new apps
 
-Include a compact **Open in browser** header button and visible launch/error status in every new canvas app. Use a validated, authenticated same-origin POST to launch only the app's own loopback URL; never accept arbitrary URLs or commands from the page. Prefer a dedicated app-style window and report default-browser fallback honestly.
+Include a compact **Open in browser** header button and visible launch/error status in every new canvas app. Use a validated, authenticated same-origin POST to launch only the app's own loopback URL; never accept arbitrary URLs or commands from the page. Always use the native default-browser URL handler, not a forced browser executable, `--app` mode, or a Copilot browser canvas.
 
 Keep servers alive after canvas close only when a browser view has explicitly been opened, and release them when the extension exits. Ordinary canvas-only instances still close their servers normally. No persistent daemon or extension-global setting is required.
 

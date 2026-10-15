@@ -10,7 +10,7 @@ const apps = new URL("../apps/", import.meta.url);
 
 test("every app exposes an authenticated browser pop-out and retains its server after launch", async (t) => {
     const launches = [];
-    const launchBrowser = async (url) => { launches.push(url); return { mode: "window", browser: "Test browser" }; };
+    const launchBrowser = async (url) => { launches.push(url); return { mode: "browser", browser: "your default system browser" }; };
     const servers = [
         await screenshots({}, { launchBrowser }),
         await monitor(() => ({}), undefined, { launchBrowser }),
@@ -28,7 +28,7 @@ test("every app exposes an authenticated browser pop-out and retains its server 
         assert.equal(forbidden.status, 403);
         const result = await fetch(endpoint, { method: "POST", headers, body: "{}" });
         assert.equal(result.status, 200);
-        assert.equal((await result.json()).mode, "window");
+        assert.equal((await result.json()).mode, "browser");
         assert.equal(server.hasBrowserWindow(), true);
         assert.equal((await fetch(server.url)).status, 200);
         const foreign = await fetch(endpoint, { method: "POST", headers: { ...headers, Origin: "https://example.com" }, body: "{}" });
@@ -40,18 +40,23 @@ test("every app exposes an authenticated browser pop-out and retains its server 
     assert.ok(launches.every((url) => new URL(url).hostname === "127.0.0.1" && new URL(url).searchParams.get("view") === "browser"));
 });
 
-test("browser commands request dedicated local app windows without accepting remote or executable URLs", () => {
+test("browser commands use the native system URL handler without app-mode or browser-profile overrides", () => {
     const command = browserCommand("http://127.0.0.1:12345/local/?session=example&view=browser", {
-        platform: "win32", env: { "ProgramFiles(x86)": "C:\\Program Files (x86)" }, exists: () => true,
+        platform: "win32", env: { WINDIR: "C:\\Windows" }, exists: () => true,
     });
-    assert.equal(command.mode, "window");
-    assert.equal(command.browser, "Microsoft Edge");
-    assert.deepEqual(command.args, ["--app=http://127.0.0.1:12345/local/?session=example&view=browser", "--new-window"]);
+    assert.equal(command.mode, "browser");
+    assert.equal(command.executable, "C:\\Windows\\System32\\rundll32.exe");
+    assert.deepEqual(command.args, ["url.dll,FileProtocolHandler", "http://127.0.0.1:12345/local/?session=example&view=browser"]);
+    assert.equal(command.args.some((argument) => /^--/.test(argument)), false);
     for (const url of ["https://example.com", "file:///secret", "http://localhost:12345", "http://user:password@127.0.0.1:12345"]) {
         assert.throws(() => browserCommand(url), /local browser/);
     }
-    const fallback = browserCommand("http://127.0.0.1:12345/", { platform: "linux", env: {}, exists: (file) => file === "/usr/bin/xdg-open" });
-    assert.equal(fallback.mode, "browser");
+    const linux = browserCommand("http://127.0.0.1:12345/", { platform: "linux", env: {}, exists: (file) => file === "/usr/bin/xdg-open" });
+    assert.equal(linux.executable, "/usr/bin/xdg-open");
+    assert.deepEqual(linux.args, ["http://127.0.0.1:12345/"]);
+    const mac = browserCommand("http://127.0.0.1:12345/", { platform: "darwin", env: {}, exists: () => true });
+    assert.equal(mac.executable, "/usr/bin/open");
+    assert.deepEqual(mac.args, ["http://127.0.0.1:12345/"]);
     assert.throws(() => browserCommand("http://127.0.0.1:12345/", { exists: () => false }), /launcher/);
 });
 

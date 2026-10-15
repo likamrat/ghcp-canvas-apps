@@ -23,9 +23,7 @@
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || "The browser could not be opened.");
-            status.textContent = result.mode === "window"
-                ? `Opened a dedicated ${result.browser} window. It stays available when this canvas closes.`
-                : `Opened in ${result.browser}; this system may use a browser tab instead of a separate window.`;
+            status.textContent = `Opened in ${result.browser}. It stays available when this canvas closes.`;
         } catch (error) { status.textContent = `Could not open in browser: ${error.message}`; }
         finally { button.disabled = false; }
     });

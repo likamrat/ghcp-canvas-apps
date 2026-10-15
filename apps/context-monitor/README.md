@@ -17,7 +17,7 @@ Open Context Monitor when installation is complete.
 
 Install in personal scope to make Context Monitor available from Canvas apps across chats.
 
-Choose **Open in browser** in the header to open a dedicated Edge/Chrome/Chromium window. If none is found, the app reports a fallback to your default browser. Closing the canvas leaves an explicitly opened browser view running. Keep the owning Copilot session active; session exit or extension reload ends its old browser URL. Saved thresholds are shared, while filters are independent between views.
+Choose **Open in browser** in the header to use your normal system-default browser through the OS URL handler. No browser executable, app-mode window, or isolated profile is forced; tab/window behavior follows your browser settings. Closing the canvas leaves an explicitly opened browser view running. Keep the owning Copilot session active; session exit or extension reload ends its old browser URL. Saved thresholds are shared, while filters are independent between views.
 
 Filter by model, pinned sessions, or context usage. Use the arrow beside a parent session's name to show its nested sessions. Branches start collapsed at every level, so opening a parent reveals its immediate children rather than all descendants. Indentation, branch connectors, and parent/nested labels show the hierarchy. Search and filters temporarily reveal matching branches; context-usage sorting reveals nested sessions for comparison.
 
