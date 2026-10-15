@@ -1,15 +1,21 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
+import { createBrowserPopout } from "./browser.mjs";
 
 const assets = new Map([
     ["/", ["index.html", "text/html; charset=utf-8"]],
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
+    ["/browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
+    ["/icon.png", ["icon.png", "image/png"]],
+    ["/icon.svg", ["icon.svg", "image/svg+xml"]],
+    ["/favicon.ico", ["icon.png", "image/png"]],
 ]);
 
-export async function startServer(store) {
+export async function startServer(store, { launchBrowser } = {}) {
     const token = randomBytes(32).toString("hex");
+    const popout = createBrowserPopout(() => `http://127.0.0.1:${server.address().port}/`, launchBrowser);
     const server = createServer(async (req, res) => {
         res.setHeader("Cache-Control", "no-store");
         res.setHeader("X-Content-Type-Options", "nosniff");
@@ -19,20 +25,26 @@ export async function startServer(store) {
         const expectedHost = `127.0.0.1:${address.port}`;
         const origin = `http://${expectedHost}`;
         if (req.headers.host !== expectedHost ||
-            (req.headers.origin && req.headers.origin !== origin)) {
+            (req.headers.origin && req.headers.origin !== origin) || req.headers["sec-fetch-site"] === "cross-site") {
             res.writeHead(403).end("Forbidden");
             return;
         }
         try {
             const url = new URL(req.url, origin);
-            if (req.method === "GET" && url.pathname === "/favicon.ico") {
-                res.writeHead(204).end();
+            if (url.pathname === "/api/open-browser" && req.method === "POST") {
+                if (req.headers["x-inbox-token"] !== token) { res.writeHead(403).end("Forbidden"); return; }
+                const result = await popout.open(req);
+                res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
                 return;
             }
             if (req.method === "GET" && assets.has(url.pathname)) {
                 const [file, type] = assets.get(url.pathname);
-                let content = await readFile(new URL(file, import.meta.url), "utf8");
-                if (file === "index.html") content = content.replace("__TOKEN__", token);
+                let content = await readFile(new URL(file, import.meta.url));
+                if (file === "index.html") {
+                    const icon = await readFile(new URL("icon.svg", import.meta.url));
+                    content = content.toString("utf8").replace("__TOKEN__", token)
+                        .replace("__ICON_VERSION__", createHash("sha256").update(icon).digest("hex").slice(0, 12));
+                }
                 res.setHeader("Content-Type", type);
                 res.end(content);
                 return;
@@ -60,7 +72,7 @@ export async function startServer(store) {
             }
             res.writeHead(404).end("Not found");
         } catch (error) {
-            res.writeHead(error.code === "item_changed" ? 409 : error.code === "invalid_input" ? 400 : 500,
+            res.writeHead(error.status ?? (error.code === "item_changed" ? 409 : error.code === "invalid_input" ? 400 : 500),
                 { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: error.message }));
         }
@@ -70,6 +82,7 @@ export async function startServer(store) {
         server.listen(0, "127.0.0.1", resolve);
     });
     return {
+        hasBrowserWindow: popout.hasBrowserWindow,
         server,
         url: `http://127.0.0.1:${server.address().port}/`,
         close: () => new Promise((resolve, reject) => {

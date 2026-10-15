@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="monitor-token" content="__TOKEN__">
     <title>Context Monitor</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg?v=__ICON_VERSION__">
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/style.css">
     <script type="module" src="/app.js"></script>
+    <script src="/browser.js" defer></script>
 </head>
 <body>
     <main>
-        <header><h1>Context Monitor</h1></header>
+        <header><h1>Context Monitor</h1><button id="open-browser" type="button">Open in browser</button></header>
+        <p id="browser-status" class="browser-status" role="status" hidden></p>
         <section class="control-panel" aria-label="Session controls">
             <div class="control-filters">
                 <div class="search"><label for="search">Search sessions</label><input id="search" type="search" placeholder="Name, project, or model" autocomplete="off"></div>

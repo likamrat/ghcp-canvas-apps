@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Screenshots</title>
+    <link rel="icon" type="image/svg+xml" href="./icon.svg?v=__ICON_VERSION__">
+    <link rel="stylesheet" href="./style.css">
+    <script type="module" src="./app.js"></script>
+    <script src="./browser.js" defer></script>
+</head>
+<body>
+<main>
+    <header><h1>Screenshots</h1><div class="header-actions"><span class="local-label">Local / read-only</span><button id="open-browser" type="button">Open in browser</button></div></header>
+    <p id="browser-status" class="browser-status" role="status" hidden></p>
+    <section class="control-panel" aria-label="Screenshot controls">
+        <div class="control-row session-controls">
+            <label class="check-filter"><input id="include-archived" type="checkbox"> Include archived sessions</label>
+            <label class="check-filter" title="Include screenshots from descendants of the selected session. Expanding the navigator does not change image scope."><input id="include-children" type="checkbox" aria-describedby="child-scope-help"> Include child screenshots</label>
+        </div>
+        <div class="control-row image-controls">
+            <div class="field"><label for="filename">Search filenames</label><input id="filename" type="search" placeholder="Screenshot filename" autocomplete="off"></div>
+            <div class="field"><label for="source">Source</label><select id="source"><option value="">All sources</option><option value="uploaded">Uploaded</option><option value="generated">Tool-generated</option><option value="tool">Tool image</option><option value="unknown">Unknown</option></select></div>
+            <div class="field"><label for="from">From date</label><input id="from" type="date" aria-describedby="date-error"></div>
+            <div class="field"><label for="to">To date</label><input id="to" type="date" aria-describedby="date-error"></div>
+        </div>
+        <p id="date-error" class="error-text" role="alert" hidden></p>
+        <div class="control-row display-controls">
+            <div class="field"><label for="sort">Sort by</label><select id="sort"><option value="timestamp">Timestamp</option><option value="name">Filename</option><option value="size">File size</option></select></div>
+            <div class="field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
+            <div class="field"><label for="group">Group by</label><select id="group"><option value="day">Day</option><option value="source">Source</option><option value="none">None</option></select></div>
+            <div class="field"><label for="thumbnail">Thumbnail size</label><select id="thumbnail"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
+            <div class="field"><label for="page-size">Screenshots per page</label><select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select></div>
+            <div class="field"><label for="auto-refresh">Auto-refresh</label><select id="auto-refresh" aria-describedby="refresh-status"><option value="0" selected>Off</option><option value="5000">Every 5 seconds</option><option value="10000">Every 10 seconds</option><option value="30000">Every 30 seconds</option><option value="60000">Every minute</option><option value="300000">Every 5 minutes</option></select></div>
+            <div class="control-actions"><button id="refresh" type="button">Refresh</button><button id="clear" class="quiet" type="button">Clear filters</button><button id="download-all" type="button" disabled><span class="download-icon" aria-hidden="true"></span>Download all</button></div>
+        </div>
+    </section>
+    <div class="overview"><p id="summary" role="status">Reading local sessions...</p><div class="refresh-summary"><span id="sync"></span><span id="refresh-status" role="status">Auto-refresh off</span></div></div>
+    <p id="error" class="notice error-text" role="alert" hidden></p>
+    <p id="warnings" class="notice" hidden></p>
+    <div id="download-notice" class="notice download-notice" hidden>
+        <p id="download-status" role="status"></p>
+        <div class="download-notice-actions">
+            <button id="open-download-folder" type="button" hidden>Open in folder</button>
+            <button id="dismiss-download" type="button" aria-label="Dismiss download notification">Dismiss</button>
+        </div>
+    </div>
+    <div class="browse">
+        <aside aria-label="Session navigator">
+            <h2>Sessions <span id="session-count"></span></h2>
+            <div class="session-discovery">
+                <div class="session-search-field field">
+                    <label for="session-search">Search sessions</label>
+                    <input id="session-search" type="search" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="session-options" placeholder="Name or project" autocomplete="off">
+                </div>
+                <div class="compact-picker field">
+                    <label id="session-picker-label" for="session-picker">Selected session</label>
+                    <button id="session-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="session-options" aria-labelledby="session-picker-label session-picker-value"><span id="session-picker-value">Select a session</span></button>
+                </div>
+                <div id="session-options" role="listbox" aria-label="Matching sessions" hidden></div>
+            </div>
+            <p id="session-search-status" class="muted" role="status" hidden></p>
+            <p id="child-scope-help" class="session-scope-help">Expand a parent to browse its children. Child screenshots are excluded until enabled above.</p>
+            <nav id="sessions" aria-label="Sessions" aria-busy="true"><p class="muted">Loading sessions...</p></nav>
+        </aside>
+        <section class="gallery-area" aria-label="Screenshot gallery">
+            <div id="gallery" data-size="medium" aria-busy="true"><div class="skeleton"></div></div>
+            <nav id="pagination" aria-label="Screenshot pages" hidden>
+                <span id="page-range" role="status"></span>
+                <div class="page-buttons">
+                    <button id="page-previous" type="button">Previous page</button>
+                    <span id="page-status" aria-live="polite"></span>
+                    <button id="page-next" type="button">Next page</button>
+                </div>
+            </nav>
+        </section>
+    </div>
+    <footer>Images stay on this computer. Only retained session image references are indexed.</footer>
+</main>
+<dialog id="viewer" aria-labelledby="preview-name">
+    <div class="viewer-header"><h2 id="preview-name">Screenshot</h2><button id="close-preview" type="button">Close</button></div>
+    <div class="preview-controls" aria-label="Preview controls">
+        <button id="previous" type="button" aria-label="Previous screenshot">Previous</button>
+        <button id="next" type="button" aria-label="Next screenshot">Next</button>
+        <span id="position"></span>
+        <div class="zoom-controls" role="group" aria-label="Zoom controls">
+            <span class="zoom-label">Zoom</span>
+            <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+            <output id="zoom" aria-label="Zoom level" aria-live="polite"></output>
+            <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+            <button id="actual" type="button" aria-pressed="false" title="Show the image at 100%">Actual size</button>
+            <button id="reset-zoom" type="button" title="Restore the original preview size and position">Reset zoom</button>
+        </div>
+    </div>
+    <div id="preview-stage" class="preview-stage" tabindex="0" aria-label="Image preview">
+        <span id="preview-anchor" hidden></span>
+        <p id="preview-error" class="preview-message" role="status"></p>
+    </div>
+    <dl id="details"></dl>
+</dialog>
+</body>
+</html>

@@ -257,7 +257,6 @@ function sessionRow(session, scale) {
     ].join(" / ")));
     if (!session.matching) nameBlock.append(element("div", "filter-parent",
         isFiltering() ? "Parent of matching sessions" : "Parent of sessions on this page"));
-    identity.append(nameBlock);
     const actions = element("div", "row-actions");
     if (isParent) {
         const fold = element("button", "fold icon-button");
@@ -275,8 +274,9 @@ function sessionRow(session, scale) {
         const icon = element("span", `disclosure-icon ${isOpen ? "hide-children" : "show-children"}`);
         icon.setAttribute("aria-hidden", "true");
         fold.append(icon);
-        actions.append(fold);
-    }
+        identity.append(fold);
+    } else identity.append(element("span", "disclosure-spacer"));
+    identity.append(nameBlock);
     const modelBlock = element("div", "model-block");
     const model = element("div", "model", session.model || "Model not reported");
     model.title = session.model || "Model not reported";
@@ -375,7 +375,7 @@ function render() {
     document.getElementById("legend-high").textContent = `High usage ${thresholds.high}%+`;
     sortHelp.textContent = SORT_PRESETS[sortBy.value].hint;
     for (const session of visibleTree(sessions, { includeArchived: archived.checked })) {
-        if (session.depth === 0 && session.descendantCount && !initializedParents.has(session.id)) {
+        if (session.descendantCount && !initializedParents.has(session.id)) {
             initializedParents.add(session.id);
             if (!isContextSort(sortBy.value)) collapsed.add(session.id);
         }
