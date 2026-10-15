@@ -39,7 +39,7 @@ From this app's folder:
 node --test store.test.mjs
 ```
 
-After updating an installed copy, ask Copilot to "reload extensions" in the GitHub Copilot app. Reopen existing browser tabs to load the current code and favicon. Cross-app browser and favicon checks are in `tests/`.
+After updating an installed copy, reload or restart the extension in **Customize** in the GitHub Copilot app. Alternatively, ask Copilot to "reload extensions". Reopen existing browser tabs to load the current code and favicon. Cross-app browser and favicon checks are in `tests/`.
 
 ## Publish
 

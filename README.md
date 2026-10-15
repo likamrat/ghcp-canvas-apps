@@ -8,4 +8,4 @@ Personal canvas extensions for the GitHub Copilot app. Each opens in a panel alo
 | [Context Monitor](apps/context-monitor/README.md) | See which sessions have room to continue and which are nearing their context limit. |
 | [Screenshots](apps/screenshots/README.md) | Find the screenshot you need without digging through old chats. |
 
-After installing or updating an app, ask Copilot to "reload extensions" in the GitHub Copilot app.
+After installing or updating an app, reload or restart the extension in **Customize** in the GitHub Copilot app. Alternatively, ask Copilot to "reload extensions".

@@ -50,4 +50,4 @@ Node 24+. No build step. From this folder:
 node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs refresh.test.mjs
 ```
 
-After updating an installed copy, ask Copilot to "reload extensions" in the GitHub Copilot app. Reopen existing browser tabs to load the current code and favicon. Keep private images, histories, and databases out of the repository.
+After updating an installed copy, reload or restart the extension in **Customize** in the GitHub Copilot app. Alternatively, ask Copilot to "reload extensions". Reopen existing browser tabs to load the current code and favicon. Keep private images, histories, and databases out of the repository.
