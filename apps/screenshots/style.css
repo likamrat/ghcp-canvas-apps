@@ -129,6 +129,9 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
 .viewer-header h2 { font-size: 14px; margin: 0; overflow-wrap: anywhere; min-width: 0; }
 .preview-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 14px 0; }
 .preview-controls button { font-size: 12px; min-height: 34px; padding: 6px 10px; }
+.zoom-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.zoom-label { color: var(--muted); font-size: 12px; }
+#reset-zoom { border-color: var(--muted); }
 #position, #zoom { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 #position { margin-right: auto; }
 .preview-stage { height: min(58dvh, 700px); overflow: auto; background: var(--hover); border: 1px solid var(--edge); border-radius: 6px; position: relative; }

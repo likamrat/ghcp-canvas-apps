@@ -1,4 +1,4 @@
-import { defaultView, clearFilters, queryImages, paginateImages, sessionTree, createRequestGate, SOURCE_LABELS } from "./model.mjs";
+import { defaultView, clearFilters, queryImages, paginateImages, sessionTree, createRequestGate, SOURCE_LABELS, previewScale, nextZoom } from "./model.mjs";
 
 const $ = (id) => document.getElementById(id);
 const view = defaultView();
@@ -333,6 +333,7 @@ function openPreview(id, trigger) {
     previewId = id; previewTrigger = trigger; zoom = null;
     renderPreview();
     $("viewer").showModal();
+    updateZoom();
     $("close-preview").focus();
 }
 function renderPreview() {
@@ -344,7 +345,7 @@ function renderPreview() {
     $("position").textContent = `${index + 1} of ${ordered.length}`;
     $("previous").disabled = index === 0;
     $("next").disabled = index === ordered.length - 1;
-    for (const id of ["fit", "actual", "zoom-in", "zoom-out"]) $(id).disabled = image.availability !== "available";
+    for (const id of ["reset-zoom", "actual", "zoom-in", "zoom-out"]) $(id).disabled = image.availability !== "available";
     $("preview-image")?.remove();
     const img = document.createElement("img");
     img.id = "preview-image";
@@ -387,9 +388,12 @@ function updateZoom() {
         img.style.width = zoom === null ? "" : `${(image?.width || img.naturalWidth) * zoom}px`;
         img.style.height = zoom === null ? "" : `${(image?.height || img.naturalHeight) * zoom}px`;
     }
-    $("fit").setAttribute("aria-pressed", String(zoom === null));
     $("actual").setAttribute("aria-pressed", String(zoom === 1));
-    $("zoom").textContent = zoom === null ? "Fit" : `${Math.round(zoom * 100)}%`;
+    const stage = $("preview-stage");
+    const initial = previewScale(image?.width, image?.height, stage.clientWidth, stage.clientHeight);
+    const scale = zoom ?? initial;
+    $("zoom").textContent = scale === null ? "" : `${Math.round(scale * 1000) / 10}%`;
+    if (zoom === null) stage.scrollTo(0, 0);
 }
 function stepPreview(delta) {
     const index = ordered.findIndex((image) => image.id === previewId);
@@ -400,8 +404,9 @@ function scaleZoom(factor) {
     const image = ordered.find((item) => item.id === previewId);
     if (!image) return;
     const stage = $("preview-stage");
-    const fitted = Math.min(stage.clientWidth / image.width, stage.clientHeight / image.height, 1);
-    zoom = Math.min(8, Math.max(.1, (zoom ?? fitted) * factor));
+    const initial = previewScale(image.width, image.height, stage.clientWidth, stage.clientHeight);
+    if (initial === null) return;
+    zoom = nextZoom(zoom, factor, initial);
     updateZoom();
 }
 
@@ -553,8 +558,9 @@ $("viewer").addEventListener("keydown", (event) => {
 });
 $("previous").onclick = () => stepPreview(-1);
 $("next").onclick = () => stepPreview(1);
-$("fit").onclick = () => { zoom = null; updateZoom(); };
+$("reset-zoom").onclick = () => { zoom = null; updateZoom(); };
 $("actual").onclick = () => { zoom = 1; updateZoom(); };
 $("zoom-in").onclick = () => scaleZoom(1.25);
 $("zoom-out").onclick = () => scaleZoom(.8);
+new ResizeObserver(() => { if ($("viewer").open) updateZoom(); }).observe($("preview-stage"));
 refresh();

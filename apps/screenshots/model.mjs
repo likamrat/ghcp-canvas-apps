@@ -18,6 +18,17 @@ function dateBoundary(value, nextDay = false) {
     return date.getTime();
 }
 
+export function previewScale(width, height, viewportWidth, viewportHeight) {
+    if (![width, height, viewportWidth, viewportHeight].every((value) => Number.isFinite(value) && value > 0)) return null;
+    return Math.min(viewportWidth / width, viewportHeight / height, 1);
+}
+
+export function nextZoom(current, factor, initial) {
+    if (!Number.isFinite(initial) || initial <= 0 || !Number.isFinite(factor) || factor <= 0 ||
+        (current !== null && (!Number.isFinite(current) || current <= 0))) invalid("Invalid zoom dimensions.");
+    return Math.min(8, Math.max(Math.min(.01, initial / 10), (current ?? initial) * factor));
+}
+
 export function localDay(value) {
     const date = new Date(value);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;

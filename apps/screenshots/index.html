@@ -82,11 +82,14 @@
         <button id="previous" type="button" aria-label="Previous screenshot">Previous</button>
         <button id="next" type="button" aria-label="Next screenshot">Next</button>
         <span id="position"></span>
-        <button id="fit" type="button" aria-pressed="true">Fit</button>
-        <button id="actual" type="button" aria-pressed="false">Actual size</button>
-        <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
-        <output id="zoom" aria-live="polite">Fit</output>
-        <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+        <div class="zoom-controls" role="group" aria-label="Zoom controls">
+            <span class="zoom-label">Zoom</span>
+            <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+            <output id="zoom" aria-label="Zoom level" aria-live="polite"></output>
+            <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+            <button id="actual" type="button" aria-pressed="false" title="Show the image at 100%">Actual size</button>
+            <button id="reset-zoom" type="button" title="Restore the original preview size and position">Reset zoom</button>
+        </div>
     </div>
     <div id="preview-stage" class="preview-stage" tabindex="0" aria-label="Image preview">
         <span id="preview-anchor" hidden></span>

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { queryImages, defaultView, clearFilters, sessionTree, createRequestGate, paginateImages } from "./model.mjs";
+import { queryImages, defaultView, clearFilters, sessionTree, createRequestGate, paginateImages, previewScale, nextZoom } from "./model.mjs";
 
 test("combined image filters use local inclusive dates and leave unknown times visible without a range", () => {
     const images = [
@@ -66,4 +66,15 @@ test("pagination defaults to eight, slices across groups, and clamps pages after
     assert.equal(paginateImages(query, 99).page, 5);
     assert.equal(paginateImages(queryImages([]), 5).page, 1);
     assert.throws(() => paginateImages(query, 1, 10), /page size/i);
+});
+
+test("preview zoom starts at the original preview scale and zoom-out never increases a small preview", () => {
+    const initial = previewScale(1000, 2000, 500, 500);
+    assert.equal(initial, .25);
+    assert.equal(nextZoom(null, 1.25, initial), .3125);
+    assert.equal(nextZoom(null, .8, initial), .2);
+    assert.equal(previewScale(100, 100, 500, 500), 1);
+    assert.equal(previewScale(1000, 2000, 0, 0), null);
+    const tiny = previewScale(1000, 100000, 500, 500);
+    assert.ok(nextZoom(null, .8, tiny) < tiny);
 });
