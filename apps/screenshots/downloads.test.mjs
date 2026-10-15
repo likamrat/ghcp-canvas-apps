@@ -2,6 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { startServer } from "./server.mjs";
 import { downloadArchive, downloadName } from "./downloads.mjs";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
 
 test("individual and ZIP downloads export indexed bytes with safe unique names", async (t) => {
     const ids = ["a".repeat(64), "b".repeat(64)];
@@ -59,4 +63,52 @@ test("bulk exports reject missing images, duplicate selections, and oversized ar
     await assert.rejects(downloadArchive(catalog, [id]), /unavailable/);
     assert.equal(downloadName("CON.png"), "_CON.png");
     assert.equal(downloadName("../../hello\r\n.png"), "hello__.png");
+});
+
+test("download clicks save verified files and exactly one ZIP without overwriting earlier downloads", async (t) => {
+    const directory = await mkdtemp(join(tmpdir(), "screenshots-download-"));
+    t.after(() => rm(directory, { recursive: true, force: true }));
+    const ids = ["a".repeat(64), "b".repeat(64)];
+    const bytes = Buffer.from("known screenshot bytes");
+    const catalog = {
+        metadata: (id) => {
+            if (!ids.includes(id)) throw Object.assign(new Error("Image not indexed"), { code: "image_missing" });
+            return { id, name: "capture.png", size: bytes.length, availability: "available" };
+        },
+        openImage: async (id) => {
+            catalog.metadata(id);
+            return { data: bytes, size: bytes.length, mime: "image/png" };
+        },
+    };
+    const server = await startServer(catalog, { downloadDirectory: directory });
+    t.after(() => server.close());
+    async function save(input) {
+        const response = await fetch(new URL("api/save-download", server.url), {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+        });
+        assert.equal(response.status, 200);
+        return response.json();
+    }
+    const single = await save({ ids: [ids[0]], archive: false });
+    assert.equal(single.path, join(directory, "capture.png"));
+    assert.equal(createHash("sha256").update(await readFile(single.path)).digest("hex"), createHash("sha256").update(bytes).digest("hex"));
+    const second = await save({ ids: [ids[0]], archive: false });
+    assert.notEqual(second.path, single.path);
+    const archive = await save({ ids, archive: true });
+    const zip = await readFile(archive.path);
+    assert.equal(archive.count, 2);
+    assert.equal(zip.readUInt32LE(0), 0x04034b50);
+    assert.equal(zip.readUInt16LE(zip.length - 12), 2);
+    assert.deepEqual((await readdir(directory)).sort(), ["capture (1).png", "capture.png", "screenshots.zip"]);
+    const foreign = await fetch(new URL("api/save-download", server.url), {
+        method: "POST", headers: { "Content-Type": "application/json", Origin: "https://example.com" },
+        body: JSON.stringify({ ids: [ids[0]], archive: false }),
+    });
+    assert.equal(foreign.status, 403);
+    const arbitraryPath = await fetch(new URL("api/save-download", server.url), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [ids[0]], archive: false, path: "../elsewhere" }),
+    });
+    assert.equal(arbitraryPath.status, 400);
+    assert.deepEqual((await readdir(directory)).sort(), ["capture (1).png", "capture.png", "screenshots.zip"]);
 });

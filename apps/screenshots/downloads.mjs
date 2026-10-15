@@ -1,5 +1,8 @@
 import { crc32 } from "node:zlib";
 import { sourceError } from "./source.mjs";
+import { mkdir, open, unlink } from "node:fs/promises";
+import { homedir } from "node:os";
+import { extname, join } from "node:path";
 
 const MAX_EXPORT = 128 * 1024 * 1024;
 export function downloadName(value) {
@@ -10,6 +13,61 @@ export function downloadName(value) {
 export function attachment(name) {
     const safe = downloadName(name);
     return `attachment; filename="${safe.replace(/[^\x20-\x7e]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(safe).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)}`;
+}
+
+async function imageBytes(image) {
+    try {
+        if (image.data) return image.data;
+        if (!Number.isSafeInteger(image.size) || image.size < 1 || image.size > 32 * 1024 * 1024) {
+            throw sourceError("image_unavailable", "The image size is unsupported. Refresh and retry.");
+        }
+        const bytes = Buffer.alloc(image.size);
+        let read = 0;
+        while (read < bytes.length) {
+            const { bytesRead } = await image.file.read(bytes, read, bytes.length - read, read);
+            if (!bytesRead) throw sourceError("image_changed", "An image changed during export. Refresh and retry.");
+            read += bytesRead;
+        }
+        return bytes;
+    } finally { await image.file?.close(); }
+}
+
+export async function saveImages(catalog, input, directory = join(homedir(), "Downloads")) {
+    if (!input || typeof input !== "object" || Object.keys(input).some((key) => !["ids", "archive"].includes(key)) ||
+        typeof input.archive !== "boolean" || !Array.isArray(input.ids) || !input.ids.length ||
+        input.ids.some((id) => typeof id !== "string" || !/^[a-f0-9]{64}$/.test(id)) ||
+        (!input.archive && input.ids.length !== 1)) {
+        throw sourceError("invalid_input", "Choose one image or a ZIP archive of indexed images.");
+    }
+    const filename = input.archive ? "screenshots.zip" : downloadName(catalog.metadata(input.ids[0]).name);
+    const bytes = input.archive ? await downloadArchive(catalog, input.ids) : await imageBytes(await catalog.openImage(input.ids[0]));
+    await mkdir(directory, { recursive: true });
+    const extension = extname(filename);
+    const stem = filename.slice(0, filename.length - extension.length);
+    for (let suffix = 0; suffix < 1000; suffix++) {
+        const name = suffix ? `${stem} (${suffix})${extension}` : filename;
+        const path = join(directory, name);
+        let file;
+        try { file = await open(path, "wx", 0o600); }
+        catch (error) {
+            if (error.code === "EEXIST") continue;
+            throw sourceError("download_failed", `Cannot create a file in Downloads: ${error.message}`);
+        }
+        try {
+            await file.writeFile(bytes);
+            await file.sync();
+            await file.close();
+            return { path, name, bytes: bytes.length, count: input.ids.length, archive: input.archive };
+        } catch (error) {
+            await file.close();
+            try { await unlink(path); }
+            catch (cleanupError) {
+                throw sourceError("download_failed", `Download failed (${error.message}); partial file could not be removed: ${path} (${cleanupError.message}).`);
+            }
+            throw sourceError("download_failed", `Download could not be saved: ${error.message}`);
+        }
+    }
+    throw sourceError("download_failed", "Too many files with this name already exist in Downloads. Rename or move earlier downloads.");
 }
 
 export async function downloadArchive(catalog, ids) {
@@ -31,20 +89,7 @@ export async function downloadArchive(catalog, ids) {
     let offset = 0;
     for (const [index, record] of records.entries()) {
         const image = await catalog.openImage(record.id);
-        let bytes;
-        try {
-            if (image.data) bytes = image.data;
-            else {
-                bytes = Buffer.alloc(image.size);
-                let read = 0;
-                while (read < bytes.length) {
-                    const { bytesRead } = await image.file.read(bytes, read, bytes.length - read, read);
-                    if (!bytesRead) throw sourceError("image_changed", "An image changed during export. Refresh and retry.");
-                    read += bytesRead;
-                }
-            }
-        }
-        finally { await image.file?.close(); }
+        const bytes = await imageBytes(image);
         const name = Buffer.from(`${String(index + 1).padStart(4, "0")}-${downloadName(record.name)}`, "utf8");
         const local = Buffer.alloc(30);
         local.writeUInt32LE(0x04034b50, 0);

@@ -213,7 +213,10 @@ function renderGallery() {
             download.firstChild.setAttribute("aria-hidden", "true");
             download.onclick = async () => {
                 download.disabled = true;
-                try { await saveDownload(`download/${image.id}`, image.name); }
+                try {
+                    const saved = await saveDownload({ ids: [image.id], archive: false });
+                    notice("download-status", `Saved screenshot to ${saved.path}`);
+                }
                 catch (error) { notice("download-status", `Download failed: ${error.message}`); }
                 finally { download.disabled = image.availability !== "available"; }
             };
@@ -446,22 +449,17 @@ function changePage(delta) {
     renderGallery();
     $("gallery").scrollIntoView({ block: "start" });
 }
-async function saveDownload(route, filename, input) {
-    const response = await fetch(new URL(route, location.href), input ? {
+async function saveDownload(input) {
+    const response = await fetch(new URL("api/save-download", location.href), {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
-    } : {});
+    });
     if (!response.ok) {
         let message = `Request failed (${response.status}).`;
         const body = await response.text();
         try { message = JSON.parse(body).error || message; } catch { /* Keep the HTTP error for non-JSON transport failures. */ }
         throw new Error(message);
     }
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = node("a");
-    link.href = url; link.download = filename; link.hidden = true;
-    document.body.append(link); link.click(); link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return response.json();
 }
 $("download-all").onclick = async () => {
     const available = ordered.filter((image) => image.availability === "available");
@@ -472,8 +470,8 @@ $("download-all").onclick = async () => {
     $("download-all").disabled = true;
     notice("download-status", `Preparing ${available.length} screenshots from all matching pages${skipped ? `; skipping ${skippedLabel}` : ""}...`);
     try {
-        await saveDownload("api/download-all", "screenshots.zip", { ids: available.map((image) => image.id) });
-        notice("download-status", `ZIP download started for ${available.length} screenshots${skipped ? `; skipped ${skippedLabel}` : ""}.`);
+        const saved = await saveDownload({ ids: available.map((image) => image.id), archive: true });
+        notice("download-status", `Saved one ZIP with ${saved.count} screenshots to ${saved.path}${skipped ? `; skipped ${skippedLabel}` : ""}.`);
     } catch (error) { notice("download-status", `Download all failed: ${error.message}`); }
     finally {
         downloadingAll = false;

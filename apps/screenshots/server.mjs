@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import { sourceError } from "./source.mjs";
-import { attachment, downloadArchive } from "./downloads.mjs";
+import { attachment, downloadArchive, saveImages } from "./downloads.mjs";
 
 const assets = new Map([
     ["", ["index.html", "text/html; charset=utf-8"]],
@@ -27,7 +27,7 @@ function imageInput(params) {
     return { sessionId, input };
 }
 
-export async function startServer(catalog, { sessionId } = {}) {
+export async function startServer(catalog, { sessionId, downloadDirectory } = {}) {
     const token = randomBytes(32).toString("hex");
     const prefix = `/${token}/`;
     let scanning = false;
@@ -50,7 +50,7 @@ export async function startServer(catalog, { sessionId } = {}) {
             const url = new URL(req.url, origin);
             if (!url.pathname.startsWith(prefix)) { res.writeHead(403).end("Forbidden"); return; }
             const route = url.pathname.slice(prefix.length);
-            if (route === "api/download-all" && req.method === "POST") {
+            if (["api/download-all", "api/save-download"].includes(route) && req.method === "POST") {
                 if (req.headers["content-type"] !== "application/json") throw sourceError("invalid_input", "Use a JSON image selection.");
                 if (exporting) throw sourceError("export_busy", "A download archive is already being prepared.");
                 exporting = true;
@@ -62,6 +62,11 @@ export async function startServer(catalog, { sessionId } = {}) {
                     }
                     let input;
                     try { input = JSON.parse(body); } catch { throw sourceError("invalid_input", "Invalid download selection JSON."); }
+                    if (route === "api/save-download") {
+                        const saved = await saveImages(catalog, input, downloadDirectory);
+                        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(saved));
+                        return;
+                    }
                     if (!input || typeof input !== "object" || Object.keys(input).some((key) => key !== "ids")) throw sourceError("invalid_input", "Unsupported download selection.");
                     const archive = await downloadArchive(catalog, input.ids);
                     res.writeHead(200, { "Content-Type": "application/zip", "Content-Length": archive.length,
