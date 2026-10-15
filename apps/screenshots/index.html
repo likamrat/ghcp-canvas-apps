@@ -13,7 +13,6 @@
     <header><h1>Screenshots</h1><span class="local-label">Local / read-only</span></header>
     <section class="control-panel" aria-label="Screenshot controls">
         <div class="control-row session-controls">
-            <div class="field"><label for="session-search">Search sessions</label><input id="session-search" type="search" placeholder="Name or project" autocomplete="off"></div>
             <label class="check-filter"><input id="include-archived" type="checkbox"> Include archived sessions</label>
             <label class="check-filter"><input id="include-children" type="checkbox"> Include child sessions</label>
         </div>
@@ -40,11 +39,18 @@
     <div class="browse">
         <aside aria-label="Session navigator">
             <h2>Sessions <span id="session-count"></span></h2>
-            <div class="compact-picker field">
-                <label id="session-picker-label" for="session-picker">Selected session</label>
-                <button id="session-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="session-options" aria-labelledby="session-picker-label session-picker-value"><span id="session-picker-value">Select a session</span></button>
-                <div id="session-options" role="listbox" aria-labelledby="session-picker-label" hidden></div>
+            <div class="session-discovery">
+                <div class="session-search-field field">
+                    <label for="session-search">Search sessions</label>
+                    <input id="session-search" type="search" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="session-options" placeholder="Name or project" autocomplete="off">
+                </div>
+                <div class="compact-picker field">
+                    <label id="session-picker-label" for="session-picker">Selected session</label>
+                    <button id="session-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="session-options" aria-labelledby="session-picker-label session-picker-value"><span id="session-picker-value">Select a session</span></button>
+                </div>
+                <div id="session-options" role="listbox" aria-label="Matching sessions" hidden></div>
             </div>
+            <p id="session-search-status" class="muted" role="status" hidden></p>
             <nav id="sessions" aria-label="Sessions" aria-busy="true"><p class="muted">Loading sessions...</p></nav>
         </aside>
         <section class="gallery-area" aria-label="Screenshot gallery">

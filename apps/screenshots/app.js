@@ -13,6 +13,7 @@ let imageWarnings = [], sessionWarnings = [], page = 1, sessionLimit = 300;
 let scanning = false, pending = false, loadingSessions = false, collectedAt = null, imageRevision = 0;
 let zoom = null, previewRevision = 0;
 let downloadingAll = false;
+let pickerOpener = null;
 
 function node(tag, text, className) {
     const element = document.createElement(tag);
@@ -83,25 +84,29 @@ function renderSessions() {
     }
     if (!rows.length) $("sessions").append(node("p", sessions.length ? "No sessions match these controls." : "No local sessions found.", "muted"));
     $("sessions").setAttribute("aria-busy", String(loadingSessions));
+    const matches = rows.filter((session) => session.matching).length;
+    notice("session-search-status", view.sessionSearch.trim() ? `${matches} matching session${matches === 1 ? "" : "s"}` : null);
 }
 
 function closeSessionPicker(restoreFocus = false) {
     $("session-options").hidden = true;
     $("session-picker").setAttribute("aria-expanded", "false");
-    if (restoreFocus) $("session-picker").focus();
+    $("session-search").setAttribute("aria-expanded", "false");
+    if (restoreFocus) (pickerOpener ?? $("session-search")).focus();
 }
 
-function openSessionPicker(last = false) {
-    const rows = sessionTree(sessions, view);
-    if (!rows.length) return;
+function openSessionPicker(last = false, focusOptions = true, fromSearch = false) {
+    const rows = sessionTree(sessions, view).filter((session) => !view.sessionSearch.trim() || session.matching);
+    pickerOpener = fromSearch ? $("session-search") : $("session-picker");
     pickerSearch = "";
     const menu = $("session-options");
+    (fromSearch ? $("session-search").parentElement : $("session-search").closest(".session-discovery")).append(menu);
     menu.replaceChildren();
     for (const session of rows) {
-        const option = node("button", `${session.name}${session.archived ? " (archived)" : ""}`, "session-option");
+        const option = node("button", `${session.name}${session.project ? ` / ${session.project}` : ""}${session.archived ? " (archived)" : ""}`, "session-option");
         option.type = "button";
         option.tabIndex = -1;
-        option.style.paddingLeft = `${8 + Math.min(session.depth, 8) * 12}px`;
+        option.style.paddingLeft = `${8 + (view.sessionSearch.trim() ? 0 : Math.min(session.depth, 8) * 12)}px`;
         option.setAttribute("role", "option");
         option.setAttribute("aria-selected", String(session.id === selected));
         option.onclick = () => {
@@ -111,10 +116,15 @@ function openSessionPicker(last = false) {
         menu.append(option);
     }
     menu.hidden = false;
-    $("session-picker").setAttribute("aria-expanded", "true");
+    $("session-picker").setAttribute("aria-expanded", String(!fromSearch));
+    $("session-search").setAttribute("aria-expanded", String(fromSearch));
+    if (!rows.length) {
+        menu.append(node("p", "No matching sessions. Try another name or project.", "session-results-empty"));
+        return;
+    }
     const options = [...menu.children];
     const active = options.find((option) => option.getAttribute("aria-selected") === "true") ?? (last ? options.at(-1) : options[0]);
-    active.focus({ preventScroll: true });
+    if (focusOptions) active.focus({ preventScroll: true });
     menu.scrollTop = active.offsetTop - menu.clientHeight / 2;
 }
 
@@ -365,7 +375,10 @@ for (const [key, id] of Object.entries(fields)) {
             renderSessions(); requestImages();
         } else if (key === "includeChildren") {
             images = []; requestImages();
-        } else if (key === "sessionSearch") renderSessions();
+        } else if (key === "sessionSearch") {
+            renderSessions();
+            openSessionPicker(false, false, true);
+        }
         else renderGallery();
     });
 }
@@ -385,8 +398,20 @@ $("session-picker").onkeydown = (event) => {
     }
 };
 let pickerSearch = "", pickerSearchAt = 0;
+$("session-search").onkeydown = (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        openSessionPicker(event.key === "ArrowUp", true, true);
+    } else if (event.key === "Escape") {
+        event.preventDefault();
+        closeSessionPicker();
+    } else if (event.key === "Enter" && !$("session-options").hidden) {
+        event.preventDefault();
+        $("session-options").querySelector('[role="option"]')?.click();
+    }
+};
 $("session-options").onkeydown = (event) => {
-    const options = [...$("session-options").children];
+    const options = [...$("session-options").querySelectorAll('[role="option"]')];
     const index = options.indexOf(document.activeElement);
     let next;
     if (event.key === "ArrowDown") next = Math.min(index + 1, options.length - 1);
@@ -411,10 +436,10 @@ $("session-options").onkeydown = (event) => {
     }
 };
 document.addEventListener("pointerdown", (event) => {
-    if (!event.target.closest(".compact-picker")) closeSessionPicker();
+    if (!event.target.closest(".session-discovery")) closeSessionPicker();
 });
-$("session-options").addEventListener("focusout", (event) => {
-    if (!event.relatedTarget?.closest(".compact-picker")) closeSessionPicker();
+$("session-search").closest(".session-discovery").addEventListener("focusout", (event) => {
+    if (!event.relatedTarget?.closest(".session-discovery")) closeSessionPicker();
 });
 function changePage(delta) {
     page = Math.max(1, page + delta);

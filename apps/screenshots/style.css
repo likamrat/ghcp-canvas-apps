@@ -36,7 +36,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .control-panel { margin-top: 16px; border: 1px solid var(--edge); border-radius: 8px; padding: 12px; }
 .control-row { display: grid; align-items: end; gap: 10px; }
 .control-row + .control-row { margin-top: 10px; }
-.session-controls { grid-template-columns: minmax(160px, 1fr) auto auto; padding-bottom: 10px; border-bottom: 1px solid var(--edge); margin-bottom: 10px; }
+.session-controls { display: flex; flex-wrap: wrap; gap: 8px 20px; padding-bottom: 10px; border-bottom: 1px solid var(--edge); margin-bottom: 10px; }
 .image-controls { grid-template-columns: minmax(160px, 1fr) minmax(120px, 180px) repeat(2, minmax(120px, 150px)); }
 .display-controls { grid-template-columns: repeat(5, minmax(96px, 1fr)); }
 .display-controls .control-actions { grid-column: 1 / -1; }
@@ -74,7 +74,11 @@ aside h2 { color: var(--muted); font-size: 12px; }
 .session-button[aria-current="true"] { background: var(--selected); border-color: var(--edge); }
 .session-name { display: block; font-size: 13px; overflow-wrap: anywhere; }
 .session-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
-.compact-picker { display: none; position: relative; }
+.session-discovery { position: relative; margin-bottom: 12px; }
+.compact-picker { display: none; margin-top: 10px; }
+.session-search-field { position: relative; }
+#session-search-status { font-size: 11px; margin: 0 0 10px; }
+.session-results-empty { padding: 8px; margin: 0; font-size: 12px; color: var(--muted); }
 #session-picker { width: 100%; min-width: 0; min-height: 32px; height: 32px; display: flex; align-items: center; gap: 12px; text-align: left; padding: 4px 8px; font-size: 12px; }
 #session-picker-value { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #session-picker::after { content: ""; width: 6px; height: 6px; flex-shrink: 0; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
@@ -126,8 +130,6 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
     .image-controls { grid-template-columns: minmax(140px, 1fr) repeat(3, minmax(100px, 1fr)); }
     .display-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .control-actions { grid-column: 1 / -1; justify-content: end; }
-    .session-controls { grid-template-columns: 1fr 1fr; }
-    .session-controls .field { grid-column: 1 / -1; }
 }
 @media (max-width: 680px) {
     main { padding: 20px 16px 16px; }
@@ -135,8 +137,6 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
     .control-row { gap: 10px; }
     .image-controls, .display-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .image-controls .field:first-child { grid-column: auto; }
-    .session-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .session-controls .field { grid-column: 1 / -1; }
     .check-filter { min-height: 28px; font-size: 11px; gap: 6px; }
     .browse { grid-template-columns: minmax(0, 1fr); gap: 18px; }
     aside { border: 0; padding: 0; }

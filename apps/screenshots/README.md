@@ -19,11 +19,11 @@ Personal installation makes Screenshots available across projects and chats. The
 
 ## Controllers area
 
-The panel below the title keeps the browsing controls together, following Context Monitor's layout.
+The panel below the title keeps image filters and display controls together, following Context Monitor's layout. Session search lives with the session navigator so the input, matching results, and selected session stay together.
 
 | Controls | Behavior |
 | --- | --- |
-| Search sessions | Search session and project names without filtering image filenames. Matching children keep their parent context visible. |
+| Search sessions | Located directly above the session navigator and compact picker, not in the image controls. Matching sessions appear beneath the search as you type, with project names and a live result count. Click a result, press Enter for the first match, or use Arrow keys and Enter. No-match feedback is explicit. The navigator also filters while retaining matching children's parent context. |
 | Include archived sessions | Show archived sessions and allow their images in the selected scope. Off initially. |
 | Include child sessions | Include descendants of the selected session, with owning-session labels on images. Off initially. |
 | Search filenames / Source | Combine a filename search with Uploaded, Tool-generated, or Unknown provenance. |
