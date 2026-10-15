@@ -12,8 +12,19 @@ Paste this into a chat in the GitHub Copilot app:
 Install or update Thoughts as a personal canvas extension from:
 https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/thoughts
 
-Open Thoughts when installation is complete.
+Use persistent personal (user) scope, not project or session scope, so it is available across projects and chats after this conversation ends.
+Keep the app's existing SDK canvas declaration: display name "Thoughts", canvas ID "idea-inbox".
+Reuse an existing personal installation rather than creating duplicates, and preserve saved thoughts and settings.
+
+Reload extensions and verify that the personal provider is loaded and the canvas is registered.
+Confirm that GitHub Copilot's Canvas apps list contains "Thoughts" as "Canvas · Personal", with a "New session" action.
+If you cannot inspect that UI, clearly state what registration you verified and that the menu still needs a manual check.
+Do not substitute a temporary preview, browser tab, skill, or project-only extension for installation.
+
+Then open Thoughts.
 ```
+
+After personal installation, open **Canvas apps**, find **Thoughts** labeled **Canvas · Personal**, and choose **New session**. It should remain available across projects and chats, not only in the installing conversation. Its internal canvas ID is `idea-inbox`, but its name in the app is **Thoughts**.
 
 Choose **Add thought** or press **Ctrl/Cmd + Enter** to save an idea. You can also tell your agent what to save.
 

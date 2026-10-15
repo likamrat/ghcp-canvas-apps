@@ -12,10 +12,19 @@ Paste this into a chat in the GitHub Copilot app:
 Install or update Context Monitor as a personal canvas extension from:
 https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/context-monitor
 
-Open Context Monitor when installation is complete.
+Use persistent personal (user) scope, not project or session scope, so it is available across projects and chats after this conversation ends.
+Keep the app's existing SDK canvas declaration: display name "Context Monitor", canvas ID "context-monitor".
+Reuse an existing personal installation rather than creating duplicates, and preserve saved data and settings.
+
+Reload extensions and verify that the personal provider is loaded and the canvas is registered.
+Confirm that GitHub Copilot's Canvas apps list contains "Context Monitor" as "Canvas · Personal", with a "New session" action.
+If you cannot inspect that UI, clearly state what registration you verified and that the menu still needs a manual check.
+Do not substitute a temporary preview, browser tab, skill, or project-only extension for installation.
+
+Then open Context Monitor.
 ```
 
-Install in personal scope to make Context Monitor available from Canvas apps across chats.
+After personal installation, open **Canvas apps**, find **Context Monitor** labeled **Canvas · Personal**, and choose **New session**. It should remain available across projects and chats, not only in the installing conversation. A **Canvas · Project** entry is the repository's development copy; both entries can appear while working in this repository.
 
 Choose **Open in browser** in the header to use your normal system-default browser through the OS URL handler. No browser executable, app-mode window, or isolated profile is forced; tab/window behavior follows your browser settings. Closing the canvas leaves an explicitly opened browser view running. Keep the owning Copilot session active; session exit or extension reload ends its old browser URL. Saved thresholds are shared, while filters are independent between views.
 

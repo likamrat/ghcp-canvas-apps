@@ -12,10 +12,19 @@ Paste this into a chat after this app is published to `main`:
 Install or update Screenshots as a personal canvas extension from:
 https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/screenshots
 
-Open Screenshots when installation is complete.
+Use persistent personal (user) scope, not project or session scope, so it is available across projects and chats after this conversation ends.
+Keep the app's existing SDK canvas declaration: display name "Screenshots", canvas ID "screenshots".
+Reuse an existing personal installation rather than creating duplicates, and preserve saved data and settings.
+
+Reload extensions and verify that the personal provider is loaded and the canvas is registered.
+Confirm that GitHub Copilot's Canvas apps list contains "Screenshots" as "Canvas · Personal", with a "New session" action.
+If you cannot inspect that UI, clearly state what registration you verified and that the menu still needs a manual check.
+Do not substitute a temporary preview, browser tab, skill, or project-only extension for installation.
+
+Then open Screenshots.
 ```
 
-Personal installation makes Screenshots available across projects and chats. The extension must run on the computer that holds the app's local metadata and image files.
+After personal installation, open **Canvas apps**, find **Screenshots** labeled **Canvas · Personal**, and choose **New session**. It should remain available across projects and chats, not only in the installing conversation. A **Canvas · Project** entry is the repository's development copy, not a substitute for the personal installation. The extension must run on the computer that holds the app's local metadata and image files.
 
 Choose **Open in browser** in the header to open the selected session in your normal system-default browser. The app uses the OS URL handler, with no app-mode window, forced Edge executable, or isolated browser profile; tab/window behavior follows your browser settings. The canvas remains open, and closing it does not stop the external browser view. Keep the owning Copilot session running; extension reload or session exit ends the old browser URL. Filters are independent between views.
 
