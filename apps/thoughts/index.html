@@ -7,6 +7,7 @@
   <title>Thoughts</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
+  <script src="/browser.js" defer></script>
 </head>
 <body>
   <template id="pencil-icon">
@@ -22,7 +23,8 @@
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/></svg>
   </template>
   <main>
-    <header><h1>Thoughts</h1><p>A place to leave thoughts while you work.</p></header>
+    <header><div class="title-row"><h1>Thoughts</h1><button id="open-browser" type="button">Open in browser</button></div><p>A place to leave thoughts while you work.</p></header>
+    <p id="browser-status" class="browser-status" role="status" hidden></p>
     <form id="capture">
       <label for="idea">What's on your mind?</label>
       <textarea id="idea" rows="3" maxlength="4000" placeholder="An idea, a reminder, a thing to try..." required></textarea>

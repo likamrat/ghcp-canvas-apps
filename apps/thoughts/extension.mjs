@@ -36,7 +36,7 @@ const canvas = createCanvas({
             },
             onClose: async (ctx) => {
                 const entry = servers.get(ctx.instanceId);
-                if (entry) {
+                if (entry && !entry.hasBrowserWindow()) {
                     servers.delete(ctx.instanceId);
                     await entry.close();
                 }

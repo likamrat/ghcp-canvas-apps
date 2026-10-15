@@ -45,7 +45,7 @@ await joinSession({
         },
         onClose: async ({ instanceId }) => {
             const entry = servers.get(instanceId);
-            if (entry) { servers.delete(instanceId); await entry.close(); }
+            if (entry && !entry.hasBrowserWindow()) { servers.delete(instanceId); await entry.close(); }
         },
     })],
 });

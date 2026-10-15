@@ -7,10 +7,12 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" href="./style.css">
     <script type="module" src="./app.js"></script>
+    <script src="./browser.js" defer></script>
 </head>
 <body>
 <main>
-    <header><h1>Screenshots</h1><span class="local-label">Local / read-only</span></header>
+    <header><h1>Screenshots</h1><div class="header-actions"><span class="local-label">Local / read-only</span><button id="open-browser" type="button">Open in browser</button></div></header>
+    <p id="browser-status" class="browser-status" role="status" hidden></p>
     <section class="control-panel" aria-label="Screenshot controls">
         <div class="control-row session-controls">
             <label class="check-filter"><input id="include-archived" type="checkbox"> Include archived sessions</label>

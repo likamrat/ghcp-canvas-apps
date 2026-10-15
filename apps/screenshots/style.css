@@ -19,6 +19,9 @@
 body { margin: 0; background: var(--surface); color: var(--ink); font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); font-size: var(--text-body-medium, 14px); line-height: 1.5; }
 main { max-width: 1400px; margin: auto; padding: 28px 24px 18px; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: end; }
+#open-browser { min-height: 30px; padding: 4px 9px; font-size: 12px; }
+.browser-status { color: var(--muted); font-size: 12px; margin: 8px 0 0; overflow-wrap: anywhere; }
 h1 { margin: 0; font-size: 25px; font-weight: 600; letter-spacing: -.6px; line-height: 1.3; }
 h2 { font-size: 14px; font-weight: 600; margin: 0 0 14px; }
 .local-label, .muted, footer { color: var(--muted); font-size: 12px; }

@@ -17,6 +17,8 @@ Open Screenshots when installation is complete.
 
 Personal installation makes Screenshots available across projects and chats. The extension must run on the computer that holds the app's local metadata and image files.
 
+Choose **Open in browser** in the header for a dedicated Edge/Chrome/Chromium window, carrying the selected session. If no supported dedicated-window browser is found, the app reports a fallback to your default browser. The canvas remains open, and closing it does not stop the popped-out view. Keep the owning Copilot session running; extension reload or session exit ends the old browser URL. Filters are independent between views.
+
 ## Controllers area
 
 The panel below the title keeps image filters and display controls together, following Context Monitor's layout. Session search lives with the session navigator so the input, matching results, and selected session stay together.
@@ -67,7 +69,7 @@ Discovery is bounded to 64 MiB of history per session identity, 128 MiB of histo
 
 ## Privacy and storage
 
-Original images, session histories, and app metadata are never modified. Filters, catalog state, and zoom are temporary and do not survive extension reloads. Existing retained image assets are read on demand from indexed history offsets, not duplicated into a screenshot cache. No screenshot database, copied image collection, or background daemon is created.
+Original images, session histories, and app metadata are never modified. Filters, catalog state, and zoom are temporary and do not survive extension reloads. Existing retained image assets are read on demand from indexed history offsets, not duplicated into a screenshot cache. No screenshot database, copied image collection, or background daemon is created. A server explicitly opened in a browser stays alive after canvas close until its owning extension exits.
 
 Only attachment metadata and tool-result image references are extracted from the selected histories; message prose is not indexed. No data is uploaded, no remote URLs are fetched, and no OCR or AI image analysis runs. Image delivery uses a loopback-only HTTP server, per-panel capability URLs, indexed image IDs, and file identity checks rather than arbitrary-path HTTP access. Do not share a live capability URL.
 
@@ -82,6 +84,8 @@ node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs
 ```
 
 The repository discovery entry is `.github/extensions/screenshots/extension.mjs`. The app folder is independently installable; it does not import a sibling app. Reload extensions after changing an installed copy.
+
+Cross-app browser-window and lifecycle checks live at `tests/browser.test.mjs` and run from the repository root.
 
 The canvas ID is `screenshots`. Open input optionally accepts `sessionId`. Read-only actions are `list_sessions`, `query_images` (validated filters, an offset, and a metadata page defaulting to 8 images, up to 120), and `get_image` (metadata for a previously queried image). No action returns image bytes to the model.
 

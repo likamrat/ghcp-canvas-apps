@@ -52,6 +52,7 @@ function renderSessions() {
     $("session-count").textContent = `(${rows.length})`;
     $("sessions").replaceChildren();
     const current = sessions.find((session) => session.id === selected);
+    $("open-browser").dataset.sessionId = selected || "";
     $("session-picker-value").textContent = current ? `${current.name}${current.archived ? " (archived)" : ""}` : "Select a session";
     $("session-picker").disabled = !sessionTree(sessions, view).length;
     if (!$("session-options").hidden) closeSessionPicker($("session-options").contains(document.activeElement));

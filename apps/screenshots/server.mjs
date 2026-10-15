@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import { sourceError } from "./source.mjs";
 import { attachment, downloadArchive, saveImages } from "./downloads.mjs";
+import { createBrowserPopout } from "./browser.mjs";
 
 const assets = new Map([
     ["", ["index.html", "text/html; charset=utf-8"]],
@@ -11,6 +12,7 @@ const assets = new Map([
     ["model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
     ["style.css", ["style.css", "text/css; charset=utf-8"]],
     ["icons/download.svg", ["icons/download.svg", "image/svg+xml"]],
+    ["browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
 ]);
 
 function imageInput(params) {
@@ -27,11 +29,12 @@ function imageInput(params) {
     return { sessionId, input };
 }
 
-export async function startServer(catalog, { sessionId, downloadDirectory } = {}) {
+export async function startServer(catalog, { sessionId, downloadDirectory, launchBrowser } = {}) {
     const token = randomBytes(32).toString("hex");
     const prefix = `/${token}/`;
     let scanning = false;
     let exporting = false;
+    const popout = createBrowserPopout(() => `http://127.0.0.1:${server.address().port}${prefix}`, launchBrowser);
     const server = createServer(async (req, res) => {
         const origin = `http://127.0.0.1:${server.address().port}`;
         res.setHeader("Cache-Control", "no-store");
@@ -50,6 +53,11 @@ export async function startServer(catalog, { sessionId, downloadDirectory } = {}
             const url = new URL(req.url, origin);
             if (!url.pathname.startsWith(prefix)) { res.writeHead(403).end("Forbidden"); return; }
             const route = url.pathname.slice(prefix.length);
+            if (route === "api/open-browser" && req.method === "POST") {
+                const result = await popout.open(req);
+                res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
+                return;
+            }
             if (["api/download-all", "api/save-download"].includes(route) && req.method === "POST") {
                 if (req.headers["content-type"] !== "application/json") throw sourceError("invalid_input", "Use a JSON image selection.");
                 if (exporting) throw sourceError("export_busy", "A download archive is already being prepared.");
@@ -105,8 +113,8 @@ export async function startServer(catalog, { sessionId, downloadDirectory } = {}
             }
         } catch (error) {
             if (!res.headersSent) {
-                const status = error.code === "invalid_input" ? 400 : error.code === "export_too_large" ? 413 : error.code === "session_missing" || error.code === "image_missing" ? 404 :
-                    error.code === "image_changed" ? 409 : 503;
+                const status = error.status ?? (error.code === "invalid_input" ? 400 : error.code === "export_too_large" ? 413 : error.code === "session_missing" || error.code === "image_missing" ? 404 :
+                    error.code === "image_changed" ? 409 : 503);
                 res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify({ error: error.message, code: error.code ?? "screenshots_unavailable" }));
             } else res.destroy(error);
         } finally { await image?.file?.close(); }
@@ -116,6 +124,7 @@ export async function startServer(catalog, { sessionId, downloadDirectory } = {}
         server.listen(0, "127.0.0.1", resolve);
     });
     return {
+        hasBrowserWindow: popout.hasBrowserWindow,
         url: `http://127.0.0.1:${server.address().port}${prefix}${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`,
         close: () => new Promise((resolve, reject) => {
             server.close((error) => error ? reject(error) : resolve());

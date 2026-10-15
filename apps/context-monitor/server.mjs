@@ -1,20 +1,23 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
+import { createBrowserPopout } from "./browser.mjs";
 
 const assets = new Map([
     ["/", ["index.html", "text/html; charset=utf-8"]],
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["/model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
+    ["/browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
     ["/icons/caret-down.svg", ["icons/caret-down.svg", "image/svg+xml"]],
     ["/icons/caret-up.svg", ["icons/caret-up.svg", "image/svg+xml"]],
     ["/fonts/Geist-Variable.woff2", ["fonts/Geist-Variable.woff2", "font/woff2"]],
     ["/fonts/GeistMono-Variable.woff2", ["fonts/GeistMono-Variable.woff2", "font/woff2"]],
 ]);
 
-export async function startServer(snapshot, settings) {
+export async function startServer(snapshot, settings, { launchBrowser } = {}) {
     const token = randomBytes(32).toString("hex");
+    const popout = createBrowserPopout(() => `http://127.0.0.1:${server.address().port}/`, launchBrowser);
     const server = createServer(async (req, res) => {
         res.setHeader("Cache-Control", "no-store");
         res.setHeader("X-Content-Type-Options", "nosniff");
@@ -29,6 +32,12 @@ export async function startServer(snapshot, settings) {
         }
         try {
             const url = new URL(req.url, origin);
+            if (url.pathname === "/api/open-browser" && req.method === "POST") {
+                if (req.headers["x-monitor-token"] !== token) { res.writeHead(403).end("Forbidden"); return; }
+                const result = await popout.open(req);
+                res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
+                return;
+            }
             if (url.pathname === "/api/settings" && req.method === "POST" && settings) {
                 if (req.headers["x-monitor-token"] !== token || req.headers["content-type"] !== "application/json") {
                     res.writeHead(403).end("Forbidden");
@@ -66,7 +75,7 @@ export async function startServer(snapshot, settings) {
                 res.writeHead(404).end("Not found");
             }
         } catch (error) {
-            res.writeHead(error.code === "settings_changed" ? 409 : error.code === "invalid_input" ? 400 : 503,
+            res.writeHead(error.status ?? (error.code === "settings_changed" ? 409 : error.code === "invalid_input" ? 400 : 503),
                 { "Content-Type": "application/json" })
                 .end(JSON.stringify({ error: error.message, code: error.code ?? "monitor_unavailable", settings: error.settings }));
         }
@@ -76,6 +85,7 @@ export async function startServer(snapshot, settings) {
         server.listen(0, "127.0.0.1", resolve);
     });
     return {
+        hasBrowserWindow: popout.hasBrowserWindow,
         url: `http://127.0.0.1:${server.address().port}/`,
         close: () => new Promise((resolve, reject) => {
             server.close((error) => error ? reject(error) : resolve());
