@@ -6,3 +6,4 @@ Small productivity apps for developers working in the GitHub Copilot app. Each o
 | --- | --- |
 | [Thoughts](apps/thoughts/README.md) | Save and revisit ideas across chats. |
 | [Context Monitor](apps/context-monitor/README.md) | View nested sessions, filter by pins or model, and compare context usage. |
+| [Screenshots](apps/screenshots/README.md) | Browse session uploads and tool screenshots with filters, sorting, and full-size previews. |

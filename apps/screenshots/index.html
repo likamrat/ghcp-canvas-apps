@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Screenshots</title>
+    <link rel="icon" href="./favicon.ico">
+    <link rel="stylesheet" href="./style.css">
+    <script type="module" src="./app.js"></script>
+</head>
+<body>
+<main>
+    <header><h1>Screenshots</h1><span class="local-label">Local / read-only</span></header>
+    <section class="control-panel" aria-label="Screenshot controls">
+        <div class="control-row session-controls">
+            <div class="field"><label for="session-search">Search sessions</label><input id="session-search" type="search" placeholder="Name or project" autocomplete="off"></div>
+            <label class="check-filter"><input id="include-archived" type="checkbox"> Include archived sessions</label>
+            <label class="check-filter"><input id="include-children" type="checkbox"> Include child sessions</label>
+        </div>
+        <div class="control-row image-controls">
+            <div class="field"><label for="filename">Search filenames</label><input id="filename" type="search" placeholder="Screenshot filename" autocomplete="off"></div>
+            <div class="field"><label for="source">Source</label><select id="source"><option value="">All sources</option><option value="uploaded">Uploaded</option><option value="generated">Tool-generated</option><option value="unknown">Unknown</option></select></div>
+            <div class="field"><label for="from">From date</label><input id="from" type="date" aria-describedby="date-error"></div>
+            <div class="field"><label for="to">To date</label><input id="to" type="date" aria-describedby="date-error"></div>
+        </div>
+        <p id="date-error" class="error-text" role="alert" hidden></p>
+        <div class="control-row display-controls">
+            <div class="field"><label for="sort">Sort by</label><select id="sort"><option value="timestamp">Timestamp</option><option value="name">Filename</option><option value="size">File size</option></select></div>
+            <div class="field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
+            <div class="field"><label for="group">Group by</label><select id="group"><option value="day">Day</option><option value="source">Source</option><option value="none">None</option></select></div>
+            <div class="field"><label for="thumbnail">Thumbnail size</label><select id="thumbnail"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
+            <div class="control-actions"><button id="refresh" type="button">Refresh</button><button id="clear" class="quiet" type="button">Clear filters</button></div>
+        </div>
+    </section>
+    <div class="overview"><p id="summary" role="status">Reading local sessions...</p><span id="sync"></span></div>
+    <p id="error" class="notice error-text" role="alert" hidden></p>
+    <p id="warnings" class="notice" hidden></p>
+    <div class="browse">
+        <aside aria-label="Session navigator">
+            <h2>Sessions <span id="session-count"></span></h2>
+            <div class="compact-picker field"><label for="session-picker">Selected session</label><select id="session-picker"><option value="">Select a session</option></select></div>
+            <nav id="sessions" aria-label="Sessions" aria-busy="true"><p class="muted">Loading sessions...</p></nav>
+        </aside>
+        <section class="gallery-area" aria-label="Screenshot gallery">
+            <div id="gallery" data-size="medium" aria-busy="true"><div class="skeleton"></div></div>
+            <button id="more" type="button" hidden>Show more</button>
+        </section>
+    </div>
+    <footer>Images stay on this computer. Only retained session image references are indexed.</footer>
+</main>
+<dialog id="viewer" aria-labelledby="preview-name">
+    <div class="viewer-header"><h2 id="preview-name">Screenshot</h2><button id="close-preview" type="button">Close</button></div>
+    <div class="preview-controls" aria-label="Preview controls">
+        <button id="previous" type="button" aria-label="Previous screenshot">Previous</button>
+        <button id="next" type="button" aria-label="Next screenshot">Next</button>
+        <span id="position"></span>
+        <button id="fit" type="button" aria-pressed="true">Fit</button>
+        <button id="actual" type="button" aria-pressed="false">Actual size</button>
+        <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+        <output id="zoom" aria-live="polite">Fit</output>
+        <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+    </div>
+    <div id="preview-stage" class="preview-stage" tabindex="0" aria-label="Image preview">
+        <span id="preview-anchor" hidden></span>
+        <p id="preview-error" class="preview-message" role="status"></p>
+    </div>
+    <dl id="details"></dl>
+</dialog>
+</body>
+</html>
