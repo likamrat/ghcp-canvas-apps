@@ -10,14 +10,15 @@ When screenshots pile up across Copilot sessions, finding the one you need means
 
 ## Install
 
-Paste into a GitHub Copilot chat once published to `main`:
+Screenshots runs as a personal canvas extension in the GitHub Copilot app. Paste this into a chat once published to `main`:
 
 ```text
 Install or update this as a persistent personal canvas extension:
 https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/screenshots
 
-Reuse an existing installation and preserve its data. Reload extensions and verify Screenshots appears in
-Canvas apps as "Canvas · Personal" with "New session". If you cannot inspect
+Reuse an existing installation and preserve its data.
+Reload extensions in the GitHub Copilot app and verify Screenshots appears
+in Canvas apps as "Canvas · Personal" with "New session". If you cannot inspect
 the list, say so. Then open Screenshots.
 ```
 
@@ -31,7 +32,7 @@ Opens with the current Copilot session selected. You can choose another session 
 - Select an image to zoom. **Reset zoom** restores its opening size; **Actual size** shows 100%. Arrow keys navigate; Escape closes.
 - Download one image or **Download all** filtered results as one ZIP. Files go to Downloads without overwriting existing files. **Open in folder** reveals the file; **Dismiss** hides the notice.
 
-**Open in browser** uses your system browser. Keep the Copilot session running; extension reloads end the old browser connection.
+**Open in browser** uses your system browser. Keep the Copilot session running; reloading extensions in the GitHub Copilot app ends the old browser connection.
 
 ## Data
 
@@ -49,4 +50,4 @@ Node 24+. No build step. From this folder:
 node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs refresh.test.mjs
 ```
 
-After updating an installed copy, reload extensions and reopen existing browser tabs to load the current code and favicon. Keep private images, histories, and databases out of the repository.
+After updating an installed copy, ask Copilot to "reload extensions" in the GitHub Copilot app. Reopen existing browser tabs to load the current code and favicon. Keep private images, histories, and databases out of the repository.
