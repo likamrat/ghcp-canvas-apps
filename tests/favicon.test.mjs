@@ -64,6 +64,14 @@ test("each app has one complete background-backed logo and a matching Lucide app
         assert.match(logo, /<rect width="920" height="220"[^>]*fill="#191c22"/);
         assert.match(logo, /<g[^>]+aria-label=/, "The logo must contain the outlined wordmark");
         assert.doesNotMatch(logo, /<text|<script|<image|@font-face|prefers-color-scheme/, "One logo must work without font, image, or theme dependencies");
+        assert.match(logo, /data-typeface="Bricolage Grotesque"/);
+        assert.match(logo, /data-replaced-letter="o"/);
+        assert.match(logo, /<circle[^>]+class="icon-halo"/, "The letter replacement must have a subtle circular background");
+        const metrics = logo.match(/data-optical-gaps="([\d.]+) ([\d.]+)"/);
+        assert.ok(metrics, "Record the glyph-edge spacing used to center the circle");
+        assert.ok(Math.abs(Number(metrics[1]) - Number(metrics[2])) < .01,
+            "The circle must be centered between the visible letter edges, not font advance boxes");
+        assert.match(logo, new RegExp(`data-letter-prefix="${app === "screenshots" ? "screensh" : app === "context-monitor" ? "context monit" : "th"}"`));
         const wordmark = logo.slice(logo.indexOf(`<g aria-label="${name}"`));
         assert.equal((wordmark.match(/<path transform=/g) ?? []).length, name.length - 1,
             "The symbol replaces one letter; every other wordmark glyph belongs in the image");

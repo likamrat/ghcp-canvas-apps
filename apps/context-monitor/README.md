@@ -47,7 +47,7 @@ Reload extensions after editing an installed copy. Cross-app browser and favicon
 
 Fonts use [Geist](https://github.com/vercel/geist-font) ([license](fonts/LICENSE.txt)). Interface icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](icons/LICENSE)).
 
-Logo: Lucide **Chart Column Increasing** ([license](LUCIDE-LICENSE.txt)) and Space Grotesk ([license](FONT-LICENSE.txt)).
+Logo: Lucide **Chart Column Increasing** ([license](LUCIDE-LICENSE.txt)) and Bricolage Grotesque ([license](FONT-LICENSE.txt)).
 
 ## Publish
 

@@ -46,4 +46,4 @@ node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs
 
 Reload extensions after edits. Keep private images, histories, and databases out of the repository.
 
-Logo: Lucide **Images** ([license](icons/LICENSE)) and Syne ([license](FONT-LICENSE.txt)).
+Logo: Lucide **Images** ([license](icons/LICENSE)) and Bricolage Grotesque ([license](FONT-LICENSE.txt)).
