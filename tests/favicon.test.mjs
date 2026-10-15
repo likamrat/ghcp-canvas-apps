@@ -47,9 +47,11 @@ test("each app has one complete background-backed logo and a matching Lucide app
         const stroke = svg.match(/<g[^>]*stroke="(#[a-f0-9]{6})"/i)?.[1];
         const background = svg.match(/<rect width="64" height="64"[^>]*fill="(#[a-f0-9]{6})"/i)?.[1];
         assert.ok(stroke && background, "Use an explicit solid background and foreground");
-        assert.equal(background, "#ffffff");
+        assert.equal(background, "#000000");
+        assert.match(svg, /transform="translate\(4 4\) scale\(2.3333333333333335\)"/);
+        assert.doesNotMatch(svg, /<circle cx="32"/, "Small-format icons must not waste space on a nested circle");
         const values = [luminance(stroke), luminance("#000000")].sort((a, b) => b - a);
-        assert.ok((values[0] + .05) / (values[1] + .05) >= 3, `${app} symbol needs contrast against its black circle`);
+        assert.ok((values[0] + .05) / (values[1] + .05) >= 3, `${app} symbol needs contrast against its black tile`);
         const png = await readFile(new URL("icon.png", base));
         assert.equal(png.readUInt32BE(16), 512);
         assert.equal(png.readUInt32BE(20), 512);
@@ -73,7 +75,6 @@ test("each app has one complete background-backed logo and a matching Lucide app
         const halo = logo.match(/<circle class="icon-halo"[^>]+>/)?.[0];
         assert.match(halo, /fill="#000000"/);
         assert.match(halo, /stroke="#7c858e" stroke-width="1.25"/);
-        assert.match(svg, /fill="#000000" stroke="#7c858e" stroke-width="1"/);
         for (const surface of ["#ffffff", "#0d1117", "#22272e", "#252930"]) {
             const tones = [luminance("#7c858e"), luminance(surface)].sort((a, b) => b - a);
             assert.ok((tones[0] + .05) / (tones[1] + .05) >= 3, "Neutral ring needs visible contrast on light and dark surfaces");
