@@ -38,7 +38,8 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .control-row + .control-row { margin-top: 10px; }
 .session-controls { grid-template-columns: minmax(160px, 1fr) auto auto; padding-bottom: 10px; border-bottom: 1px solid var(--edge); margin-bottom: 10px; }
 .image-controls { grid-template-columns: minmax(160px, 1fr) minmax(120px, 180px) repeat(2, minmax(120px, 150px)); }
-.display-controls { grid-template-columns: repeat(5, minmax(96px, 140px)) minmax(0, 1fr); }
+.display-controls { grid-template-columns: repeat(5, minmax(96px, 1fr)); }
+.display-controls .control-actions { grid-column: 1 / -1; }
 .control-panel > .display-controls { margin-top: 10px; }
 .check-filter { display: flex; align-items: center; gap: 7px; min-height: 32px; font-size: 12px; color: var(--muted); cursor: pointer; }
 .check-filter input { appearance: none; display: grid; place-content: center; flex: 0 0 14px; width: 14px; height: 14px; margin: 0; border: 1.5px solid var(--muted); border-radius: 3px; background: transparent; cursor: pointer; }
@@ -47,6 +48,13 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .check-filter input:disabled { opacity: .55; cursor: default; }
 .control-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-self: end; }
 .control-actions button { min-height: 32px; padding: 5px 10px; font-size: 12px; }
+#download-all { display: inline-flex; align-items: center; gap: 6px; }
+.download-icon { display: inline-block; flex: 0 0 15px; width: 15px; height: 15px; background: currentColor; mask: url("./icons/download.svg") center / contain no-repeat; }
+.screenshot-item { min-width: 0; position: relative; }
+.screenshot-item .image-card { display: block; width: 100%; }
+.screenshot-item .image-caption { padding-right: 32px; }
+.download-button { position: absolute; right: 0; bottom: 2px; display: grid; place-items: center; width: 28px; min-height: 28px; padding: 5px; border-color: transparent; color: var(--muted); }
+.download-button:hover { color: var(--ink); border-color: var(--edge); }
 #refresh { border-color: var(--ink); }
 .quiet { color: var(--muted); }
 .overview { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; margin: 18px 0 14px; font-size: 13px; color: var(--muted); }
@@ -148,4 +156,5 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
     .check-filter input { appearance: auto; background: revert; border: revert; }
     .check-filter input::before { display: none; }
     .session-option[aria-selected="true"] { outline: 1px solid Highlight; }
+    .download-icon { background: ButtonText; }
 }

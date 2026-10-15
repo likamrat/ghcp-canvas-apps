@@ -30,12 +30,13 @@
             <div class="field"><label for="group">Group by</label><select id="group"><option value="day">Day</option><option value="source">Source</option><option value="none">None</option></select></div>
             <div class="field"><label for="thumbnail">Thumbnail size</label><select id="thumbnail"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
             <div class="field"><label for="page-size">Screenshots per page</label><select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select></div>
-            <div class="control-actions"><button id="refresh" type="button">Refresh</button><button id="clear" class="quiet" type="button">Clear filters</button></div>
+            <div class="control-actions"><button id="refresh" type="button">Refresh</button><button id="clear" class="quiet" type="button">Clear filters</button><button id="download-all" type="button" disabled><span class="download-icon" aria-hidden="true"></span>Download all</button></div>
         </div>
     </section>
     <div class="overview"><p id="summary" role="status">Reading local sessions...</p><span id="sync"></span></div>
     <p id="error" class="notice error-text" role="alert" hidden></p>
     <p id="warnings" class="notice" hidden></p>
+    <p id="download-status" class="notice" role="status" hidden></p>
     <div class="browse">
         <aside aria-label="Session navigator">
             <h2>Sessions <span id="session-count"></span></h2>

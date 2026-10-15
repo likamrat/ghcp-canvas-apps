@@ -32,12 +32,15 @@ The panel below the title keeps the browsing controls together, following Contex
 | Group by | Day, source, or none. Groups follow the chosen direction; the selected sort applies within each group. |
 | Thumbnail size | Small, medium, or large, preserving image aspect ratios. |
 | Screenshots per page | 8 by default, with 16 and 32 options. Previous/Next page controls show the page number and visible image range. |
+| Download all | Save available images matching the current filters across every page in one ZIP. Unavailable images are skipped with a notice. |
 | Refresh | Re-read local metadata and image references, preserving valid filters and selection. No automatic refresh. |
 | Clear filters | Clear session search, filename search, source, and dates. Keep session selection, scope toggles, sort, grouping, and thumbnail size. |
 
 Initially the gallery uses newest timestamps first, grouped by day, with medium thumbnails and eight screenshots per page. Changing session scope, image filters, sorting, grouping, or page size returns to page 1. Refresh preserves the current page when possible and clamps it to the last page if results shrink. Clear filters keeps the page size but returns to page 1. Select a session from the navigator, or use the compact session picker in a narrow canvas. Its scrollable menu always opens below the field. Arrow keys, Home/End, and typing navigate the options; Enter selects and Escape dismisses. Expand/collapse buttons only change the navigator; they do not change image scope.
 
 Select a thumbnail to open its full-size preview. Use Fit, Actual size, zoom, Previous/Next, or the left/right arrow keys. Escape closes the viewer. Navigation follows the current filtered order, including images beyond the currently rendered gallery page.
+
+Each screenshot has a small Lucide download button beside its caption. It saves the available original file or retained session image, without opening the preview. Unavailable images have disabled download buttons. **Download all** exports every available filtered result, not just the current page, as `screenshots.zip`; numbered filenames avoid collisions. ZIP downloads are limited to 128 MiB; narrow the filters or download individual images if the limit is exceeded. A changed image fails the export explicitly rather than producing a partial archive. Downloading creates only the browser-requested files; originals and session storage stay unchanged.
 
 ## Sources and limitations
 
@@ -71,7 +74,7 @@ Use Node 24 or later and the GitHub Copilot app with canvas extension support. N
 Run from this app's folder:
 
 ```sh
-node --test model.test.mjs source.test.mjs server.test.mjs
+node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs
 ```
 
 The repository discovery entry is `.github/extensions/screenshots/extension.mjs`. The app folder is independently installable; it does not import a sibling app. Reload extensions after changing an installed copy.
@@ -79,6 +82,8 @@ The repository discovery entry is `.github/extensions/screenshots/extension.mjs`
 The canvas ID is `screenshots`. Open input optionally accepts `sessionId`. Read-only actions are `list_sessions`, `query_images` (validated filters, an offset, and a metadata page defaulting to 8 images, up to 120), and `get_image` (metadata for a previously queried image). No action returns image bytes to the model.
 
 For browser checks, use synthetic session metadata and reference images rather than private session data. Exercise the controllers, invalid dates, missing files, empty results, refresh recovery, session changes during discovery, preview keyboard navigation, and narrow/light/dark layouts.
+
+The download glyph is from [Lucide](https://lucide.dev), used as an SVG in this dependency-free JavaScript app, with its [ISC/Feather MIT notices](icons/LICENSE). It is the same icon design available in `lucide-react`, without adding a React runtime.
 
 ## Publish
 

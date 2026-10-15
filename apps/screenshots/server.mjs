@@ -3,12 +3,14 @@ import { readFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import { sourceError } from "./source.mjs";
+import { attachment, downloadArchive } from "./downloads.mjs";
 
 const assets = new Map([
     ["", ["index.html", "text/html; charset=utf-8"]],
     ["app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
     ["style.css", ["style.css", "text/css; charset=utf-8"]],
+    ["icons/download.svg", ["icons/download.svg", "image/svg+xml"]],
 ]);
 
 function imageInput(params) {
@@ -29,6 +31,7 @@ export async function startServer(catalog, { sessionId } = {}) {
     const token = randomBytes(32).toString("hex");
     const prefix = `/${token}/`;
     let scanning = false;
+    let exporting = false;
     const server = createServer(async (req, res) => {
         const origin = `http://127.0.0.1:${server.address().port}`;
         res.setHeader("Cache-Control", "no-store");
@@ -46,8 +49,27 @@ export async function startServer(catalog, { sessionId } = {}) {
         try {
             const url = new URL(req.url, origin);
             if (!url.pathname.startsWith(prefix)) { res.writeHead(403).end("Forbidden"); return; }
-            if (req.method !== "GET") { res.writeHead(405, { Allow: "GET" }).end("Read-only screenshots"); return; }
             const route = url.pathname.slice(prefix.length);
+            if (route === "api/download-all" && req.method === "POST") {
+                if (req.headers["content-type"] !== "application/json") throw sourceError("invalid_input", "Use a JSON image selection.");
+                if (exporting) throw sourceError("export_busy", "A download archive is already being prepared.");
+                exporting = true;
+                try {
+                    let body = "";
+                    for await (const chunk of req) {
+                        body += chunk;
+                        if (Buffer.byteLength(body) > 700000) throw sourceError("invalid_input", "The download selection is too large.");
+                    }
+                    let input;
+                    try { input = JSON.parse(body); } catch { throw sourceError("invalid_input", "Invalid download selection JSON."); }
+                    if (!input || typeof input !== "object" || Object.keys(input).some((key) => key !== "ids")) throw sourceError("invalid_input", "Unsupported download selection.");
+                    const archive = await downloadArchive(catalog, input.ids);
+                    res.writeHead(200, { "Content-Type": "application/zip", "Content-Length": archive.length,
+                        "Content-Disposition": attachment("screenshots.zip") }).end(archive);
+                } finally { exporting = false; }
+                return;
+            }
+            if (req.method !== "GET") { res.writeHead(405, { Allow: "GET" }).end("Read-only screenshots"); return; }
             if (route === "favicon.ico") {
                 res.writeHead(204).end();
             } else if (assets.has(route)) {
@@ -64,10 +86,13 @@ export async function startServer(catalog, { sessionId } = {}) {
                 try { result = await catalog.images(sessionId, input); }
                 finally { scanning = false; }
                 res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
-            } else if (/^image\/[a-f0-9]{64}$/.test(route)) {
-                image = await catalog.openImage(route.slice(6));
+            } else if (/^(?:image|download)\/[a-f0-9]{64}$/.test(route)) {
+                const id = route.split("/")[1];
+                const download = route.startsWith("download/");
+                const metadata = download ? catalog.metadata(id) : null;
+                image = await catalog.openImage(id);
                 res.writeHead(200, { "Content-Type": image.mime, "Content-Length": image.size,
-                    "Content-Disposition": "inline" });
+                    "Content-Disposition": download ? attachment(metadata.name) : "inline" });
                 if (image.data) res.end(image.data);
                 else await pipeline(image.file.createReadStream({ autoClose: false }), res);
             } else {
@@ -75,7 +100,7 @@ export async function startServer(catalog, { sessionId } = {}) {
             }
         } catch (error) {
             if (!res.headersSent) {
-                const status = error.code === "invalid_input" ? 400 : error.code === "session_missing" || error.code === "image_missing" ? 404 :
+                const status = error.code === "invalid_input" ? 400 : error.code === "export_too_large" ? 413 : error.code === "session_missing" || error.code === "image_missing" ? 404 :
                     error.code === "image_changed" ? 409 : 503;
                 res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify({ error: error.message, code: error.code ?? "screenshots_unavailable" }));
             } else res.destroy(error);

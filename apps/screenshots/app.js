@@ -12,6 +12,7 @@ let sessions = [], images = [], ordered = [], selected = null, previewId = null,
 let imageWarnings = [], sessionWarnings = [], page = 1, sessionLimit = 300;
 let scanning = false, pending = false, loadingSessions = false, collectedAt = null, imageRevision = 0;
 let zoom = null, previewRevision = 0;
+let downloadingAll = false;
 
 function node(tag, text, className) {
     const element = document.createElement(tag);
@@ -137,6 +138,8 @@ function renderGallery() {
         return;
     }
     ordered = query.images;
+    $("download-all").disabled = downloadingAll || scanning || !ordered.some((image) => image.availability === "available");
+    $("download-all").title = "Download available screenshots matching the current filters across all pages as a ZIP";
     const pagination = paginateImages(query, page, view.pageSize);
     page = pagination.page;
     $("pagination").hidden = !ordered.length;
@@ -171,6 +174,7 @@ function renderGallery() {
         section.append(node("h2", `${label} (${group.total})`, "group-heading"));
         const grid = node("div", null, "image-grid");
         for (const image of group.images) {
+            const card = node("article", null, "screenshot-item");
             const button = node("button", null, "image-card");
             button.type = "button";
             button.dataset.imageId = image.id;
@@ -190,7 +194,21 @@ function renderGallery() {
             if (image.storage === "session") caption.append(node("span", "Retained session image", "image-meta"));
             button.append(thumbnail, caption);
             button.onclick = () => openPreview(image.id, button);
-            grid.append(button);
+            const download = node("button", null, "download-button");
+            download.type = "button";
+            download.title = `Download ${image.name}`;
+            download.setAttribute("aria-label", `Download ${image.name}`);
+            download.disabled = image.availability !== "available";
+            download.append(node("span", null, "download-icon"));
+            download.firstChild.setAttribute("aria-hidden", "true");
+            download.onclick = async () => {
+                download.disabled = true;
+                try { await saveDownload(`download/${image.id}`, image.name); }
+                catch (error) { notice("download-status", `Download failed: ${error.message}`); }
+                finally { download.disabled = image.availability !== "available"; }
+            };
+            card.append(button, download);
+            grid.append(card);
         }
         section.append(grid);
         $("gallery").append(section);
@@ -403,6 +421,40 @@ function changePage(delta) {
     renderGallery();
     $("gallery").scrollIntoView({ block: "start" });
 }
+async function saveDownload(route, filename, input) {
+    const response = await fetch(new URL(route, location.href), input ? {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+    } : {});
+    if (!response.ok) {
+        let message = `Request failed (${response.status}).`;
+        const body = await response.text();
+        try { message = JSON.parse(body).error || message; } catch { /* Keep the HTTP error for non-JSON transport failures. */ }
+        throw new Error(message);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = node("a");
+    link.href = url; link.download = filename; link.hidden = true;
+    document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+$("download-all").onclick = async () => {
+    const available = ordered.filter((image) => image.availability === "available");
+    if (!available.length || downloadingAll) return;
+    const skipped = ordered.length - available.length;
+    const skippedLabel = `${skipped} unavailable image${skipped === 1 ? "" : "s"}`;
+    downloadingAll = true;
+    $("download-all").disabled = true;
+    notice("download-status", `Preparing ${available.length} screenshots from all matching pages${skipped ? `; skipping ${skippedLabel}` : ""}...`);
+    try {
+        await saveDownload("api/download-all", "screenshots.zip", { ids: available.map((image) => image.id) });
+        notice("download-status", `ZIP download started for ${available.length} screenshots${skipped ? `; skipped ${skippedLabel}` : ""}.`);
+    } catch (error) { notice("download-status", `Download all failed: ${error.message}`); }
+    finally {
+        downloadingAll = false;
+        $("download-all").disabled = scanning || !ordered.some((image) => image.availability === "available");
+    }
+};
 $("page-previous").onclick = () => changePage(-1);
 $("page-next").onclick = () => changePage(1);
 $("close-preview").onclick = () => $("viewer").close();
