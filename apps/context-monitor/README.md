@@ -2,7 +2,7 @@
 
 See your GitHub Copilot app sessions, models, and context usage in one canvas.
 
-<a href="screenshot-full.png?v=088408fb0ae2"><img src="screenshot.png?v=d14737e9fe6e" alt="Context Monitor with a 600-session mock heat map, filters, pagination, and GPT and Claude sessions" width="640"></a>
+<img src="screenshot.png?v=d14737e9fe6e" alt="Context Monitor with a 600-session mock heat map, filters, pagination, and GPT and Claude sessions" width="640">
 
 ## Use in the GitHub Copilot app
 
@@ -44,9 +44,3 @@ node --test monitor.test.mjs
 Reload extensions after editing an installed copy.
 
 Fonts use [Geist](https://github.com/vercel/geist-font) ([license](fonts/LICENSE.txt)). Icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](icons/LICENSE)).
-
-## Publish
-
-Keep the source, assets, and this README in `apps/context-monitor/`. Push changes to `main`, then update the installed extension in the GitHub Copilot app.
-
-Keep session data, databases, and logs out of the repository.

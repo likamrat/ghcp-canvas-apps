@@ -36,9 +36,3 @@ node --test store.test.mjs
 Reload extensions after editing an installed copy.
 
 Icons use [Phosphor Icons](https://github.com/phosphor-icons/core) under MIT ([license](PHOSPHOR-LICENSE.txt)).
-
-## Publish
-
-Keep the source, assets, and this README in `apps/thoughts/`. Push changes to `main`, then update the installed extension in the GitHub Copilot app.
-
-Keep saved thoughts, databases, and logs out of the repository.
