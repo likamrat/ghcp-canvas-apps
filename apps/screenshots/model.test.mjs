@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { queryImages, defaultView, clearFilters, sessionTree, createRequestGate } from "./model.mjs";
+import { queryImages, defaultView, clearFilters, sessionTree, createRequestGate, paginateImages } from "./model.mjs";
 
 test("combined image filters use local inclusive dates and leave unknown times visible without a range", () => {
     const images = [
@@ -47,4 +47,23 @@ test("session navigation preserves matching ancestors, handles collapse, and exc
     assert.deepEqual(sessionTree(sessions, {}, new Set(["parent"])).map((row) => row.id), ["parent"]);
     assert.deepEqual(sessionTree(sessions, { sessionSearch: "Gallery" }, new Set(["parent"])).map((row) => row.id), ["parent", "child"]);
     assert.equal(sessionTree(sessions, { includeArchived: true }).length, 3);
+});
+
+test("pagination defaults to eight, slices across groups, and clamps pages after results shrink", () => {
+    const records = Array.from({ length: 35 }, (_, index) => ({
+        id: String(index).padStart(2, "0"), name: `${index}.png`, size: index,
+        source: index < 5 ? "generated" : "uploaded", timestamp: null,
+    }));
+    const query = queryImages(records, { group: "source", order: "asc", sort: "size" });
+    const first = paginateImages(query);
+    assert.equal(first.images.length, 8);
+    assert.equal(first.pages, 5);
+    assert.deepEqual(first.groups.map((group) => group.images.length), [5, 3]);
+    assert.equal(paginateImages(query, 2).images[0].id, "08");
+    assert.equal(paginateImages(query, 5).images.length, 3);
+    assert.equal(paginateImages(query, 3, 16).images.length, 3);
+    assert.equal(paginateImages(query, 2, 32).images.length, 3);
+    assert.equal(paginateImages(query, 99).page, 5);
+    assert.equal(paginateImages(queryImages([]), 5).page, 1);
+    assert.throws(() => paginateImages(query, 1, 10), /page size/i);
 });

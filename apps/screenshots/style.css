@@ -38,7 +38,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .control-row + .control-row { margin-top: 10px; }
 .session-controls { grid-template-columns: minmax(160px, 1fr) auto auto; padding-bottom: 10px; border-bottom: 1px solid var(--edge); margin-bottom: 10px; }
 .image-controls { grid-template-columns: minmax(160px, 1fr) minmax(120px, 180px) repeat(2, minmax(120px, 150px)); }
-.display-controls { grid-template-columns: repeat(4, minmax(96px, 140px)) minmax(0, 1fr); }
+.display-controls { grid-template-columns: repeat(5, minmax(96px, 140px)) minmax(0, 1fr); }
 .control-panel > .display-controls { margin-top: 10px; }
 .check-filter { display: flex; align-items: center; gap: 7px; min-height: 32px; font-size: 12px; color: var(--muted); cursor: pointer; }
 .check-filter input { appearance: none; display: grid; place-content: center; flex: 0 0 14px; width: 14px; height: 14px; margin: 0; border: 1.5px solid var(--muted); border-radius: 3px; background: transparent; cursor: pointer; }
@@ -92,7 +92,10 @@ aside h2 { color: var(--muted); font-size: 12px; }
 .empty h2 { font-size: 16px; color: var(--ink); margin-bottom: 8px; }
 .empty p { margin: 0 auto; font-size: 13px; max-width: 42ch; }
 .skeleton { height: 200px; border: 1px solid var(--edge); border-radius: 6px; background: var(--hover); }
-#more { display: block; margin: 24px auto 0; }
+#pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--edge); color: var(--muted); font-size: 12px; }
+.page-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.page-buttons button { min-height: 32px; font-size: 12px; padding: 5px 8px; }
+#page-status { font-variant-numeric: tabular-nums; white-space: nowrap; }
 footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--edge); font-size: 11px; }
 dialog { width: min(1180px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 18px; color: var(--ink); background: var(--surface); border: 1px solid var(--edge); border-radius: 8px; }
 dialog::backdrop { background: rgb(15 18 24 / .72); }
@@ -113,7 +116,7 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
 #details .path-detail { grid-column: 1 / -1; }
 @media (max-width: 1000px) {
     .image-controls { grid-template-columns: minmax(140px, 1fr) repeat(3, minmax(100px, 1fr)); }
-    .display-controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .display-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .control-actions { grid-column: 1 / -1; justify-content: end; }
     .session-controls { grid-template-columns: 1fr 1fr; }
     .session-controls .field { grid-column: 1 / -1; }

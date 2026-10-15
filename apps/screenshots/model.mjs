@@ -2,7 +2,7 @@ export const SOURCE_LABELS = Object.freeze({ uploaded: "Uploaded", generated: "T
 export const defaultView = () => ({
     sessionSearch: "", includeArchived: false, includeChildren: false,
     filename: "", source: "", from: "", to: "",
-    sort: "timestamp", order: "desc", group: "day", thumbnail: "medium",
+    sort: "timestamp", order: "desc", group: "day", thumbnail: "medium", pageSize: 8,
 });
 export const clearFilters = (view) => ({ ...view, sessionSearch: "", filename: "", source: "", from: "", to: "" });
 const compareText = (left, right) => left < right ? -1 : left > right ? 1 : 0;
@@ -62,6 +62,20 @@ export function queryImages(records, input = {}) {
         images: items.sort(compare),
     }));
     return { images: sorted.flatMap((group) => group.images), groups: sorted, total: records.length };
+}
+
+export function paginateImages(query, page = 1, pageSize = 8) {
+    if (![8, 16, 32].includes(pageSize)) invalid("Choose a supported page size.");
+    if (!Number.isSafeInteger(page) || page < 1) invalid("Choose a valid page.");
+    const pages = Math.max(1, Math.ceil(query.images.length / pageSize));
+    page = Math.min(page, pages);
+    const start = (page - 1) * pageSize;
+    const images = query.images.slice(start, start + pageSize);
+    const ids = new Set(images.map((image) => image.id));
+    const groups = query.groups.map((group) => ({
+        ...group, total: group.images.length, images: group.images.filter((image) => ids.has(image.id)),
+    })).filter((group) => group.images.length);
+    return { page, pages, pageSize, images, groups, start: images.length ? start + 1 : 0, end: start + images.length, matching: query.images.length };
 }
 
 export function sessionTree(sessions, { sessionSearch = "", includeArchived = false } = {}, collapsed = new Set()) {

@@ -29,6 +29,7 @@
             <div class="field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
             <div class="field"><label for="group">Group by</label><select id="group"><option value="day">Day</option><option value="source">Source</option><option value="none">None</option></select></div>
             <div class="field"><label for="thumbnail">Thumbnail size</label><select id="thumbnail"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
+            <div class="field"><label for="page-size">Screenshots per page</label><select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select></div>
             <div class="control-actions"><button id="refresh" type="button">Refresh</button><button id="clear" class="quiet" type="button">Clear filters</button></div>
         </div>
     </section>
@@ -47,7 +48,14 @@
         </aside>
         <section class="gallery-area" aria-label="Screenshot gallery">
             <div id="gallery" data-size="medium" aria-busy="true"><div class="skeleton"></div></div>
-            <button id="more" type="button" hidden>Show more</button>
+            <nav id="pagination" aria-label="Screenshot pages" hidden>
+                <span id="page-range" role="status"></span>
+                <div class="page-buttons">
+                    <button id="page-previous" type="button">Previous page</button>
+                    <span id="page-status" aria-live="polite"></span>
+                    <button id="page-next" type="button">Next page</button>
+                </div>
+            </nav>
         </section>
     </div>
     <footer>Images stay on this computer. Only retained session image references are indexed.</footer>

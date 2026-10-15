@@ -1,15 +1,15 @@
-import { defaultView, clearFilters, queryImages, sessionTree, createRequestGate, SOURCE_LABELS } from "./model.mjs";
+import { defaultView, clearFilters, queryImages, paginateImages, sessionTree, createRequestGate, SOURCE_LABELS } from "./model.mjs";
 
 const $ = (id) => document.getElementById(id);
 const view = defaultView();
 const fields = { sessionSearch: "session-search", includeArchived: "include-archived", includeChildren: "include-children",
-    filename: "filename", source: "source", from: "from", to: "to", sort: "sort", order: "order", group: "group", thumbnail: "thumbnail" };
+    filename: "filename", source: "source", from: "from", to: "to", sort: "sort", order: "order", group: "group", thumbnail: "thumbnail", pageSize: "page-size" };
 const scopeGate = createRequestGate();
 const sessionGate = createRequestGate();
 const collapsed = new Set();
 const counts = new Map();
 let sessions = [], images = [], ordered = [], selected = null, previewId = null, previewTrigger = null;
-let imageWarnings = [], sessionWarnings = [], limit = 120, sessionLimit = 300;
+let imageWarnings = [], sessionWarnings = [], page = 1, sessionLimit = 300;
 let scanning = false, pending = false, loadingSessions = false, collectedAt = null, imageRevision = 0;
 let zoom = null, previewRevision = 0;
 
@@ -121,7 +121,7 @@ function empty(title, help) {
     const element = node("div", null, "empty");
     element.append(node("h2", title), node("p", help));
     $("gallery").replaceChildren(element);
-    $("more").hidden = true;
+    $("pagination").hidden = true;
 }
 
 function renderGallery() {
@@ -137,6 +137,13 @@ function renderGallery() {
         return;
     }
     ordered = query.images;
+    const pagination = paginateImages(query, page, view.pageSize);
+    page = pagination.page;
+    $("pagination").hidden = !ordered.length;
+    $("page-range").textContent = `${pagination.start}-${pagination.end} of ${pagination.matching} screenshots`;
+    $("page-status").textContent = `Page ${page} of ${pagination.pages}`;
+    $("page-previous").disabled = page === 1;
+    $("page-next").disabled = page === pagination.pages;
     if (previewId && !ordered.some((image) => image.id === previewId)) {
         $("viewer").close();
         notice("error", "The preview was closed because its image is no longer in the current results.");
@@ -151,21 +158,19 @@ function renderGallery() {
     notice("warnings", [...new Set([...sessionWarnings, ...imageWarnings])].join("\n"));
     if (!selected) { empty("Choose a session", "Select a session from the navigator to load its uploaded images and tool screenshots."); return; }
     if (scanning && !images.length) {
+        $("pagination").hidden = true;
         $("gallery").replaceChildren(node("div", null, "skeleton"));
         return;
     }
     if (!images.length) { empty("No retained images", "This session has no supported local image references. Check source warnings or include child sessions."); return; }
     if (!ordered.length) { empty("No matching screenshots", "Change the source or dates, search a different filename, or clear the filters."); return; }
     $("gallery").replaceChildren();
-    let shown = 0;
-    for (const group of query.groups) {
-        if (shown >= limit) break;
+    for (const group of pagination.groups) {
         const section = node("section", null, "image-group");
         const label = view.group === "day" && group.key !== "unknown" ? new Date(`${group.key}T12:00:00`).toLocaleDateString(undefined, { dateStyle: "long" }) : group.label;
-        section.append(node("h2", `${label} (${group.images.length})`, "group-heading"));
+        section.append(node("h2", `${label} (${group.total})`, "group-heading"));
         const grid = node("div", null, "image-grid");
         for (const image of group.images) {
-            if (shown++ >= limit) break;
             const button = node("button", null, "image-card");
             button.type = "button";
             button.dataset.imageId = image.id;
@@ -190,13 +195,11 @@ function renderGallery() {
         section.append(grid);
         $("gallery").append(section);
     }
-    $("more").hidden = ordered.length <= limit;
-    $("more").textContent = `Show more (${Math.max(0, ordered.length - limit)} remaining)`;
 }
 
 function selectSession(id) {
     if (!id || id === selected) return;
-    selected = id; images = []; imageWarnings = []; collectedAt = null; limit = 120;
+    selected = id; images = []; imageWarnings = []; collectedAt = null; page = 1;
     if ($("viewer").open) $("viewer").close();
     renderSessions();
     requestImages();
@@ -245,6 +248,7 @@ async function refresh() {
             selected = eligible.find((session) => session.id === requested)?.id ||
                 [...eligible].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]?.id || null;
             images = []; imageWarnings = [];
+            page = 1;
         }
         notice("error", null);
         renderSessions();
@@ -334,8 +338,8 @@ function scaleZoom(factor) {
 for (const [key, id] of Object.entries(fields)) {
     const field = $(id);
     field.addEventListener(field.type === "search" ? "input" : "change", () => {
-        view[key] = field.type === "checkbox" ? field.checked : field.value;
-        limit = 120;
+        view[key] = field.type === "checkbox" ? field.checked : key === "pageSize" ? Number(field.value) : field.value;
+        if (!["sessionSearch", "thumbnail"].includes(key)) page = 1;
         if (key === "includeArchived") {
             if (!view.includeArchived && sessions.find((session) => session.id === selected)?.archived) {
                 selected = null; images = []; imageWarnings = [];
@@ -350,7 +354,7 @@ for (const [key, id] of Object.entries(fields)) {
 $("clear").onclick = () => {
     Object.assign(view, clearFilters(view));
     for (const [key, id] of Object.entries(fields)) if (!["includeArchived", "includeChildren"].includes(key)) $(id).value = view[key];
-    limit = 120; renderSessions(); renderGallery();
+    page = 1; renderSessions(); renderGallery();
 };
 $("refresh").onclick = refresh;
 $("session-picker").onclick = () => {
@@ -394,7 +398,13 @@ document.addEventListener("pointerdown", (event) => {
 $("session-options").addEventListener("focusout", (event) => {
     if (!event.relatedTarget?.closest(".compact-picker")) closeSessionPicker();
 });
-$("more").onclick = () => { limit += 120; renderGallery(); };
+function changePage(delta) {
+    page = Math.max(1, page + delta);
+    renderGallery();
+    $("gallery").scrollIntoView({ block: "start" });
+}
+$("page-previous").onclick = () => changePage(-1);
+$("page-next").onclick = () => changePage(1);
 $("close-preview").onclick = () => $("viewer").close();
 $("viewer").addEventListener("close", () => {
     previewId = null; previewRevision++; $("preview-image")?.remove();

@@ -23,7 +23,7 @@ await joinSession({
                 handler: action(() => catalog.sessions()) },
             { name: "query_images", description: "Discover image references for one local session and optionally its children; return a filtered metadata page, not image bytes. Dates use this computer's local timezone.",
                 inputSchema: querySchema, handler: action(async ({ input }) => {
-                    const { sessionId, includeChildren, includeArchived, offset = 0, limit = 120, ...filters } = input;
+                    const { sessionId, includeChildren, includeArchived, offset = 0, limit = 8, ...filters } = input;
                     queryImages([], filters);
                     catalog.sessions();
                     const result = await catalog.images(sessionId, { includeChildren, includeArchived });

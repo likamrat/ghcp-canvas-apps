@@ -31,10 +31,11 @@ The panel below the title keeps the browsing controls together, following Contex
 | Sort by / Order | Timestamp, filename, or file size, ascending or descending. Missing values stay last; image IDs break ties consistently. |
 | Group by | Day, source, or none. Groups follow the chosen direction; the selected sort applies within each group. |
 | Thumbnail size | Small, medium, or large, preserving image aspect ratios. |
+| Screenshots per page | 8 by default, with 16 and 32 options. Previous/Next page controls show the page number and visible image range. |
 | Refresh | Re-read local metadata and image references, preserving valid filters and selection. No automatic refresh. |
 | Clear filters | Clear session search, filename search, source, and dates. Keep session selection, scope toggles, sort, grouping, and thumbnail size. |
 
-Initially the gallery uses newest timestamps first, grouped by day, with medium thumbnails. Select a session from the navigator, or use the compact session picker in a narrow canvas. Its scrollable menu always opens below the field. Arrow keys, Home/End, and typing navigate the options; Enter selects and Escape dismisses. Expand/collapse buttons only change the navigator; they do not change image scope.
+Initially the gallery uses newest timestamps first, grouped by day, with medium thumbnails and eight screenshots per page. Changing session scope, image filters, sorting, grouping, or page size returns to page 1. Refresh preserves the current page when possible and clamps it to the last page if results shrink. Clear filters keeps the page size but returns to page 1. Select a session from the navigator, or use the compact session picker in a narrow canvas. Its scrollable menu always opens below the field. Arrow keys, Home/End, and typing navigate the options; Enter selects and Escape dismisses. Expand/collapse buttons only change the navigator; they do not change image scope.
 
 Select a thumbnail to open its full-size preview. Use Fit, Actual size, zoom, Previous/Next, or the left/right arrow keys. Escape closes the viewer. Navigation follows the current filtered order, including images beyond the currently rendered gallery page.
 
@@ -55,7 +56,7 @@ Some tools retain neither an image asset nor a usable local file. Screenshots ca
 
 Timestamps use the recorded session event time, not a claim of exact capture time. If that is absent, file modification time is labeled as a fallback. Unknown timestamps stay visible without a date filter and are excluded when a date range is active. Day groups use this computer's local calendar dates; the browser uses its local timezone for displayed dates.
 
-Discovery is bounded to 64 MiB of history per session identity, 128 MiB of history per scope, 32 identities per app session, 100 sessions and 10,000 images per scope, and 5,000 unique image references per session. Larger histories are not scanned; other limits produce partial-result warnings. Individual previews are limited to 32 MiB and 100 million pixels, with a supported header in the first 256 KiB. The gallery renders 120 images at a time and offers Show more. A file changed since indexing must be refreshed before it is served.
+Discovery is bounded to 64 MiB of history per session identity, 128 MiB of history per scope, 32 identities per app session, 100 sessions and 10,000 images per scope, and 5,000 unique image references per session. Larger histories are not scanned; other limits produce partial-result warnings. Individual previews are limited to 32 MiB and 100 million pixels, with a supported header in the first 256 KiB. The gallery renders only the selected page of 8, 16, or 32 images. Group counts describe the whole filtered group, even when it spans pages. A file changed since indexing must be refreshed before it is served.
 
 ## Privacy and storage
 
@@ -75,7 +76,7 @@ node --test model.test.mjs source.test.mjs server.test.mjs
 
 The repository discovery entry is `.github/extensions/screenshots/extension.mjs`. The app folder is independently installable; it does not import a sibling app. Reload extensions after changing an installed copy.
 
-The canvas ID is `screenshots`. Open input optionally accepts `sessionId`. Read-only actions are `list_sessions`, `query_images` (validated filters and a metadata page of at most 120 images), and `get_image` (metadata for a previously queried image). No action returns image bytes to the model.
+The canvas ID is `screenshots`. Open input optionally accepts `sessionId`. Read-only actions are `list_sessions`, `query_images` (validated filters, an offset, and a metadata page defaulting to 8 images, up to 120), and `get_image` (metadata for a previously queried image). No action returns image bytes to the model.
 
 For browser checks, use synthetic session metadata and reference images rather than private session data. Exercise the controllers, invalid dates, missing files, empty results, refresh recovery, session changes during discovery, preview keyboard navigation, and narrow/light/dark layouts.
 
