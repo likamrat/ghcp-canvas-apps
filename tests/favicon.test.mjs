@@ -44,11 +44,12 @@ test("each app has one complete background-backed logo and a matching Lucide app
         const svg = await readFile(new URL("icon.svg", base), "utf8");
         assert.match(svg, /viewBox="0 0 64 64"/);
         assert.match(svg, /stroke-width="2"/);
-        const stroke = svg.match(/stroke="(#[a-f0-9]{6})"/i)?.[1];
+        const stroke = svg.match(/<g[^>]*stroke="(#[a-f0-9]{6})"/i)?.[1];
         const background = svg.match(/<rect width="64" height="64"[^>]*fill="(#[a-f0-9]{6})"/i)?.[1];
         assert.ok(stroke && background, "Use an explicit solid background and foreground");
-        const values = [luminance(stroke), luminance(background)].sort((a, b) => b - a);
-        assert.ok((values[0] + .05) / (values[1] + .05) >= 3, `${app} icon needs contrast against its own background`);
+        assert.equal(background, "#ffffff");
+        const values = [luminance(stroke), luminance("#000000")].sort((a, b) => b - a);
+        assert.ok((values[0] + .05) / (values[1] + .05) >= 3, `${app} symbol needs contrast against its black circle`);
         const png = await readFile(new URL("icon.png", base));
         assert.equal(png.readUInt32BE(16), 512);
         assert.equal(png.readUInt32BE(20), 512);
@@ -61,16 +62,18 @@ test("each app has one complete background-backed logo and a matching Lucide app
         const logo = await readFile(new URL("logo.svg", base), "utf8");
         assert.ok(logo.includes(`<title>${name}</title>`));
         assert.match(logo, /viewBox="0 0 920 220"/);
-        assert.match(logo, /<rect width="920" height="220"[^>]*fill="#191c22"/);
+        assert.match(logo, /<rect width="920" height="220" rx="24" fill="#ffffff"/);
+        assert.match(logo, /class="word-prefix" fill="#000000"/);
+        assert.match(logo, /class="word-suffix" fill="#000000"/);
         assert.match(logo, /<g[^>]+aria-label=/, "The logo must contain the outlined wordmark");
         assert.doesNotMatch(logo, /<text|<script|<image|@font-face|prefers-color-scheme/, "One logo must work without font, image, or theme dependencies");
         assert.match(logo, /data-typeface="Bricolage Grotesque"/);
         assert.match(logo, /data-replaced-letter="o"/);
         assert.match(logo, /<circle[^>]+class="icon-halo"/, "The letter replacement must have a subtle circular background");
         const halo = logo.match(/<circle class="icon-halo"[^>]+>/)?.[0];
-        assert.match(halo, /fill="#252930"/);
+        assert.match(halo, /fill="#000000"/);
         assert.match(halo, /stroke="#7c858e" stroke-width="1.25"/);
-        assert.match(svg, /fill="#252930" stroke="#7c858e" stroke-width="1"/);
+        assert.match(svg, /fill="#000000" stroke="#7c858e" stroke-width="1"/);
         for (const surface of ["#ffffff", "#0d1117", "#22272e", "#252930"]) {
             const tones = [luminance("#7c858e"), luminance(surface)].sort((a, b) => b - a);
             assert.ok((tones[0] + .05) / (tones[1] + .05) >= 3, "Neutral ring needs visible contrast on light and dark surfaces");
