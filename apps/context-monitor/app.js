@@ -43,6 +43,7 @@ let listedModels = null;
 let heatFocusId = null;
 let currentGradient = null;
 let page = 1;
+let matchingSessions = [];
 const exact = (value) => value === null ? "Not reported" : value.toLocaleString();
 const compact = (value) => value === null ? "?" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 const levelLabel = { healthy: "Normal", watch: "Warning", high: "High usage", unknown: "Not reported" };
@@ -198,6 +199,13 @@ function renderHeatmap(sessions, scale) {
 }
 
 function showHeatSession(id) {
+    const index = matchingSessions.findIndex((session) => session.id === id);
+    if (index < 0) {
+        errorBox.textContent = "That session is no longer in this view. Refresh to try again.";
+        errorBox.hidden = false;
+        return;
+    }
+    page = Math.floor(index / Number(pageSize.value)) + 1;
     const byId = new Map(snapshot.sessions.map((session) => [session.id, session]));
     const seen = new Set();
     let current = byId.get(id);
@@ -374,18 +382,19 @@ function render() {
     }
     const matching = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, sort: sortBy.value })
         .filter((session) => session.matching);
+    matchingSessions = matching;
     const pagination = paginateSessions(matching, page, Number(pageSize.value));
     page = pagination.page;
     const pageIds = new Set(pagination.sessions.map((session) => session.id));
     const visible = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, collapsed, sort: sortBy.value, sessionIds: pageIds });
-    renderHeatmap(pagination.sessions, scale);
+    renderHeatmap(matching, scale);
     paginationRegion.hidden = matching.length === 0;
     document.getElementById("page-range").textContent = `${pagination.start}-${pagination.end} of ${pagination.matching} sessions`;
     document.getElementById("page-status").textContent = `Page ${pagination.page} of ${pagination.pages}`;
     previousPage.disabled = page === 1;
     nextPage.disabled = page === pagination.pages;
-    const high = pagination.sessions.filter((session) => session.context.level === "high").length;
-    const missing = pagination.sessions.filter((session) => session.context.level === "unknown").length;
+    const high = matching.filter((session) => session.context.level === "high").length;
+    const missing = matching.filter((session) => session.context.level === "unknown").length;
     const parentsShown = visible.filter((session) => !session.matching).length;
     count.textContent = [
         parentsShown ? `${parentsShown} ${parentsShown === 1 ? "parent" : "parents"} shown for context` : "",

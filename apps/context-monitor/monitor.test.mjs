@@ -1008,32 +1008,34 @@ test("heat map includes collapsed descendants, excludes context-only parents, an
     assert.match(ui.heatCells().find((tile) => tile.dataset.id === "child").title, /88.0% used/);
 });
 
-test("page controls bound the map and list, and its caption counts only rendered tiles", async () => {
+test("page controls bound only the list while the heat map covers every filtered session", async () => {
     const sessions = Array.from({ length: 25 }, (_, index) => ({
         id: `session-${index}`, name: `Session ${String(index).padStart(2, "0")}`, context: { used: index, capacity: 100 },
     }));
     const ui = renderer({ sessions });
     await ui.settle();
-    assert.equal(ui.heatCells().length, 8);
-    assert.equal(ui.nodes.get("heatmap-count").textContent, "(8)");
+    assert.equal(ui.heatCells().length, 25);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(25)");
     assert.equal(ui.nodes.get("page-status").textContent, "Page 1 of 4");
     assert.equal(ui.nodes.get("page-range").textContent, "1-8 of 25 sessions");
     assert.equal(ui.elements().filter((node) => node.tag === "article").length, 8);
     assert.equal(ui.nodes.get("page-previous").disabled, true);
     ui.nextPage();
-    assert.equal(ui.heatCells()[0].dataset.id, "session-8");
+    assert.equal(ui.heatCells()[0].dataset.id, "session-0");
+    assert.equal(ui.heatCells().length, 25);
     await ui.manual();
     assert.equal(ui.nodes.get("page-status").textContent, "Page 2 of 4");
     ui.nextPage();
     ui.nextPage();
-    assert.equal(ui.heatCells().length, 1);
-    assert.equal(ui.nodes.get("heatmap-count").textContent, "(1)");
+    assert.equal(ui.heatCells().length, 25);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(25)");
+    assert.equal(ui.elements().filter((node) => node.tag === "article").length, 1);
     assert.equal(ui.nodes.get("page-next").disabled, true);
     ui.previousPage();
     assert.equal(ui.nodes.get("page-status").textContent, "Page 3 of 4");
     ui.pageSize(16);
     assert.equal(ui.nodes.get("page-status").textContent, "Page 1 of 2");
-    assert.equal(ui.heatCells().length, 16);
+    assert.equal(ui.heatCells().length, 25);
     ui.search("Session 24");
     assert.equal(ui.heatCells().length, 1);
     assert.equal(ui.nodes.get("page-status").textContent, "Page 1 of 1");
@@ -1053,7 +1055,7 @@ test("pagination clamps shrinking results and validates pages and supported size
     for (const page of [0, -1, 1.5, NaN]) assert.throws(() => paginateSessions(sessions, page), { code: "invalid_input" });
 });
 
-test("a page beginning with a nested session retains its parent as context without adding a tile", async () => {
+test("later pages retain parent context without duplicating global heat-map tiles", async () => {
     const sessions = [
         { id: "root", name: "Root", context: { used: 10, capacity: 100 } },
         ...Array.from({ length: 18 }, (_, index) => ({
@@ -1063,19 +1065,19 @@ test("a page beginning with a nested session retains its parent as context witho
     ];
     const ui = renderer({ sessions });
     await ui.settle();
-    assert.equal(ui.heatCells().length, 8);
+    assert.equal(ui.heatCells().length, 19);
     assert.equal(ui.elements().filter((node) => node.tag === "article").length, 1);
     ui.nextPage();
-    assert.equal(ui.heatCells().length, 8);
-    assert.ok(ui.heatCells().every((tile) => tile.dataset.id !== "root"));
+    assert.equal(ui.heatCells().length, 19);
+    assert.equal(ui.heatCells().filter((tile) => tile.dataset.id === "root").length, 1);
     assert.equal(ui.elements().filter((node) => node.tag === "article").length, 9);
     assert.ok(ui.elements().some((node) => node.textContent === "Parent of sessions on this page"));
     const parent = ui.elements().find((node) => node.dataset.action === "fold" && node.dataset.id === "root");
     assert.equal(parent.disabled, true);
     assert.equal(parent.attributes.get("aria-expanded"), "true");
     ui.nextPage();
-    assert.equal(ui.heatCells().length, 3);
-    assert.equal(ui.nodes.get("heatmap-count").textContent, "(3)");
+    assert.equal(ui.heatCells().length, 19);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(19)");
     sessions.splice(4);
     await ui.manual();
     assert.equal(ui.nodes.get("page-status").textContent, "Page 1 of 1");

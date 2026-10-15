@@ -2,7 +2,7 @@
 
 See your GitHub Copilot app sessions, models, and context usage in one canvas.
 
-<a href="screenshot-full.png?v=dd9c3b9a6957"><img src="screenshot.png?v=2afc152792d1" alt="Context Monitor with paged sessions, a heat map, gradient usage bars, and sample GPT-6, GPT-6.1, and Claude sessions" width="640"></a>
+<a href="screenshot-full.png?v=37b4d151da0b"><img src="screenshot.png?v=fc7c961b61e9" alt="Context Monitor with paged sessions, a heat map, gradient usage bars, and sample GPT-6, GPT-6.1, and Claude sessions" width="640"></a>
 
 ## Use in the GitHub Copilot app
 
@@ -19,7 +19,7 @@ Install in personal scope to make Context Monitor available from Canvas apps acr
 
 Filter by model, pinned sessions, or context usage. Use the arrow at the end of a parent row to show its nested sessions.
 
-Use Previous page and Next page to browse 8, 16, or 32 sessions at a time. The heat map counts only the tiles on that page, including collapsed sessions. Select a tile to inspect it.
+Use Previous page and Next page to browse 8, 16, or 32 sessions at a time. Paging applies only to the list. The heat map covers all filtered sessions; select a tile to open its list page.
 
 Sessions without context data are hidden by default. Check Include sessions without context data to show them. They have no reported context reading, not 0% usage.
 

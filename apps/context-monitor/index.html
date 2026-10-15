@@ -56,7 +56,7 @@
                     </select>
                 </div>
                 <div class="page-size-choice">
-                    <label for="page-size">Sessions per page</label>
+                    <label for="page-size">List sessions per page</label>
                     <select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select>
                 </div>
                 <div class="scope-filters">
@@ -104,9 +104,9 @@
             </div>
             <div id="heatmap" class="heatmap-grid" role="group" aria-label="Session context usage" aria-describedby="heatmap-help" aria-busy="true"></div>
             <div class="heatmap-key"><span>0%</span><span id="heatmap-scale" class="scale-key" aria-hidden="true"></span><span>100%</span><span id="heatmap-missing-key" class="unknown-key" title="The app has not reported a complete context reading. This is not 0% usage.">No context data</span></div>
-            <p id="heatmap-help" class="sr-only">One tile per matching session on this page, including collapsed nested sessions. Use arrow keys to move between tiles, then Enter to show that session.</p>
+            <p id="heatmap-help" class="sr-only">One tile per matching session across all list pages, including collapsed nested sessions. Use arrow keys to move between tiles, then Enter to open that session's list page.</p>
         </section>
-        <nav id="pagination" aria-label="Session pages" hidden>
+        <nav id="pagination" aria-label="Session list pages" hidden>
             <span id="page-range" role="status"></span>
             <div class="page-buttons">
                 <button id="page-previous" type="button" aria-label="Previous page">Previous page</button>
