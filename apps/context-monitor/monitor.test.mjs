@@ -457,7 +457,7 @@ test("settings HTTP writes require the token, validate input, and report conflic
     assert.deepEqual((await conflict.json()).settings, current);
 });
 
-function renderer({ sessions = [], pinsAvailable = true } = {}) {
+function renderer({ sessions = [], pinsAvailable = true, includeMissing = false } = {}) {
     const node = (tag = "fragment") => ({
         tag, dataset: {}, style: { values: new Map(), setProperty(name, value) { this.values.set(name, value); } },
         children: [], attributes: new Map(),
@@ -499,6 +499,7 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
     document.getElementById("auto-refresh").value = "5000";
     document.getElementById("sort-by").value = "recent";
     document.getElementById("page-size").value = "8";
+    document.getElementById("include-missing").checked = includeMissing;
     const code = readFileSync(new URL("./app.js", import.meta.url), "utf8").replace(/^import .*;\r?\n/, "");
     runInNewContext(code, {
         document, window: { addEventListener() {}, matchMedia: () => ({ addEventListener() {} }) },
@@ -555,8 +556,8 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
             control.listeners.get("change")();
         },
         hideMissing(checked) {
-            const control = document.getElementById("hide-missing");
-            control.checked = checked;
+            const control = document.getElementById("include-missing");
+            control.checked = !checked;
             control.listeners.get("change")();
         },
         pageSize(value) {
@@ -795,7 +796,7 @@ test("parent disclosure shows all nested levels, survives refresh, and search pr
 });
 
 test("context bars and heat tiles share one continuous scale; unknown stays neutral", async () => {
-    const ui = renderer({ sessions: [
+    const ui = renderer({ includeMissing: true, sessions: [
         { id: "measured", name: "Measured", context: { used: 234, capacity: 1000 } },
         { id: "overflow", name: "Overflow", context: { used: 1100, capacity: 1000 } },
         { id: "unknown", name: "Unknown", context: { used: null, capacity: 1000 } },
@@ -846,7 +847,7 @@ test("context sorting reveals nested sessions and preserves ordering across refr
 });
 
 test("compact rows explain cumulative input/output totals separately from current context", async () => {
-    const ui = renderer({ sessions: [
+    const ui = renderer({ includeMissing: true, sessions: [
         {
             id: "reported", name: "Reported", model: "claude-sonnet-5.5", updatedAt: "2026-10-15",
             context: { used: 40000, capacity: 100000 },
@@ -964,7 +965,7 @@ test("heat map includes collapsed descendants, excludes context-only parents, an
         { id: "unknown", name: "Unknown", model: null, pinned: false, context: { used: null, capacity: 100 } },
         { id: "archived", name: "Archived", model: "gpt-6.1-sol", pinned: true, archived: true, context: { used: 10, capacity: 100 } },
     ];
-    const ui = renderer({ sessions });
+    const ui = renderer({ sessions, includeMissing: true });
     await ui.settle();
     const ids = () => ui.heatCells().map((tile) => tile.dataset.id);
     assert.equal(ui.elements().filter((node) => node.tag === "article").length, 3);
@@ -1081,7 +1082,7 @@ test("a page beginning with a nested session retains its parent as context witho
     assert.equal(ui.heatCells().length, 4);
 });
 
-test("hide missing context removes unknown tiles but never removes actual zero usage", async () => {
+test("missing context is hidden by default and can be included without hiding actual zero usage", async () => {
     const sessions = [
         { id: "zero", name: "Zero", context: { used: 0, capacity: 100 }, pinned: true, model: "gpt-6.1-sol" },
         { id: "known", name: "Known", context: { used: 70, capacity: 100 }, pinned: true, model: "gpt-6.1-sol" },
@@ -1089,6 +1090,9 @@ test("hide missing context removes unknown tiles but never removes actual zero u
     ];
     const ui = renderer({ sessions });
     await ui.settle();
+    assert.equal(ui.nodes.get("include-missing").checked, false);
+    assert.deepEqual(ui.heatCells().map((tile) => tile.dataset.id), ["known", "zero"]);
+    ui.hideMissing(false);
     assert.equal(ui.heatCells().length, 3);
     ui.hideMissing(true);
     assert.deepEqual(ui.heatCells().map((tile) => tile.dataset.id), ["known", "zero"]);
@@ -1097,11 +1101,12 @@ test("hide missing context removes unknown tiles but never removes actual zero u
     await ui.manual();
     assert.equal(ui.heatCells().length, 2);
     ui.usageLevel("unknown");
-    assert.equal(ui.heatCells().length, 0);
-    assert.equal(ui.nodes.get("heatmap-count").textContent, "(0)");
-    ui.hideMissing(false);
+    assert.equal(ui.nodes.get("include-missing").checked, true);
     assert.deepEqual(ui.heatCells().map((tile) => tile.dataset.id), ["missing"]);
     assert.equal(ui.nodes.get("heatmap-missing-key").hidden, false);
+    ui.hideMissing(true);
+    assert.equal(ui.nodes.get("usage-filter").value, "");
+    assert.deepEqual(ui.heatCells().map((tile) => tile.dataset.id), ["known", "zero"]);
 });
 
 test("partial groups retain the global sort order on later pages", () => {

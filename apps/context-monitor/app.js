@@ -9,7 +9,7 @@ const archived = document.getElementById("archived");
 const pinnedOnly = document.getElementById("pinned-only");
 const modelFilter = document.getElementById("model-filter");
 const usageFilter = document.getElementById("usage-filter");
-const hideMissing = document.getElementById("hide-missing");
+const includeMissing = document.getElementById("include-missing");
 const pageSize = document.getElementById("page-size");
 const paginationRegion = document.getElementById("pagination");
 const previousPage = document.getElementById("page-previous");
@@ -123,11 +123,11 @@ function element(tag, className, text) {
 }
 
 function filters() {
-    return { search: search.value, onlyPinned: pinnedOnly.checked, model: modelFilter.value, usageLevel: usageFilter.value, hideMissing: hideMissing.checked };
+    return { search: search.value, onlyPinned: pinnedOnly.checked, model: modelFilter.value, usageLevel: usageFilter.value, hideMissing: !includeMissing.checked };
 }
 
 function isFiltering() {
-    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.value || usageFilter.value || hideMissing.checked);
+    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.value || usageFilter.value);
 }
 
 function updateFilters() {
@@ -396,8 +396,9 @@ function render() {
     const fragment = document.createDocumentFragment();
     if (!visible.length) {
         const empty = element("div", "empty");
-        empty.append(element("strong", "", isFiltering() ? "No matching sessions" : "No sessions yet"),
-            element("span", "", isFiltering() ? "Change the filters or clear your search." : "Start a session in the Copilot app, then refresh."));
+        const filtered = isFiltering() || (!includeMissing.checked && sessions.some((session) => archived.checked || !session.archived));
+        empty.append(element("strong", "", filtered ? "No matching sessions" : "No sessions yet"),
+            element("span", "", filtered ? "Change the filters or clear your search." : "Start a session in the Copilot app, then refresh."));
         fragment.append(empty);
     } else {
         const groups = new Map();
@@ -506,8 +507,10 @@ archived.addEventListener("change", resetPage);
 pageSize.addEventListener("change", resetPage);
 previousPage.addEventListener("click", () => changePage(-1));
 nextPage.addEventListener("click", () => changePage(1));
-for (const control of [pinnedOnly, modelFilter, usageFilter, hideMissing]) {
+for (const control of [pinnedOnly, modelFilter, usageFilter, includeMissing]) {
     control.addEventListener("change", () => {
+        if (control === usageFilter && usageFilter.value === "unknown") includeMissing.checked = true;
+        if (control === includeMissing && !includeMissing.checked && usageFilter.value === "unknown") usageFilter.value = "";
         filterStatus.hidden = true;
         resetPage();
     });

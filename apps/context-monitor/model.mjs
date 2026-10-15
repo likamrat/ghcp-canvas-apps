@@ -162,7 +162,7 @@ export function visibleTree(sessions, {
             descendantCount: descendants.get(session.id) ?? 0, matching: matches.has(session.id),
             pageContext: sessionIds !== null && !matches.has(session.id),
         });
-        if (query || onlyPinned || model || usageLevel || hideMissing || (sessionIds !== null && !matches.has(session.id)) || !collapsed.has(session.id)) {
+        if (query || onlyPinned || model || usageLevel || (sessionIds !== null && !matches.has(session.id)) || !collapsed.has(session.id)) {
             for (const child of [...nested].reverse()) stack.push({ session: child, depth: depth + 1 });
         }
 

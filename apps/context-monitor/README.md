@@ -2,7 +2,7 @@
 
 See your GitHub Copilot app sessions, models, and context usage in one canvas.
 
-<a href="screenshot-full.png?v=ea3c356aa484"><img src="screenshot.png?v=869949a5c605" alt="Context Monitor with paged sessions, a heat map, gradient usage bars, and sample GPT-6, GPT-6.1, and Claude sessions" width="640"></a>
+<a href="screenshot-full.png?v=dd9c3b9a6957"><img src="screenshot.png?v=2afc152792d1" alt="Context Monitor with paged sessions, a heat map, gradient usage bars, and sample GPT-6, GPT-6.1, and Claude sessions" width="640"></a>
 
 ## Use in the GitHub Copilot app
 
@@ -21,7 +21,7 @@ Filter by model, pinned sessions, or context usage. Use the arrow at the end of 
 
 Use Previous page and Next page to browse 8, 16, or 32 sessions at a time. The heat map counts only the tiles on that page, including collapsed sessions. Select a tile to inspect it.
 
-Hide sessions without context data removes the dashed tiles. These mean the app has no reported context reading, not 0% usage.
+Sessions without context data are hidden by default. Check Include sessions without context data to show them. They have no reported context reading, not 0% usage.
 
 Choose a refresh interval or refresh manually. Open Usage settings to change the warning levels or reset them to 65% and 85%. Select a session name for exact token counts.
 
