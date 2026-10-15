@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import { sourceError } from "./source.mjs";
 import { attachment, downloadArchive, saveImages, revealDownload } from "./downloads.mjs";
@@ -112,7 +112,11 @@ export async function startServer(catalog, { sessionId, downloadDirectory, launc
             if (req.method !== "GET") { res.writeHead(405, { Allow: "GET" }).end("Read-only screenshots"); return; }
             if (assets.has(route)) {
                 const [file, mime] = assets.get(route);
-                const content = await readFile(new URL(file, import.meta.url));
+                let content = await readFile(new URL(file, import.meta.url));
+                if (file === "index.html") {
+                    const icon = await readFile(new URL("icon.svg", import.meta.url));
+                    content = content.toString("utf8").replace("__ICON_VERSION__", createHash("sha256").update(icon).digest("hex").slice(0, 12));
+                }
                 res.writeHead(200, { "Content-Type": mime }).end(content);
             } else if (route === "api/sessions") {
                 const requested = url.searchParams.get("sessionId") || sessionId;

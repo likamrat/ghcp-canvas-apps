@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { createBrowserPopout } from "./browser.mjs";
 
 const assets = new Map([
@@ -40,7 +40,11 @@ export async function startServer(store, { launchBrowser } = {}) {
             if (req.method === "GET" && assets.has(url.pathname)) {
                 const [file, type] = assets.get(url.pathname);
                 let content = await readFile(new URL(file, import.meta.url));
-                if (file === "index.html") content = content.toString("utf8").replace("__TOKEN__", token);
+                if (file === "index.html") {
+                    const icon = await readFile(new URL("icon.svg", import.meta.url));
+                    content = content.toString("utf8").replace("__TOKEN__", token)
+                        .replace("__ICON_VERSION__", createHash("sha256").update(icon).digest("hex").slice(0, 12));
+                }
                 res.setHeader("Content-Type", type);
                 res.end(content);
                 return;

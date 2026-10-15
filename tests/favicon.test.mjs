@@ -4,6 +4,7 @@ import { startServer as screenshots } from "../apps/screenshots/server.mjs";
 import { startServer as monitor } from "../apps/context-monitor/server.mjs";
 import { startServer as thoughts } from "../apps/thoughts/server.mjs";
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 
 test("all apps declare and serve bundled favicons in standalone browser views", async (t) => {
     const servers = [await screenshots({}), await monitor(() => ({})), await thoughts({})];
@@ -16,7 +17,11 @@ test("all apps declare and serve bundled favicons in standalone browser views", 
         const html = await (await fetch(page)).text();
         const icon = html.match(/<link(?=[^>]*rel="icon")[^>]*href="([^"]+)"/)?.[1];
         assert.ok(icon, "Browser page must declare its favicon");
-        assert.ok(icon.endsWith("icon.svg"), "Favicon must use the same scalable icon as the README");
+        const iconUrl = new URL(icon, page);
+        assert.ok(iconUrl.pathname.endsWith("icon.svg"), "Favicon must use the app's scalable icon");
+        const iconBytes = await readFile(new URL("icon.svg", base));
+        assert.equal(iconUrl.searchParams.get("v"), createHash("sha256").update(iconBytes).digest("hex").slice(0, 12),
+            "Favicon URL must change when the artwork changes, instead of reusing the browser's old tab icon");
         for (const path of [icon, "favicon.ico"]) {
             const response = await fetch(new URL(path, page));
             assert.equal(response.status, 200);
