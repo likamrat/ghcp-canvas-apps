@@ -27,6 +27,7 @@ Opens with the current Copilot session selected. You can choose another session 
 
 - Search sessions and expand parents. **Include child screenshots** adds their images to the gallery.
 - Filter by filename, source, or date; sort and group results. Pages show **8**, **16**, or **32** images.
+- Set **Auto-refresh** to 5, 10, or 30 seconds, 1 minute, or 5 minutes. It starts off, pauses when hidden, and keeps your filters, session, and page.
 - Select an image to zoom. **Reset zoom** restores its opening size; **Actual size** shows 100%. Arrow keys navigate; Escape closes.
 - Download one image or **Download all** filtered results as one ZIP. Files go to Downloads without overwriting existing files. **Open in folder** reveals the file; **Dismiss** hides the notice.
 
@@ -45,7 +46,7 @@ Dates use local time and labeled event/file timestamps. Previews are limited to 
 Node 24+. No build step. From this folder:
 
 ```sh
-node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs
+node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs refresh.test.mjs
 ```
 
 After updating an installed copy, reload extensions and reopen existing browser tabs to load the current code and favicon. Keep private images, histories, and databases out of the repository.

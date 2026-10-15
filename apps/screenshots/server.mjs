@@ -10,6 +10,7 @@ const assets = new Map([
     ["", ["index.html", "text/html; charset=utf-8"]],
     ["app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
+    ["refresh.mjs", ["refresh.mjs", "text/javascript; charset=utf-8"]],
     ["style.css", ["style.css", "text/css; charset=utf-8"]],
     ["icons/download.svg", ["icons/download.svg", "image/svg+xml"]],
     ["browser.js", ["browser.js", "text/javascript; charset=utf-8"]],

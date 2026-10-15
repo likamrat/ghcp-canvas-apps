@@ -1,4 +1,5 @@
 import { defaultView, clearFilters, queryImages, paginateImages, sessionTree, createRequestGate, SOURCE_LABELS, previewScale, nextZoom } from "./model.mjs";
+import { createRefreshCycle } from "./refresh.mjs";
 
 const $ = (id) => document.getElementById(id);
 const view = defaultView();
@@ -16,6 +17,8 @@ let zoom = null, previewRevision = 0;
 let downloadingAll = false;
 let lastDownload = null;
 let pickerOpener = null;
+const refreshCycle = createRefreshCycle({ refresh });
+refreshCycle.setHidden(document.hidden);
 
 function node(tag, text, className) {
     const element = document.createElement(tag);
@@ -33,6 +36,7 @@ function downloadNotice(message, saved = null) {
 function busy() {
     $("refresh").disabled = scanning || loadingSessions;
     $("refresh").textContent = scanning || loadingSessions ? "Reading..." : "Refresh";
+    refreshCycle.setBusy(scanning || loadingSessions);
 }
 async function api(route) {
     const response = await fetch(new URL(route, location.href), { cache: "no-store" });
@@ -303,6 +307,7 @@ async function requestImages() {
 }
 
 async function refresh() {
+    if (loadingSessions || scanning) return;
     const revision = sessionGate.next();
     loadingSessions = true; busy();
     try {
@@ -562,5 +567,13 @@ $("reset-zoom").onclick = () => { zoom = null; updateZoom(); };
 $("actual").onclick = () => { zoom = 1; updateZoom(); };
 $("zoom-in").onclick = () => scaleZoom(1.25);
 $("zoom-out").onclick = () => scaleZoom(.8);
+$("auto-refresh").addEventListener("change", () => {
+    refreshCycle.setInterval(Number($("auto-refresh").value));
+    $("refresh-status").textContent = $("auto-refresh").value === "0" ? "Auto-refresh off"
+        : `Auto-refresh: ${$("auto-refresh").selectedOptions[0].textContent.toLowerCase()}`;
+});
+document.addEventListener("visibilitychange", () => refreshCycle.setHidden(document.hidden));
+window.addEventListener("pagehide", () => refreshCycle.stop());
+window.addEventListener("pageshow", () => refreshCycle.resume());
 new ResizeObserver(() => { if ($("viewer").open) updateZoom(); }).observe($("preview-stage"));
 refresh();
