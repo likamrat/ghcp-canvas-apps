@@ -4,9 +4,9 @@
 
 When screenshots pile up across Copilot sessions, finding the one you need means digging through old chats. Screenshots gives you a visual history of each session so you can find the image and get back to your work.
 
-<a href="screenshot.png"><img src="screenshot.png" alt="Sample session hierarchy and screenshot gallery" width="640"></a>
+<a href="screenshot.png"><img src="screenshot.png" alt="Session hierarchy, gallery filters, auto-refresh, and screenshot pages" width="640"></a>
 
-[Zoom preview](screenshot-preview.png). Screenshots use sample data.
+<a href="screenshot-preview.png"><img src="screenshot-preview.png" alt="Screenshot preview with zoom, reset, navigation, and image details" width="640"></a>
 
 ## Install
 
@@ -50,5 +50,3 @@ node --test model.test.mjs source.test.mjs server.test.mjs downloads.test.mjs re
 ```
 
 After updating an installed copy, reload extensions and reopen existing browser tabs to load the current code and favicon. Keep private images, histories, and databases out of the repository.
-
-Logo: Lucide **Images** ([license](icons/LICENSE)) and Bricolage Grotesque ([license](FONT-LICENSE.txt)).

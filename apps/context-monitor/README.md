@@ -45,10 +45,6 @@ node --test monitor.test.mjs
 
 After updating an installed copy, reload extensions and reopen existing browser tabs to load the current code and favicon. Cross-app browser and favicon checks are in `tests/`.
 
-Fonts use [Geist](https://github.com/vercel/geist-font) ([license](fonts/LICENSE.txt)). Interface icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](icons/LICENSE)).
-
-Logo: Lucide **Chart Column Increasing** ([license](LUCIDE-LICENSE.txt)) and Bricolage Grotesque ([license](FONT-LICENSE.txt)).
-
 ## Publish
 
 Keep source, assets, and this README in `apps/context-monitor/`. Publish to `main`, then update installed copies. Keep session data, databases, and logs out of the repository.

@@ -41,10 +41,6 @@ node --test store.test.mjs
 
 After updating an installed copy, reload extensions and reopen existing browser tabs to load the current code and favicon. Cross-app browser and favicon checks are in `tests/`.
 
-Interface icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](PHOSPHOR-LICENSE.txt)).
-
-Logo: Lucide **Lightbulb** ([license](LUCIDE-LICENSE.txt)) and Bricolage Grotesque ([license](FONT-LICENSE.txt)).
-
 ## Publish
 
 Keep source, assets, and this README in `apps/thoughts/`. Publish to `main`, then update installed copies. Keep saved thoughts, databases, and logs out of the repository.
