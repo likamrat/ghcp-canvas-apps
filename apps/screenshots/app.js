@@ -14,6 +14,7 @@ let imageWarnings = [], sessionWarnings = [], page = 1, sessionLimit = 300;
 let scanning = false, pending = false, loadingSessions = false, collectedAt = null, imageRevision = 0;
 let zoom = null, previewRevision = 0;
 let downloadingAll = false;
+let lastDownload = null;
 let pickerOpener = null;
 
 function node(tag, text, className) {
@@ -23,6 +24,12 @@ function node(tag, text, className) {
     return element;
 }
 function notice(id, message) { $(id).textContent = message || ""; $(id).hidden = !message; }
+function downloadNotice(message, saved = null) {
+    lastDownload = saved;
+    $("download-status").textContent = message;
+    $("download-notice").hidden = false;
+    $("open-download-folder").hidden = !saved?.downloadId;
+}
 function busy() {
     $("refresh").disabled = scanning || loadingSessions;
     $("refresh").textContent = scanning || loadingSessions ? "Reading..." : "Refresh";
@@ -231,11 +238,12 @@ function renderGallery() {
             download.firstChild.setAttribute("aria-hidden", "true");
             download.onclick = async () => {
                 download.disabled = true;
+                downloadNotice("Saving screenshot...");
                 try {
                     const saved = await saveDownload({ ids: [image.id], archive: false });
-                    notice("download-status", `Saved screenshot to ${saved.path}`);
+                    downloadNotice(`Saved screenshot to ${saved.path}`, saved);
                 }
-                catch (error) { notice("download-status", `Download failed: ${error.message}`); }
+                catch (error) { downloadNotice(`Download failed: ${error.message}`); }
                 finally { download.disabled = image.availability !== "available"; }
             };
             card.append(button, download);
@@ -499,15 +507,37 @@ $("download-all").onclick = async () => {
     const skippedLabel = `${skipped} unavailable image${skipped === 1 ? "" : "s"}`;
     downloadingAll = true;
     $("download-all").disabled = true;
-    notice("download-status", `Preparing ${available.length} screenshots from all matching pages${skipped ? `; skipping ${skippedLabel}` : ""}...`);
+    downloadNotice(`Preparing ${available.length} screenshots from all matching pages${skipped ? `; skipping ${skippedLabel}` : ""}...`);
     try {
         const saved = await saveDownload({ ids: available.map((image) => image.id), archive: true });
-        notice("download-status", `Saved one ZIP with ${saved.count} screenshots to ${saved.path}${skipped ? `; skipped ${skippedLabel}` : ""}.`);
-    } catch (error) { notice("download-status", `Download all failed: ${error.message}`); }
+        downloadNotice(`Saved one ZIP with ${saved.count} screenshots to ${saved.path}${skipped ? `; skipped ${skippedLabel}` : ""}.`, saved);
+    } catch (error) { downloadNotice(`Download all failed: ${error.message}`); }
     finally {
         downloadingAll = false;
         $("download-all").disabled = scanning || !ordered.some((image) => image.availability === "available");
     }
+};
+$("dismiss-download").onclick = () => {
+    $("download-notice").hidden = true;
+    ($("download-all").disabled ? $("refresh") : $("download-all")).focus();
+};
+$("open-download-folder").onclick = async () => {
+    const saved = lastDownload;
+    if (!saved?.downloadId) return;
+    $("open-download-folder").disabled = true;
+    try {
+        const response = await fetch(new URL("api/open-download-folder", location.href), {
+            method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ downloadId: saved.downloadId }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "The folder could not be opened.");
+        if (lastDownload?.downloadId === saved.downloadId) {
+            $("download-status").textContent = result.selected ? `Opened folder with ${saved.name} selected. Saved at ${saved.path}`
+                : `Opened the download folder. Saved at ${saved.path}`;
+        }
+    } catch (error) {
+        if (lastDownload?.downloadId === saved.downloadId) downloadNotice(`Could not open folder: ${error.message} Saved at ${saved.path}`, saved);
+    } finally { $("open-download-folder").disabled = false; }
 };
 $("page-previous").onclick = () => changePage(-1);
 $("page-next").onclick = () => changePage(1);

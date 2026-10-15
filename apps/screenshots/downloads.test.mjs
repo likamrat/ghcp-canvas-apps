@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { startServer } from "./server.mjs";
-import { downloadArchive, downloadName } from "./downloads.mjs";
+import { downloadArchive, downloadName, revealCommand, revealDownload } from "./downloads.mjs";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -111,4 +111,43 @@ test("download clicks save verified files and exactly one ZIP without overwritin
     });
     assert.equal(arbitraryPath.status, 400);
     assert.deepEqual((await readdir(directory)).sort(), ["capture (1).png", "capture.png", "screenshots.zip"]);
+});
+
+test("Open in folder only reveals files actually saved by this server, never caller-supplied paths", async (t) => {
+    const directory = await mkdtemp(join(tmpdir(), "screenshots-reveal-"));
+    t.after(() => rm(directory, { recursive: true, force: true }));
+    const id = "a".repeat(64);
+    const bytes = Buffer.from("image bytes");
+    const revealed = [];
+    const server = await startServer({
+        metadata: () => ({ id, name: "capture.png", availability: "available", size: bytes.length }),
+        openImage: async () => ({ data: bytes, size: bytes.length, mime: "image/png" }),
+    }, { downloadDirectory: directory, revealFile: async (path) => { revealed.push(path); return { selected: true }; } });
+    t.after(() => server.close());
+    const post = (route, input, extra = {}) => fetch(new URL(route, server.url), {
+        method: "POST", headers: { "content-type": "application/json", ...extra }, body: JSON.stringify(input),
+    });
+    const saved = await (await post("api/save-download", { ids: [id], archive: false })).json();
+    assert.match(saved.downloadId ?? "", /^[a-f0-9]{32}$/);
+    const response = await post("api/open-download-folder", { downloadId: saved.downloadId });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).selected, true);
+    assert.deepEqual(revealed, [saved.path]);
+    assert.equal((await post("api/open-download-folder", { downloadId: "0".repeat(32) })).status, 404);
+    assert.equal((await post("api/open-download-folder", { path: "C:\\private" })).status, 400);
+    assert.equal((await post("api/open-download-folder", { downloadId: saved.downloadId }, { Origin: "https://example.com" })).status, 403);
+    assert.equal(revealed.length, 1);
+});
+
+test("Windows folder reveal keeps the selection switch and spaced path in one argument", () => {
+    const path = "C:\\Users\\Example User\\Downloads\\screenshots (2).zip";
+    const command = revealCommand(path, "win32", { WINDIR: "C:\\Windows" });
+    assert.deepEqual(command.args, [`/select,${path}`]);
+    assert.equal(command.selected, true);
+});
+
+test("moved downloads fail explicitly before attempting to open a file manager", async (t) => {
+    const directory = await mkdtemp(join(tmpdir(), "screenshots-moved-download-"));
+    t.after(() => rm(directory, { recursive: true, force: true }));
+    await assert.rejects(revealDownload(join(directory, "moved.png")), /moved or deleted/);
 });

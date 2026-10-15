@@ -1,10 +1,42 @@
 import { crc32 } from "node:zlib";
 import { sourceError } from "./source.mjs";
-import { mkdir, open, unlink } from "node:fs/promises";
+import { mkdir, open, unlink, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { extname, join } from "node:path";
+import { extname, join, dirname, isAbsolute } from "node:path";
+import { spawn } from "node:child_process";
 
 const MAX_EXPORT = 128 * 1024 * 1024;
+export function revealCommand(path, platform = process.platform, env = process.env) {
+    if (!isAbsolute(path) || /^(?:\\\\|\/\/)/.test(path)) throw sourceError("invalid_input", "Only a saved local download can be revealed.");
+    if (platform === "win32") return { executable: join(env.WINDIR || "C:\\Windows", "explorer.exe"), args: [`/select,${path}`], selected: true };
+    if (platform === "darwin") return { executable: "/usr/bin/open", args: ["-R", path], selected: true };
+    return { executable: "/usr/bin/xdg-open", args: [dirname(path)], selected: false };
+}
+
+export async function revealDownload(path) {
+    let info;
+    try { info = await stat(path); }
+    catch (error) {
+        if (error.code === "ENOENT") throw sourceError("download_missing", "The saved file was moved or deleted. Download it again to reveal it.");
+        throw sourceError("folder_open_failed", `Cannot access the saved download: ${error.message}`);
+    }
+    if (!info.isFile()) throw sourceError("download_missing", "The saved download is no longer a file.");
+    const command = revealCommand(path);
+    await new Promise((resolve, reject) => {
+        const child = spawn(command.executable, command.args, { stdio: "ignore", windowsHide: false, detached: true, shell: false });
+        let settled = false, timer;
+        const finish = (error) => {
+            if (settled) return;
+            settled = true; clearTimeout(timer); child.unref();
+            if (error) reject(sourceError("folder_open_failed", `Could not open the folder: ${error.message}`)); else resolve();
+        };
+        child.once("error", finish);
+        child.once("spawn", () => { timer = setTimeout(() => finish(), 500); });
+        child.once("exit", (code) => finish(code ? new Error(`file manager exited with code ${code}`) : undefined));
+    });
+    return { selected: command.selected };
+}
+
 export function downloadName(value) {
     const name = String(value).split(/[\\/]/).at(-1).replace(/[<>:"/\\|?*\x00-\x1f\x7f]/g, "_").replace(/^[. ]+|[. ]+$/g, "").slice(0, 180);
     return /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name) ? `_${name}` : name || "screenshot.png";

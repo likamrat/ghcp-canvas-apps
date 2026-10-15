@@ -64,6 +64,10 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .overview p { margin: 0; }
 #sync { font-size: 11px; }
 .notice { font-size: 12px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 6px; white-space: pre-line; overflow-wrap: anywhere; }
+.download-notice { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin: 12px 0; }
+.download-notice > p { margin: 0; flex: 1 1 200px; }
+.download-notice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.download-notice-actions button { min-height: 30px; padding: 4px 8px; font-size: 12px; }
 .error-text { color: var(--error); font-size: 12px; }
 #date-error { margin: 8px 0; }
 [aria-invalid="true"] { border-color: var(--error) !important; }

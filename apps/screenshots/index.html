@@ -37,7 +37,13 @@
     <div class="overview"><p id="summary" role="status">Reading local sessions...</p><span id="sync"></span></div>
     <p id="error" class="notice error-text" role="alert" hidden></p>
     <p id="warnings" class="notice" hidden></p>
-    <p id="download-status" class="notice" role="status" hidden></p>
+    <div id="download-notice" class="notice download-notice" hidden>
+        <p id="download-status" role="status"></p>
+        <div class="download-notice-actions">
+            <button id="open-download-folder" type="button" hidden>Open in folder</button>
+            <button id="dismiss-download" type="button" aria-label="Dismiss download notification">Dismiss</button>
+        </div>
+    </div>
     <div class="browse">
         <aside aria-label="Session navigator">
             <h2>Sessions <span id="session-count"></span></h2>

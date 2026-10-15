@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import { sourceError } from "./source.mjs";
-import { attachment, downloadArchive, saveImages } from "./downloads.mjs";
+import { attachment, downloadArchive, saveImages, revealDownload } from "./downloads.mjs";
 import { createBrowserPopout } from "./browser.mjs";
 
 const assets = new Map([
@@ -29,11 +29,12 @@ function imageInput(params) {
     return { sessionId, input };
 }
 
-export async function startServer(catalog, { sessionId, downloadDirectory, launchBrowser } = {}) {
+export async function startServer(catalog, { sessionId, downloadDirectory, launchBrowser, revealFile = revealDownload } = {}) {
     const token = randomBytes(32).toString("hex");
     const prefix = `/${token}/`;
     let scanning = false;
     let exporting = false;
+    const savedDownloads = new Map();
     const popout = createBrowserPopout(() => `http://127.0.0.1:${server.address().port}${prefix}`, launchBrowser);
     const server = createServer(async (req, res) => {
         const origin = `http://127.0.0.1:${server.address().port}`;
@@ -58,6 +59,25 @@ export async function startServer(catalog, { sessionId, downloadDirectory, launc
                 res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
                 return;
             }
+            if (route === "api/open-download-folder" && req.method === "POST") {
+                if (req.headers["content-type"] !== "application/json") throw sourceError("invalid_input", "Use a JSON download reference.");
+                let body = "";
+                for await (const chunk of req) {
+                    body += chunk;
+                    if (Buffer.byteLength(body) > 1024) throw sourceError("invalid_input", "The download reference is too large.");
+                }
+                let input;
+                try { input = JSON.parse(body); } catch { throw sourceError("invalid_input", "Invalid download reference JSON."); }
+                if (!input || typeof input !== "object" || Object.keys(input).length !== 1 ||
+                    typeof input.downloadId !== "string" || !/^[a-f0-9]{32}$/.test(input.downloadId)) {
+                    throw sourceError("invalid_input", "Choose a completed download from this app.");
+                }
+                const path = savedDownloads.get(input.downloadId);
+                if (!path) throw sourceError("download_missing", "This download is no longer tracked. Download the file again to reveal it.");
+                const result = await revealFile(path);
+                res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
+                return;
+            }
             if (["api/download-all", "api/save-download"].includes(route) && req.method === "POST") {
                 if (req.headers["content-type"] !== "application/json") throw sourceError("invalid_input", "Use a JSON image selection.");
                 if (exporting) throw sourceError("export_busy", "A download archive is already being prepared.");
@@ -72,7 +92,10 @@ export async function startServer(catalog, { sessionId, downloadDirectory, launc
                     try { input = JSON.parse(body); } catch { throw sourceError("invalid_input", "Invalid download selection JSON."); }
                     if (route === "api/save-download") {
                         const saved = await saveImages(catalog, input, downloadDirectory);
-                        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(saved));
+                        const downloadId = randomBytes(16).toString("hex");
+                        savedDownloads.set(downloadId, saved.path);
+                        if (savedDownloads.size > 1000) savedDownloads.delete(savedDownloads.keys().next().value);
+                        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ...saved, downloadId }));
                         return;
                     }
                     if (!input || typeof input !== "object" || Object.keys(input).some((key) => key !== "ids")) throw sourceError("invalid_input", "Unsupported download selection.");
@@ -113,7 +136,7 @@ export async function startServer(catalog, { sessionId, downloadDirectory, launc
             }
         } catch (error) {
             if (!res.headersSent) {
-                const status = error.status ?? (error.code === "invalid_input" ? 400 : error.code === "export_too_large" ? 413 : error.code === "session_missing" || error.code === "image_missing" ? 404 :
+                const status = error.status ?? (error.code === "invalid_input" ? 400 : error.code === "export_too_large" ? 413 : ["session_missing", "image_missing", "download_missing", "ENOENT"].includes(error.code) ? 404 :
                     error.code === "image_changed" ? 409 : 503);
                 res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify({ error: error.message, code: error.code ?? "screenshots_unavailable" }));
             } else res.destroy(error);

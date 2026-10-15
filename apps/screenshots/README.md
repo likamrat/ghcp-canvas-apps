@@ -48,6 +48,8 @@ Each screenshot has a small Lucide download button beside its caption. It saves 
 
 Explicit download clicks save through the extension to `Downloads` under the local user's home directory, avoiding unsupported blob-link downloads in embedded webviews. The status reports the completed file's full path only after writing and flushing it. Existing downloads are never overwritten: a numeric suffix is added to conflicting names. The canvas does not claim the browser saved a file merely because a link was clicked. No screenshot is saved automatically; original images and session storage stay unchanged. On remote setups, this is the Downloads folder of the machine running the extension, not a browser client's separate computer.
 
+Use **Dismiss** to hide a download notification without deleting its file. Successful downloads also offer **Open in folder**, which reveals that screenshot or ZIP in File Explorer (Windows) or Finder (macOS); Linux opens its containing folder. The action only accepts a server-tracked completed download, not an arbitrary path. Moved/deleted files and file-manager launch failures are reported explicitly.
+
 ## Sources and limitations
 
 Screenshots reads the local app's `data.db` in read-only mode, resolves workspace/session aliases and parent relationships, and scans only the selected sessions' retained `events.jsonl` files. Explicit `workspace_parent_links` take precedence over legacy creator references; chat links and historical aliases are also resolved. `COPILOT_HOME` selects the data directory; otherwise it uses `~/.copilot`.
