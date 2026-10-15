@@ -45,9 +45,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .control-panel label:not(.check-filter) { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 input[type="search"], input[type="number"], select { width: 100%; padding: 8px 11px; border: 1px solid var(--edge); border-radius: 6px; background: var(--surface); }
 .control-options { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 12px; margin-top: 12px; }
-.scope-filters { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.scope-filters { display: flex; flex: 1 1 400px; flex-wrap: wrap; gap: 6px 12px; }
 .sort-choice { flex: 1 1 200px; min-width: 160px; }
 .refresh-choice { flex: 0 1 160px; min-width: 140px; }
+.page-size-choice { flex: 0 1 130px; min-width: 110px; }
 #refresh { min-height: 40px; margin-left: auto; }
 .control-settings { display: flex; flex-wrap: wrap; align-items: start; gap: 10px 20px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--edge); }
 .control-settings details { min-width: 0; font-size: 12px; }
@@ -57,7 +58,7 @@ input[type="search"], input[type="number"], select { width: 100%; padding: 8px 1
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .filter-notice { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
 input::placeholder { color: var(--muted); opacity: 1; }
-.check-filter { display: flex; gap: 7px; align-items: center; min-height: 40px; color: var(--muted); font-size: 13px; white-space: nowrap; cursor: pointer; }
+.check-filter { display: flex; gap: 7px; align-items: center; min-height: 40px; color: var(--muted); font-size: 13px; cursor: pointer; }
 .check-filter input { appearance: none; display: grid; place-content: center; flex: 0 0 18px; width: 18px; height: 18px; margin: 0; border: 1.5px solid var(--muted); border-radius: 4px; background: transparent; cursor: pointer; }
 .check-filter input:checked { background: var(--ink); border-color: var(--ink); }
 .check-filter input:checked::before { content: ""; width: 5px; height: 9px; border: solid var(--surface); border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
@@ -86,7 +87,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .heatmap-section[hidden] { display: none; }
 .heatmap-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .heatmap-heading h2 { margin: 0; font-size: 13px; font-weight: 500; }
-#heatmap-count { font-size: 11px; color: var(--muted); }
+#heatmap-count { font: inherit; color: var(--muted); }
 .heatmap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14px, 1fr)); gap: 4px; }
 .heat-cell { aspect-ratio: 1; min-width: 0; padding: 0; border: 1px solid color-mix(in srgb, var(--heat-color), var(--ink) 50%); border-radius: 3px; background: var(--heat-color); }
 .heat-cell:hover { background: var(--heat-color); border-color: var(--ink); }
@@ -97,6 +98,11 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .scale-key { width: 100px; height: 6px; border-radius: 1px; background: var(--usage-gradient); }
 .unknown-key { margin-left: 8px; }
 .unknown-key::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: -1px; border: 1px dashed var(--muted); border-radius: 2px; background: var(--hover); }
+#pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 0 8px 12px; padding-top: 12px; border-top: 1px solid var(--edge); color: var(--muted); font-size: 12px; }
+#pagination[hidden] { display: none; }
+.page-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.page-buttons button { min-height: 32px; font-size: 12px; padding: 5px 8px; }
+#page-status { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .token-guide { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 10px 0 0; max-width: 85ch; }
 .token-guide strong { color: var(--ink); font-weight: 500; }
 .column-head, .session-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(175px, 1fr) 32px; gap: 16px; align-items: center; }

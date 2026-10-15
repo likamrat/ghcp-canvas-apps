@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters, buildUsageScale, usageColor } from "./model.mjs";
+import { contextUsage, resolveParents, visibleTree, DEFAULT_THRESHOLDS, validateThresholds, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters, buildUsageScale, usageColor, paginateSessions } from "./model.mjs";
 import { databasePath, readSnapshot } from "./source.mjs";
 import { startServer } from "./server.mjs";
 import { createSettings } from "./settings.mjs";
@@ -254,7 +254,7 @@ test("usage filters select normal, warning, high, and unknown readings using con
     assert.deepEqual(matches("watch", {}, custom), ["normal", "warning"]);
     assert.deepEqual(matches("healthy", {}, custom), []);
     const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
-    for (const label of ["Normal (green)", "Warning (yellow)", "High usage (red)", "Not reported"]) assert.ok(html.includes(label));
+    for (const label of ["Normal (green)", "Warning (yellow)", "High usage (red)", "No context data"]) assert.ok(html.includes(label));
 });
 
 test("reads canonical app sessions, aliases, archived parents, and exact token breakdown read-only", (t) => {
@@ -471,6 +471,7 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
         },
         replaceChildren(...children) { this.children = []; this.append(...children); },
         addEventListener(name, callback) { this.listeners.set(name, callback); },
+        scrollIntoView() { this.scrolled = true; },
     });
     const nodes = new Map();
     const document = {
@@ -497,12 +498,13 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
     const themeCallbacks = [];
     document.getElementById("auto-refresh").value = "5000";
     document.getElementById("sort-by").value = "recent";
+    document.getElementById("page-size").value = "8";
     const code = readFileSync(new URL("./app.js", import.meta.url), "utf8").replace(/^import .*;\r?\n/, "");
     runInNewContext(code, {
         document, window: { addEventListener() {}, matchMedia: () => ({ addEventListener() {} }) },
         visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS,
         SORT_PRESETS, isContextSort, tokenCount, Intl, Date,
-        availableModels, matchesFilters, buildUsageScale, usageColor,
+        availableModels, matchesFilters, buildUsageScale, usageColor, paginateSessions,
         getComputedStyle: () => ({ getPropertyValue: (name) => currentPalette[name.replace("--usage-", "")] ?? "" }),
         MutationObserver: class { constructor(callback) { themeCallbacks.push(callback); } observe() {} },
         AbortSignal: { timeout: () => ({}) },
@@ -552,6 +554,18 @@ function renderer({ sessions = [], pinsAvailable = true } = {}) {
             control.checked = checked;
             control.listeners.get("change")();
         },
+        hideMissing(checked) {
+            const control = document.getElementById("hide-missing");
+            control.checked = checked;
+            control.listeners.get("change")();
+        },
+        pageSize(value) {
+            const control = document.getElementById("page-size");
+            control.value = String(value);
+            control.listeners.get("change")();
+        },
+        nextPage: () => document.getElementById("page-next").listeners.get("click")(),
+        previousPage: () => document.getElementById("page-previous").listeners.get("click")(),
         fold(id) {
             const button = elements().find((element) => element.dataset.action === "fold" && element.dataset.id === id);
             document.getElementById("sessions").listeners.get("click")({ target: { closest: () => button } });
@@ -852,11 +866,11 @@ test("compact rows explain cumulative input/output totals separately from curren
     const counts = ui.elements().filter((node) => node.className === "context-count");
     assert.equal(counts[0].children[0].textContent, "Context: ");
     assert.equal(counts[0].children[1].textContent, "40K of 100K tokens");
-    assert.equal(counts[2].children[1].textContent, "Not reported; 100K capacity");
+    assert.equal(counts[2].children[1].textContent, "No reading; 100K capacity");
     const usageLabels = ui.elements().filter((node) => node.className === "percent");
     assert.deepEqual(usageLabels.map((node) => node.textContent), ["40.0% used", "0.0% used", "N/A"]);
     assert.equal(ui.elements().some((node) => node.className === "used-label"), false);
-    assert.ok(ui.elements().some((node) => node.className === "missing-usage" && node.textContent === "Not reported"));
+    assert.ok(ui.elements().some((node) => node.className === "missing-usage" && node.textContent === "No context data"));
     ui.details("reported");
     for (const text of ["Input total", "Output total", "Input window limit", "Reply output limit",
         "Tokens read across requests in this session.", "Maximum tokens the model can generate in one response."]) {
@@ -881,7 +895,7 @@ test("renderer filters pins and models while distinguishing parent context from 
     ui.onlyPinned(true);
     ui.filterModel("claude-sonnet-5.5");
     assert.deepEqual(ids(), ["root", "child"]);
-    assert.equal(ui.nodes.get("count").textContent, "1 matching session / 1 parent shown for context");
+    assert.equal(ui.nodes.get("count").textContent, "1 parent shown for context");
     assert.ok(ui.elements().some((node) => node.textContent === "Parent of matching sessions"));
     assert.ok(ui.elements().some((node) => node.textContent === "Nested session / Pinned"));
     const existingOption = ui.nodes.get("model-filter").children[1];
@@ -960,14 +974,14 @@ test("heat map includes collapsed descendants, excludes context-only parents, an
     const missing = ui.heatCells().find((tile) => tile.dataset.id === "unknown");
     assert.equal(missing.style.values.has("--heat-color"), false);
     assert.equal(missing.className, "heat-cell unknown");
-    assert.match(missing.title, /Context not reported/);
+    assert.match(missing.title, /No context data/);
     ui.fold("root");
     assert.equal(ids().length, 4);
     ui.onlyPinned(true);
     ui.filterModel("claude-sonnet-5.5");
     ui.usageLevel("watch");
     assert.deepEqual(ids(), ["child"]);
-    assert.equal(ui.nodes.get("heatmap-count").textContent, "1 session");
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(1)");
     assert.ok(ui.elements().some((node) => node.textContent === "Parent of matching sessions"));
     ui.search("no match");
     assert.equal(ui.nodes.get("heatmap-region").hidden, true);
@@ -991,4 +1005,119 @@ test("heat map includes collapsed descendants, excludes context-only parents, an
     sessions[1] = { ...sessions[1], context: { used: 88, capacity: 100 } };
     await ui.advance(5000);
     assert.match(ui.heatCells().find((tile) => tile.dataset.id === "child").title, /88.0% used/);
+});
+
+test("page controls bound the map and list, and its caption counts only rendered tiles", async () => {
+    const sessions = Array.from({ length: 25 }, (_, index) => ({
+        id: `session-${index}`, name: `Session ${String(index).padStart(2, "0")}`, context: { used: index, capacity: 100 },
+    }));
+    const ui = renderer({ sessions });
+    await ui.settle();
+    assert.equal(ui.heatCells().length, 8);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(8)");
+    assert.equal(ui.nodes.get("page-status").textContent, "Page 1 of 4");
+    assert.equal(ui.nodes.get("page-range").textContent, "1-8 of 25 sessions");
+    assert.equal(ui.elements().filter((node) => node.tag === "article").length, 8);
+    assert.equal(ui.nodes.get("page-previous").disabled, true);
+    ui.nextPage();
+    assert.equal(ui.heatCells()[0].dataset.id, "session-8");
+    await ui.manual();
+    assert.equal(ui.nodes.get("page-status").textContent, "Page 2 of 4");
+    ui.nextPage();
+    ui.nextPage();
+    assert.equal(ui.heatCells().length, 1);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(1)");
+    assert.equal(ui.nodes.get("page-next").disabled, true);
+    ui.previousPage();
+    assert.equal(ui.nodes.get("page-status").textContent, "Page 3 of 4");
+    ui.pageSize(16);
+    assert.equal(ui.nodes.get("page-status").textContent, "Page 1 of 2");
+    assert.equal(ui.heatCells().length, 16);
+    ui.search("Session 24");
+    assert.equal(ui.heatCells().length, 1);
+    assert.equal(ui.nodes.get("page-status").textContent, "Page 1 of 1");
+});
+
+test("pagination clamps shrinking results and validates pages and supported sizes", () => {
+    const sessions = Array.from({ length: 35 }, (_, id) => ({ id }));
+    assert.deepEqual(paginateSessions(sessions).sessions, sessions.slice(0, 8));
+    assert.equal(paginateSessions(sessions, 99).page, 5);
+    assert.equal(paginateSessions(sessions, 5).sessions.length, 3);
+    assert.equal(paginateSessions(sessions.slice(0, 3), 5).page, 1);
+    assert.deepEqual(paginateSessions([], 5), {
+        page: 1, pages: 1, pageSize: 8, sessions: [], start: 0, end: 0, matching: 0,
+    });
+    for (const size of [8, 16, 32]) assert.equal(paginateSessions(sessions, 1, size).sessions.length, size);
+    for (const size of [0, 10, 64, "8"]) assert.throws(() => paginateSessions(sessions, 1, size), { code: "invalid_input" });
+    for (const page of [0, -1, 1.5, NaN]) assert.throws(() => paginateSessions(sessions, page), { code: "invalid_input" });
+});
+
+test("a page beginning with a nested session retains its parent as context without adding a tile", async () => {
+    const sessions = [
+        { id: "root", name: "Root", context: { used: 10, capacity: 100 } },
+        ...Array.from({ length: 18 }, (_, index) => ({
+            id: `child-${index}`, name: `Child ${String(index).padStart(2, "0")}`,
+            parentId: "root", context: { used: index, capacity: 100 },
+        })),
+    ];
+    const ui = renderer({ sessions });
+    await ui.settle();
+    assert.equal(ui.heatCells().length, 8);
+    assert.equal(ui.elements().filter((node) => node.tag === "article").length, 1);
+    ui.nextPage();
+    assert.equal(ui.heatCells().length, 8);
+    assert.ok(ui.heatCells().every((tile) => tile.dataset.id !== "root"));
+    assert.equal(ui.elements().filter((node) => node.tag === "article").length, 9);
+    assert.ok(ui.elements().some((node) => node.textContent === "Parent of sessions on this page"));
+    const parent = ui.elements().find((node) => node.dataset.action === "fold" && node.dataset.id === "root");
+    assert.equal(parent.disabled, true);
+    assert.equal(parent.attributes.get("aria-expanded"), "true");
+    ui.nextPage();
+    assert.equal(ui.heatCells().length, 3);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(3)");
+    sessions.splice(4);
+    await ui.manual();
+    assert.equal(ui.nodes.get("page-status").textContent, "Page 1 of 1");
+    assert.equal(ui.heatCells().length, 4);
+});
+
+test("hide missing context removes unknown tiles but never removes actual zero usage", async () => {
+    const sessions = [
+        { id: "zero", name: "Zero", context: { used: 0, capacity: 100 }, pinned: true, model: "gpt-6.1-sol" },
+        { id: "known", name: "Known", context: { used: 70, capacity: 100 }, pinned: true, model: "gpt-6.1-sol" },
+        { id: "missing", name: "Missing", context: { used: null, capacity: 100 }, pinned: true, model: "gpt-6.1-sol" },
+    ];
+    const ui = renderer({ sessions });
+    await ui.settle();
+    assert.equal(ui.heatCells().length, 3);
+    ui.hideMissing(true);
+    assert.deepEqual(ui.heatCells().map((tile) => tile.dataset.id), ["known", "zero"]);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(2)");
+    assert.equal(ui.nodes.get("heatmap-missing-key").hidden, true);
+    await ui.manual();
+    assert.equal(ui.heatCells().length, 2);
+    ui.usageLevel("unknown");
+    assert.equal(ui.heatCells().length, 0);
+    assert.equal(ui.nodes.get("heatmap-count").textContent, "(0)");
+    ui.hideMissing(false);
+    assert.deepEqual(ui.heatCells().map((tile) => tile.dataset.id), ["missing"]);
+    assert.equal(ui.nodes.get("heatmap-missing-key").hidden, false);
+});
+
+test("partial groups retain the global sort order on later pages", () => {
+    const sessions = [
+        { id: "a", name: "A", context: contextUsage(20, 100) },
+        { id: "max", name: "Max", parentId: "a", context: contextUsage(100, 100) },
+        ...Array.from({ length: 8 }, (_, index) => ({
+            id: `low-${index}`, name: `Low ${index}`, parentId: "a", context: contextUsage(index + 1, 100),
+        })),
+        { id: "b", name: "B", context: contextUsage(90, 100) },
+        { id: "b-child", name: "B child", parentId: "b", context: contextUsage(30, 100) },
+    ];
+    const ordered = visibleTree(sessions, { sort: "context-high" });
+    const page = paginateSessions(ordered, 2);
+    const selected = new Set(page.sessions.map((session) => session.id));
+    const visible = visibleTree(sessions, { sort: "context-high", sessionIds: selected });
+    assert.deepEqual(visible.filter((session) => session.matching).map((session) => session.id),
+        page.sessions.map((session) => session.id));
 });

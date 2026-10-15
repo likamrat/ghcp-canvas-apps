@@ -1,4 +1,4 @@
-import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort, tokenCount, availableModels, matchesFilters, buildUsageScale, usageColor } from "./model.mjs";
+import { visibleTree, contextUsage, validateThresholds, DEFAULT_THRESHOLDS, SORT_PRESETS, isContextSort, tokenCount, availableModels, buildUsageScale, usageColor, paginateSessions } from "./model.mjs";
 
 const token = document.querySelector('meta[name="monitor-token"]').content;
 const rows = document.getElementById("sessions");
@@ -9,6 +9,11 @@ const archived = document.getElementById("archived");
 const pinnedOnly = document.getElementById("pinned-only");
 const modelFilter = document.getElementById("model-filter");
 const usageFilter = document.getElementById("usage-filter");
+const hideMissing = document.getElementById("hide-missing");
+const pageSize = document.getElementById("page-size");
+const paginationRegion = document.getElementById("pagination");
+const previousPage = document.getElementById("page-previous");
+const nextPage = document.getElementById("page-next");
 const filterStatus = document.getElementById("filter-status");
 const sortBy = document.getElementById("sort-by");
 const sortHelp = document.getElementById("sort-help");
@@ -37,6 +42,7 @@ let savingThresholds = false;
 let listedModels = null;
 let heatFocusId = null;
 let currentGradient = null;
+let page = 1;
 const exact = (value) => value === null ? "Not reported" : value.toLocaleString();
 const compact = (value) => value === null ? "?" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 const levelLabel = { healthy: "Normal", watch: "Warning", high: "High usage", unknown: "Not reported" };
@@ -97,6 +103,7 @@ async function saveThresholds(reset = false) {
         draftDirty = false;
         savingThresholds = false;
         acceptSettings(data);
+        page = 1;
         showThresholdStatus(reset
             ? `Defaults restored: warning at ${data.defaults.watch}%, high usage at ${data.defaults.high}%.` : "Usage warnings saved.");
         render();
@@ -116,11 +123,11 @@ function element(tag, className, text) {
 }
 
 function filters() {
-    return { search: search.value, onlyPinned: pinnedOnly.checked, model: modelFilter.value, usageLevel: usageFilter.value };
+    return { search: search.value, onlyPinned: pinnedOnly.checked, model: modelFilter.value, usageLevel: usageFilter.value, hideMissing: hideMissing.checked };
 }
 
 function isFiltering() {
-    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.value || usageFilter.value);
+    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.value || usageFilter.value || hideMissing.checked);
 }
 
 function updateFilters() {
@@ -140,11 +147,13 @@ function updateFilters() {
     modelFilter.value = models.includes(previous) ? previous : "";
     modelFilter.disabled = models.length === 0;
     if (previous && modelFilter.value !== previous) {
+        page = 1;
         filterStatus.textContent = `Model filter reset to All models: ${previous} is no longer used by an open session.`;
         filterStatus.hidden = false;
     }
     pinnedOnly.disabled = snapshot.pinsAvailable !== true;
     if (pinnedOnly.disabled && pinnedOnly.checked) {
+        page = 1;
         pinnedOnly.checked = false;
         filterStatus.textContent = "The pinned-only filter was turned off because app pin metadata is unavailable.";
         filterStatus.hidden = false;
@@ -165,7 +174,8 @@ function readUsageScale() {
 
 function renderHeatmap(sessions, scale) {
     heatmapRegion.hidden = sessions.length === 0;
-    document.getElementById("heatmap-count").textContent = `${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`;
+    document.getElementById("heatmap-count").textContent = `(${sessions.length})`;
+    document.getElementById("heatmap-missing-key").hidden = !sessions.some((session) => session.context.percent === null);
     document.getElementById("heatmap-scale").style.setProperty("--usage-gradient", scale.gradient);
     if (!sessions.some((session) => session.id === heatFocusId)) heatFocusId = sessions[0]?.id ?? null;
     const fragment = document.createDocumentFragment();
@@ -178,7 +188,7 @@ function renderHeatmap(sessions, scale) {
         tile.tabIndex = session.id === heatFocusId ? 0 : -1;
         tile.title = [
             session.name, session.model || "Model not reported",
-            session.context.percent === null ? "Context not reported" : `${session.context.percent.toFixed(1)}% used (${levelLabel[session.context.level]})`,
+            session.context.percent === null ? "No context data: the app has not reported a complete reading." : `${session.context.percent.toFixed(1)}% used (${levelLabel[session.context.level]})`,
         ].join("\n");
         tile.setAttribute("aria-label", tile.title.replaceAll("\n", ". "));
         if (color !== null) tile.style.setProperty("--heat-color", color);
@@ -211,7 +221,7 @@ function showHeatSession(id) {
 
 function sessionRow(session, scale) {
     const isParent = session.descendantCount > 0;
-    const isOpen = !collapsed.has(session.id) || isFiltering();
+    const isOpen = !collapsed.has(session.id) || isFiltering() || session.pageContext;
     const container = element("article",
         `session${session.depth ? " is-nested" : " is-root"}${isParent ? " is-parent" : ""}${isParent && isOpen ? " is-expanded" : ""}`);
     container.id = `session-${session.id}`;
@@ -237,7 +247,8 @@ function sessionRow(session, scale) {
         session.project || (session.kind === "general_chat" ? "Chat" : "Session"),
         session.archived ? "Archived" : session.running === null ? "Status not reported" : session.running ? "Running" : "Idle",
     ].join(" / ")));
-    if (!session.matching) nameBlock.append(element("div", "filter-parent", "Parent of matching sessions"));
+    if (!session.matching) nameBlock.append(element("div", "filter-parent",
+        isFiltering() ? "Parent of matching sessions" : "Parent of sessions on this page"));
     identity.append(nameBlock);
     const actions = element("div", "row-actions");
     if (isParent) {
@@ -249,8 +260,9 @@ function sessionRow(session, scale) {
         fold.setAttribute("aria-label", `${label} for ${session.name}`);
         fold.setAttribute("aria-expanded", String(isOpen));
         fold.setAttribute("aria-controls", `children-${session.id}`);
-        fold.disabled = isFiltering();
-        fold.title = isFiltering() ? "Clear search and filters to show or hide nested sessions." : `${label} (${session.descendantCount})`;
+        fold.disabled = isFiltering() || session.pageContext;
+        fold.title = session.pageContext ? "Parent kept open for sessions on this page."
+            : isFiltering() ? "Clear search and filters to show or hide nested sessions." : `${label} (${session.descendantCount})`;
         fold.dataset.tooltip = fold.title;
         const icon = element("span", `disclosure-icon ${isOpen ? "hide-children" : "show-children"}`);
         icon.setAttribute("aria-hidden", "true");
@@ -283,7 +295,7 @@ function sessionRow(session, scale) {
         : `${levelLabel[level]} context: ${percent.toFixed(1)} percent, ${exact(used)} of ${exact(capacity)} tokens`);
     const numbers = element("div", "numbers");
     numbers.append(element("span", "percent", percent === null ? "N/A" : `${percent.toFixed(1)}% used`));
-    if (percent === null) numbers.append(element("span", "missing-usage", "Not reported"));
+    if (percent === null) numbers.append(element("span", "missing-usage", "No context data"));
     const line = element("div", "line");
     line.setAttribute("aria-hidden", "true");
     if (percent !== null) {
@@ -296,9 +308,9 @@ function sessionRow(session, scale) {
     const contextCount = element("div", "context-count");
     const contextText = used !== null && capacity !== null && capacity > 0
         ? `${compact(used)} of ${compact(capacity)} tokens`
-        : used !== null ? `${compact(used)} used; capacity not reported`
-        : capacity !== null && capacity > 0 ? `Not reported; ${compact(capacity)} capacity`
-        : "Not reported";
+        : used !== null ? `${compact(used)} used; capacity unavailable`
+        : capacity !== null && capacity > 0 ? `No reading; ${compact(capacity)} capacity`
+        : "No context reading";
     contextCount.append(element("span", "", "Context: "),
         element("span", "tokens", contextText));
     contextCount.title = used === null || capacity === null
@@ -354,25 +366,33 @@ function render() {
     document.getElementById("legend-watch").textContent = `Warning ${thresholds.watch} to <${thresholds.high}%`;
     document.getElementById("legend-high").textContent = `High usage ${thresholds.high}%+`;
     sortHelp.textContent = SORT_PRESETS[sortBy.value].hint;
-    const active = sessions.filter((session) => archived.checked || !session.archived);
     for (const session of visibleTree(sessions, { includeArchived: archived.checked })) {
         if (session.depth === 0 && session.descendantCount && !initializedParents.has(session.id)) {
             initializedParents.add(session.id);
             if (!isContextSort(sortBy.value)) collapsed.add(session.id);
         }
     }
-    const visible = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, collapsed, sort: sortBy.value });
-    const matching = active.filter((session) => matchesFilters(session, filters()));
-    const heatSessions = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, sort: sortBy.value })
+    const matching = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, sort: sortBy.value })
         .filter((session) => session.matching);
-    renderHeatmap(heatSessions, scale);
-    const high = matching.filter((session) => session.context.level === "high").length;
-    const missing = matching.filter((session) => session.context.level === "unknown").length;
+    const pagination = paginateSessions(matching, page, Number(pageSize.value));
+    page = pagination.page;
+    const pageIds = new Set(pagination.sessions.map((session) => session.id));
+    const visible = visibleTree(sessions, { ...filters(), includeArchived: archived.checked, collapsed, sort: sortBy.value, sessionIds: pageIds });
+    renderHeatmap(pagination.sessions, scale);
+    paginationRegion.hidden = matching.length === 0;
+    document.getElementById("page-range").textContent = `${pagination.start}-${pagination.end} of ${pagination.matching} sessions`;
+    document.getElementById("page-status").textContent = `Page ${pagination.page} of ${pagination.pages}`;
+    previousPage.disabled = page === 1;
+    nextPage.disabled = page === pagination.pages;
+    const high = pagination.sessions.filter((session) => session.context.level === "high").length;
+    const missing = pagination.sessions.filter((session) => session.context.level === "unknown").length;
     const parentsShown = visible.filter((session) => !session.matching).length;
-    const prefix = isFiltering()
-        ? `${matching.length} matching ${matching.length === 1 ? "session" : "sessions"}${parentsShown ? ` / ${parentsShown} ${parentsShown === 1 ? "parent" : "parents"} shown for context` : ""}`
-        : `${visible.length} of ${active.length} sessions shown`;
-    count.textContent = `${prefix}${high ? ` / ${high} high usage` : ""}${missing ? ` / ${missing} not reported` : ""}`;
+    count.textContent = [
+        parentsShown ? `${parentsShown} ${parentsShown === 1 ? "parent" : "parents"} shown for context` : "",
+        high ? `${high} high usage` : "",
+        missing ? `${missing} without context data` : "",
+    ].filter(Boolean).join(" / ");
+    count.hidden = !count.textContent;
     const fragment = document.createDocumentFragment();
     if (!visible.length) {
         const empty = element("div", "empty");
@@ -387,7 +407,7 @@ function render() {
             if (session.descendantCount) {
                 const children = element("div", "session-children");
                 children.id = `children-${session.id}`;
-                children.hidden = collapsed.has(session.id) && !isFiltering();
+                children.hidden = collapsed.has(session.id) && !isFiltering() && !session.pageContext;
                 children.setAttribute("role", "group");
                 children.setAttribute("aria-label", `Nested sessions under ${session.name}`);
                 article.append(children);
@@ -433,6 +453,7 @@ async function load() {
         if (!snapshot) {
             rows.replaceChildren();
             count.textContent = "Unable to load sessions";
+            count.hidden = false;
         }
     } finally {
         rows.setAttribute("aria-busy", "false");
@@ -471,17 +492,29 @@ heatmap.addEventListener("keydown", (event) => {
     heatFocusId = buttons[next].dataset.id;
     buttons[next].focus();
 });
-search.addEventListener("input", render);
-archived.addEventListener("change", render);
-for (const control of [pinnedOnly, modelFilter, usageFilter]) {
+function resetPage() {
+    page = 1;
+    render();
+}
+function changePage(delta) {
+    page = Math.max(1, page + delta);
+    render();
+    if (!heatmapRegion.hidden) heatmapRegion.scrollIntoView({ block: "start", behavior: "instant" });
+}
+search.addEventListener("input", resetPage);
+archived.addEventListener("change", resetPage);
+pageSize.addEventListener("change", resetPage);
+previousPage.addEventListener("click", () => changePage(-1));
+nextPage.addEventListener("click", () => changePage(1));
+for (const control of [pinnedOnly, modelFilter, usageFilter, hideMissing]) {
     control.addEventListener("change", () => {
         filterStatus.hidden = true;
-        render();
+        resetPage();
     });
 }
 sortBy.addEventListener("change", () => {
     if (isContextSort(sortBy.value)) collapsed.clear();
-    render();
+    resetPage();
 });
 refresh.addEventListener("click", load);
 autoRefresh.addEventListener("change", scheduleRefresh);

@@ -72,16 +72,18 @@ export function availableModels(sessions) {
         .map((session) => session.model))].sort((a, b) => a.localeCompare(b));
 }
 
-export function matchesFilters(session, { search = "", onlyPinned = false, model = "", usageLevel = "" } = {}) {
+export function matchesFilters(session, { search = "", onlyPinned = false, model = "", usageLevel = "", hideMissing = false } = {}) {
     const query = search.trim().toLocaleLowerCase();
     return (!onlyPinned || session.pinned === true) && (!model || session.model === model) &&
         (!usageLevel || (session.context?.level ?? "unknown") === usageLevel) &&
+        (!hideMissing || (session.context?.level ?? "unknown") !== "unknown") &&
         (!query || [session.name, session.project, session.model, session.id]
             .some((value) => String(value ?? "").toLocaleLowerCase().includes(query)));
 }
 
 export function visibleTree(sessions, {
-    search = "", includeArchived = false, collapsed = new Set(), sort = "recent", onlyPinned = false, model = "", usageLevel = "",
+    search = "", includeArchived = false, collapsed = new Set(), sort = "recent", onlyPinned = false, model = "", usageLevel = "", hideMissing = false,
+    sessionIds = null,
 } = {}) {
     if (!Object.hasOwn(SORT_PRESETS, sort)) throw new Error("Choose a supported session sort order.");
     const preset = SORT_PRESETS[sort];
@@ -98,7 +100,9 @@ export function visibleTree(sessions, {
         }
     }
     const query = search.trim().toLocaleLowerCase();
-    const matches = new Set(eligible.filter((session) => matchesFilters(session, { search, onlyPinned, model, usageLevel })).map((session) => session.id));
+    const filterMatches = new Set(eligible.filter((session) =>
+        matchesFilters(session, { search, onlyPinned, model, usageLevel, hideMissing })).map((session) => session.id));
+    const matches = sessionIds ? new Set([...filterMatches].filter((id) => sessionIds.has(id))) : filterMatches;
     const included = new Set(matches);
     for (const id of matches) {
         const seen = new Set([id]);
@@ -110,12 +114,12 @@ export function visibleTree(sessions, {
         }
     }
     const scores = new Map(eligible.map((session) => [
-        session.id, isContextSort(sort) && !matches.has(session.id) ? null : sortValue(session, preset.metric),
+        session.id, isContextSort(sort) && !filterMatches.has(session.id) ? null : sortValue(session, preset.metric),
     ]));
     if (isContextSort(sort)) {
         for (const session of eligible) {
             const value = scores.get(session.id);
-            if (!matches.has(session.id) || value === null) continue;
+            if (!filterMatches.has(session.id) || value === null) continue;
             const seen = new Set([session.id]);
             let parent = session.parentId;
             while (parent && byId.has(parent) && !seen.has(parent)) {
@@ -156,13 +160,30 @@ export function visibleTree(sessions, {
         result.push({
             ...session, depth, childCount: nested.length,
             descendantCount: descendants.get(session.id) ?? 0, matching: matches.has(session.id),
+            pageContext: sessionIds !== null && !matches.has(session.id),
         });
-        if (query || onlyPinned || model || usageLevel || !collapsed.has(session.id)) {
+        if (query || onlyPinned || model || usageLevel || hideMissing || (sessionIds !== null && !matches.has(session.id)) || !collapsed.has(session.id)) {
             for (const child of [...nested].reverse()) stack.push({ session: child, depth: depth + 1 });
         }
+
     }
     return result;
 }
+
+export function paginateSessions(sessions, page = 1, pageSize = 8) {
+    if (![8, 16, 32].includes(pageSize)) {
+        throw Object.assign(new Error("Choose 8, 16, or 32 sessions per page."), { code: "invalid_input" });
+    }
+    if (!Number.isSafeInteger(page) || page < 1) {
+        throw Object.assign(new Error("Choose a valid page."), { code: "invalid_input" });
+    }
+    const pages = Math.max(1, Math.ceil(sessions.length / pageSize));
+    page = Math.min(page, pages);
+    const offset = (page - 1) * pageSize;
+    const items = sessions.slice(offset, offset + pageSize);
+    return { page, pages, pageSize, sessions: items, start: items.length ? offset + 1 : 0, end: offset + items.length, matching: sessions.length };
+}
+
 export const DEFAULT_THRESHOLDS = Object.freeze({ watch: 65, high: 85 });
 
 export function validateThresholds(thresholds) {

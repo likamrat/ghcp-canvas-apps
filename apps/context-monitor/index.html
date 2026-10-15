@@ -26,7 +26,7 @@
                         <option value="healthy">Normal (green)</option>
                         <option value="watch">Warning (yellow)</option>
                         <option value="high">High usage (red)</option>
-                        <option value="unknown">Not reported</option>
+                        <option value="unknown">No context data</option>
                     </select>
                 </div>
             </div>
@@ -55,9 +55,14 @@
                         <option value="300000">Every 5 minutes</option>
                     </select>
                 </div>
+                <div class="page-size-choice">
+                    <label for="page-size">Sessions per page</label>
+                    <select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select>
+                </div>
                 <div class="scope-filters">
                     <label class="check-filter"><input id="pinned-only" type="checkbox" disabled> Only pinned sessions</label>
                     <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
+                    <label class="check-filter"><input id="hide-missing" type="checkbox"> Hide sessions without context data</label>
                 </div>
                 <button id="refresh" type="button">Refresh</button>
             </div>
@@ -78,6 +83,7 @@
                 <details class="reading-help">
                     <summary>Token guide</summary>
                     <p class="token-guide" id="token-guide">Tokens are pieces of text. <strong>Input</strong> is what the model reads, including messages, history, and tools. <strong>Output</strong> is what it generates. Input/output totals add up across requests; <strong>context</strong> measures the current window, not those totals.</p>
+                    <p class="token-guide">No context data means the app has not reported a valid context reading. It does not mean 0% usage.</p>
                 </details>
             </div>
             <p id="filter-help" class="sr-only">Models are from your open (non-archived) sessions. Usage levels follow your saved thresholds. Parents stay visible to show where matching nested sessions belong.</p>
@@ -94,13 +100,20 @@
         <p id="warnings" class="notice" hidden></p>
         <section id="heatmap-region" class="heatmap-section" aria-labelledby="heatmap-title" hidden>
             <div class="heatmap-heading">
-                <h2 id="heatmap-title">Context overview</h2>
-                <span id="heatmap-count"></span>
+                <h2 id="heatmap-title">Context Heat Map <span id="heatmap-count">(0)</span></h2>
             </div>
             <div id="heatmap" class="heatmap-grid" role="group" aria-label="Session context usage" aria-describedby="heatmap-help" aria-busy="true"></div>
-            <div class="heatmap-key"><span>0%</span><span id="heatmap-scale" class="scale-key" aria-hidden="true"></span><span>100%</span><span class="unknown-key">Not reported</span></div>
-            <p id="heatmap-help" class="sr-only">One tile per matching session, including collapsed nested sessions. Use arrow keys to move between tiles, then Enter to show that session.</p>
+            <div class="heatmap-key"><span>0%</span><span id="heatmap-scale" class="scale-key" aria-hidden="true"></span><span>100%</span><span id="heatmap-missing-key" class="unknown-key" title="The app has not reported a complete context reading. This is not 0% usage.">No context data</span></div>
+            <p id="heatmap-help" class="sr-only">One tile per matching session on this page, including collapsed nested sessions. Use arrow keys to move between tiles, then Enter to show that session.</p>
         </section>
+        <nav id="pagination" aria-label="Session pages" hidden>
+            <span id="page-range" role="status"></span>
+            <div class="page-buttons">
+                <button id="page-previous" type="button" aria-label="Previous page">Previous page</button>
+                <span id="page-status" aria-live="polite"></span>
+                <button id="page-next" type="button" aria-label="Next page">Next page</button>
+            </div>
+        </nav>
         <div class="column-head" aria-hidden="true"><span>Session</span><span>Model / token totals</span><span>Context window</span><span></span></div>
         <div id="sessions" aria-label="Session hierarchy" aria-busy="true">
             <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
