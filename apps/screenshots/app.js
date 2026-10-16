@@ -418,7 +418,8 @@ function scaleZoom(factor) {
 for (const [key, id] of Object.entries(fields)) {
     const field = $(id);
     field.addEventListener(field.type === "search" ? "input" : "change", () => {
-        view[key] = field.type === "checkbox" ? field.checked : key === "pageSize" ? Number(field.value) : field.value;
+        view[key] = field.multiple ? [...field.selectedOptions].map((option) => option.value)
+            : field.type === "checkbox" ? field.checked : key === "pageSize" ? Number(field.value) : field.value;
         if (!["sessionSearch", "thumbnail"].includes(key)) page = 1;
         if (key === "includeArchived") {
             if (!view.includeArchived && sessions.find((session) => session.id === selected)?.archived) {
@@ -436,7 +437,10 @@ for (const [key, id] of Object.entries(fields)) {
 }
 $("clear").onclick = () => {
     Object.assign(view, clearFilters(view));
-    for (const [key, id] of Object.entries(fields)) if (!["includeArchived", "includeChildren"].includes(key)) $(id).value = view[key];
+    for (const [key, id] of Object.entries(fields)) if (!["includeArchived", "includeChildren"].includes(key)) {
+        $(id).value = view[key];
+        if ($(id).multiple) $(id).dispatchEvent(new Event("multiselect-sync"));
+    }
     page = 1; renderSessions(); renderGallery();
 };
 $("refresh").onclick = refresh;

@@ -8,6 +8,8 @@ const assets = new Map([
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["/model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
+    ["/multiselect.js", ["multiselect.js", "text/javascript; charset=utf-8"]],
+    ["/multiselect.css", ["multiselect.css", "text/css; charset=utf-8"]],
     ["/browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
     ["/icon.svg", ["icon.svg", "image/svg+xml"]],
     ["/icon.png", ["icon.png", "image/png"]],

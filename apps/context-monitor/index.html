@@ -8,6 +8,8 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg?v=__ICON_VERSION__">
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/multiselect.css">
+    <script src="/multiselect.js" defer></script>
     <script type="module" src="/app.js"></script>
     <script src="/browser.js" defer></script>
 </head>
@@ -20,12 +22,11 @@
                 <div class="search"><label for="search">Search sessions</label><input id="search" type="search" placeholder="Name, project, or model" autocomplete="off"></div>
                 <div class="model-choice">
                     <label for="model-filter">Model</label>
-                    <select id="model-filter" aria-describedby="filter-help" disabled><option value="">All models</option></select>
+                    <select id="model-filter" multiple data-multiselect="All models" aria-describedby="filter-help" disabled></select>
                 </div>
                 <div class="usage-choice">
                     <label for="usage-filter">Context usage</label>
-                    <select id="usage-filter" aria-describedby="filter-help">
-                        <option value="">All usage levels</option>
+                    <select id="usage-filter" multiple data-multiselect="All usage levels" aria-describedby="filter-help">
                         <option value="healthy">Normal (green)</option>
                         <option value="watch">Warning (yellow)</option>
                         <option value="high">High usage (red)</option>
@@ -89,7 +90,7 @@
                     <p class="token-guide">No context data means the app has not reported a valid context reading. It does not mean 0% usage.</p>
                 </details>
             </div>
-            <p id="filter-help" class="sr-only">Models are from your open (non-archived) sessions. Usage levels follow your saved thresholds. Parents stay visible to show where matching nested sessions belong.</p>
+            <p id="filter-help" class="sr-only">Select any combination. No selection includes all. Models are from your open sessions. Usage levels follow your saved thresholds. Parents stay visible for matching nested sessions.</p>
             <p id="filter-status" class="filter-notice" role="status" hidden></p>
             <p id="sort-help" class="sr-only">Recent activity first. Parents and nested sessions stay together.</p>
         </section>

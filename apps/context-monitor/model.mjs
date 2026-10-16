@@ -74,8 +74,10 @@ export function availableModels(sessions) {
 
 export function matchesFilters(session, { search = "", onlyPinned = false, model = "", usageLevel = "", hideMissing = false } = {}) {
     const query = search.trim().toLocaleLowerCase();
-    return (!onlyPinned || session.pinned === true) && (!model || session.model === model) &&
-        (!usageLevel || (session.context?.level ?? "unknown") === usageLevel) &&
+    const models = Array.isArray(model) ? model : model ? [model] : [];
+    const levels = Array.isArray(usageLevel) ? usageLevel : usageLevel ? [usageLevel] : [];
+    return (!onlyPinned || session.pinned === true) && (!models.length || models.includes(session.model)) &&
+        (!levels.length || levels.includes(session.context?.level ?? "unknown")) &&
         (!hideMissing || (session.context?.level ?? "unknown") !== "unknown") &&
         (!query || [session.name, session.project, session.model, session.id]
             .some((value) => String(value ?? "").toLocaleLowerCase().includes(query)));
@@ -162,7 +164,7 @@ export function visibleTree(sessions, {
             descendantCount: descendants.get(session.id) ?? 0, matching: matches.has(session.id),
             pageContext: sessionIds !== null && !matches.has(session.id),
         });
-        if (query || onlyPinned || model || usageLevel || (sessionIds !== null && !matches.has(session.id)) || !collapsed.has(session.id)) {
+        if (query || onlyPinned || model.length || usageLevel.length || (sessionIds !== null && !matches.has(session.id)) || !collapsed.has(session.id)) {
             for (const child of [...nested].reverse()) stack.push({ session: child, depth: depth + 1 });
         }
 

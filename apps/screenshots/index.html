@@ -6,6 +6,8 @@
     <title>Screenshots</title>
     <link rel="icon" type="image/svg+xml" href="./icon.svg?v=__ICON_VERSION__">
     <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./multiselect.css">
+    <script src="./multiselect.js" defer></script>
     <script type="module" src="./app.js"></script>
     <script src="./browser.js" defer></script>
 </head>
@@ -20,7 +22,7 @@
         </div>
         <div class="control-row image-controls">
             <div class="field"><label for="filename">Search filenames</label><input id="filename" type="search" placeholder="Screenshot filename" autocomplete="off"></div>
-            <div class="field"><label for="source">Source</label><select id="source"><option value="">All sources</option><option value="uploaded">Uploaded</option><option value="generated">Tool-generated</option><option value="tool">Tool image</option><option value="unknown">Unknown</option></select></div>
+            <div class="field"><label for="source">Source</label><select id="source" multiple data-multiselect="All sources"><option value="uploaded">Uploaded</option><option value="generated">Tool-generated</option><option value="tool">Tool image</option><option value="unknown">Unknown</option></select></div>
             <div class="field"><label for="from">From date</label><input id="from" type="date" aria-describedby="date-error"></div>
             <div class="field"><label for="to">To date</label><input id="to" type="date" aria-describedby="date-error"></div>
         </div>

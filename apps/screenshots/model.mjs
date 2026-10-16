@@ -36,8 +36,10 @@ export function localDay(value) {
 
 export function queryImages(records, input = {}) {
     const view = { ...defaultView(), ...input };
+    const sources = Array.isArray(view.source) ? view.source : view.source === "" ? [] : [view.source];
     if (!["timestamp", "name", "size"].includes(view.sort) || !["asc", "desc"].includes(view.order) ||
-        !["day", "source", "none"].includes(view.group) || !["", ...Object.keys(SOURCE_LABELS)].includes(view.source) ||
+        !["day", "source", "none"].includes(view.group) || sources.length > 4 || new Set(sources).size !== sources.length ||
+        !sources.every((source) => Object.hasOwn(SOURCE_LABELS, source)) ||
         typeof view.filename !== "string" || view.filename.length > 500) invalid("Choose supported image filters and ordering.");
     const from = dateBoundary(view.from);
     const to = dateBoundary(view.to, true);
@@ -46,7 +48,7 @@ export function queryImages(records, input = {}) {
     const time = (image) => image.timestamp && Number.isFinite(Date.parse(image.timestamp)) ? Date.parse(image.timestamp) : null;
     const images = records.filter((image) => {
         const date = time(image);
-        return (!needle || image.name.toLowerCase().includes(needle)) && (!view.source || image.source === view.source) &&
+        return (!needle || image.name.toLowerCase().includes(needle)) && (!sources.length || sources.includes(image.source)) &&
             (from === null || (date !== null && date >= from)) && (to === null || (date !== null && date < to));
     });
     const direction = view.order === "desc" ? -1 : 1;
@@ -143,7 +145,10 @@ export const querySchema = {
         sessionId: { type: "string", minLength: 1, maxLength: 128 },
         includeChildren: { type: "boolean" }, includeArchived: { type: "boolean" },
         filename: { type: "string", maxLength: 500 },
-        source: { enum: ["", "uploaded", "generated", "tool", "unknown"] },
+        source: { anyOf: [
+            { enum: ["", "uploaded", "generated", "tool", "unknown"] },
+            { type: "array", items: { enum: ["uploaded", "generated", "tool", "unknown"] }, uniqueItems: true, maxItems: 4 },
+        ] },
         from: { type: "string", maxLength: 10 }, to: { type: "string", maxLength: 10 },
         sort: { enum: ["timestamp", "name", "size"] }, order: { enum: ["asc", "desc"] }, group: { enum: ["day", "source", "none"] },
         offset: { type: "integer", minimum: 0, maximum: 10000 }, limit: { type: "integer", minimum: 1, maximum: 120 },

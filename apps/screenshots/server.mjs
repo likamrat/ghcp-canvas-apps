@@ -12,6 +12,8 @@ const assets = new Map([
     ["model.mjs", ["model.mjs", "text/javascript; charset=utf-8"]],
     ["refresh.mjs", ["refresh.mjs", "text/javascript; charset=utf-8"]],
     ["style.css", ["style.css", "text/css; charset=utf-8"]],
+    ["multiselect.js", ["multiselect.js", "text/javascript; charset=utf-8"]],
+    ["multiselect.css", ["multiselect.css", "text/css; charset=utf-8"]],
     ["icons/download.svg", ["icons/download.svg", "image/svg+xml"]],
     ["browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
     ["icon.svg", ["icon.svg", "image/svg+xml"]],

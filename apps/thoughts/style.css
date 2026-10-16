@@ -36,8 +36,8 @@ nav span { margin-left: 5px; font-variant-numeric: tabular-nums; color: var(--mu
 #reload { margin-left: auto; color: var(--muted); }
 .item { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 16px 0; border-bottom: 1px solid var(--border); }
 .item input[type="checkbox"] { appearance: none; display: grid; place-content: center; width: 19px; height: 19px; margin: 3px 0; cursor: pointer; border: 1.5px solid var(--muted); border-radius: 4px; background: transparent; }
-.item input[type="checkbox"]:checked { background: var(--text); border-color: var(--text); }
-.item input[type="checkbox"]:checked::before { content: ""; width: 5px; height: 9px; border: solid var(--surface); border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+.item input[type="checkbox"]:checked { background: transparent; border-color: var(--color-focus-outline, #4078c0); }
+.item input[type="checkbox"]:checked::before { content: ""; width: 5px; height: 9px; border: solid var(--color-focus-outline, #4078c0); border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
 .item input[type="checkbox"]:disabled { opacity: .55; cursor: default; }
 .item p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .item .thought-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; line-height: 1.5; }

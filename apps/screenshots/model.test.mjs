@@ -2,6 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { queryImages, defaultView, clearFilters, sessionTree, createRequestGate, paginateImages, previewScale, nextZoom } from "./model.mjs";
 
+test("multiple sources combine with filename and date filters, clearing restores all sources", () => {
+    const images = ["uploaded", "generated", "tool", "unknown"].map((source) => ({
+        id: source, source, name: "review.png", timestamp: "2026-10-14T12:00:00Z", size: 100,
+    }));
+    const view = { ...defaultView(), source: ["uploaded", "tool"], filename: "review", from: "2026-10-13", to: "2026-10-15", group: "none" };
+    assert.deepEqual(queryImages(images, view).images.map((image) => image.id).sort(), ["tool", "uploaded"]);
+    assert.equal(queryImages(images, { source: [] }).images.length, 4);
+    assert.equal(queryImages(images, clearFilters(view)).images.length, 4);
+    assert.throws(() => queryImages(images, { source: ["uploaded", "unsupported"] }), /supported/);
+    assert.throws(() => queryImages(images, { source: ["uploaded", "uploaded"] }), /supported/);
+});
+
 test("combined image filters use local inclusive dates and leave unknown times visible without a range", () => {
     const images = [
         { id: "one", name: "wide.png", source: "uploaded", timestamp: new Date(2026, 9, 14, 23, 59).toISOString(), size: 100 },

@@ -124,32 +124,34 @@ function element(tag, className, text) {
 }
 
 function filters() {
-    return { search: search.value, onlyPinned: pinnedOnly.checked, model: modelFilter.value, usageLevel: usageFilter.value, hideMissing: !includeMissing.checked };
+    return { search: search.value, onlyPinned: pinnedOnly.checked, model: selectedValues(modelFilter), usageLevel: selectedValues(usageFilter), hideMissing: !includeMissing.checked };
 }
 
+const selectedValues = (control) => [...control.selectedOptions].map((option) => option.value);
+
 function isFiltering() {
-    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.value || usageFilter.value);
+    return Boolean(search.value.trim() || pinnedOnly.checked || modelFilter.selectedOptions.length || usageFilter.selectedOptions.length);
 }
 
 function updateFilters() {
     const models = availableModels(snapshot.sessions);
-    const previous = modelFilter.value;
+    const previous = selectedValues(modelFilter);
     if (!listedModels || models.length !== listedModels.length || models.some((model, index) => model !== listedModels[index])) {
-        const options = [element("option", "", "All models")];
-        options[0].value = "";
+        const options = [];
         for (const model of models) {
             const option = element("option", "", model);
             option.value = model;
+            option.selected = previous.includes(model);
             options.push(option);
         }
         modelFilter.replaceChildren(...options);
         listedModels = models;
     }
-    modelFilter.value = models.includes(previous) ? previous : "";
     modelFilter.disabled = models.length === 0;
-    if (previous && modelFilter.value !== previous) {
+    const removed = previous.filter((model) => !models.includes(model));
+    if (removed.length) {
         page = 1;
-        filterStatus.textContent = `Model filter reset to All models: ${previous} is no longer used by an open session.`;
+        filterStatus.textContent = `Removed unavailable model selections: ${removed.join(", ")}.${modelFilter.selectedOptions.length ? " Other selections kept." : " Showing all models."}`;
         filterStatus.hidden = false;
     }
     pinnedOnly.disabled = snapshot.pinsAvailable !== true;
@@ -518,8 +520,11 @@ previousPage.addEventListener("click", () => changePage(-1));
 nextPage.addEventListener("click", () => changePage(1));
 for (const control of [pinnedOnly, modelFilter, usageFilter, includeMissing]) {
     control.addEventListener("change", () => {
-        if (control === usageFilter && usageFilter.value === "unknown") includeMissing.checked = true;
-        if (control === includeMissing && !includeMissing.checked && usageFilter.value === "unknown") usageFilter.value = "";
+        if (control === usageFilter && selectedValues(usageFilter).includes("unknown")) includeMissing.checked = true;
+        if (control === includeMissing && !includeMissing.checked) {
+            for (const option of usageFilter.options) if (option.value === "unknown") option.selected = false;
+            usageFilter.dispatchEvent(new Event("multiselect-sync"));
+        }
         filterStatus.hidden = true;
         resetPage();
     });

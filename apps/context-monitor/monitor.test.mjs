@@ -215,6 +215,19 @@ test("search sorts only matching contexts, not a hidden non-matching descendant"
     assert.equal(result.find((session) => session.id === "parent").descendantCount, 2);
 });
 
+test("multi-model and multi-usage filters union within a filter and intersect across filters", () => {
+    const sessions = [
+        { id: "root", name: "Root", model: "other", context: contextUsage(10, 100) },
+        { id: "green", name: "Green", parentId: "root", model: "sol", context: contextUsage(20, 100) },
+        { id: "red", name: "Red", parentId: "root", model: "opus", context: contextUsage(90, 100) },
+        { id: "yellow", name: "Yellow", model: "sol", context: contextUsage(70, 100) },
+    ];
+    const rows = visibleTree(sessions, { model: ["sol", "opus"], usageLevel: ["healthy", "high"], collapsed: new Set(["root"]) });
+    assert.deepEqual(rows.filter((row) => row.matching).map((row) => row.id).sort(), ["green", "red"]);
+    assert.equal(rows.find((row) => row.id === "root").matching, false);
+    assert.equal(visibleTree(sessions, { model: [], usageLevel: [] }).length, 4);
+});
+
 test("model options contain only models used by non-archived sessions", () => {
     assert.deepEqual(availableModels([
         { model: "gpt-6.1-sol" }, { model: "claude-sonnet-5.5" }, { model: "gpt-6.1-sol" },
@@ -475,7 +488,14 @@ function renderer({ sessions = [], pinsAvailable = true, includeMissing = false 
     const node = (tag = "fragment") => ({
         tag, dataset: {}, style: { values: new Map(), setProperty(name, value) { this.values.set(name, value); } },
         children: [], attributes: new Map(),
-        value: "", hidden: false, textContent: "", listeners: new Map(),
+        _value: "", hidden: false, textContent: "", listeners: new Map(),
+        get options() { return this.children; },
+        get selectedOptions() { return this.children.filter((child) => child.selected); },
+        get value() { return this.multiple ? this.selectedOptions[0]?.value ?? "" : this._value; },
+        set value(value) {
+            if (this.multiple) for (const child of this.children) child.selected = child.value === value;
+            else this._value = value;
+        },
         setAttribute(name, value) { this.attributes.set(name, value); },
         append(...children) {
             for (const child of children) {
@@ -485,6 +505,7 @@ function renderer({ sessions = [], pinsAvailable = true, includeMissing = false 
         },
         replaceChildren(...children) { this.children = []; this.append(...children); },
         addEventListener(name, callback) { this.listeners.set(name, callback); },
+        dispatchEvent(event) { this.listeners.get(event.type)?.(event); },
         scrollIntoView() { this.scrolled = true; },
     });
     const nodes = new Map();
@@ -514,6 +535,14 @@ function renderer({ sessions = [], pinsAvailable = true, includeMissing = false 
     document.getElementById("sort-by").value = "recent";
     document.getElementById("page-size").value = "8";
     document.getElementById("include-missing").checked = includeMissing;
+    document.getElementById("model-filter").multiple = true;
+    const usageSelect = document.getElementById("usage-filter");
+    usageSelect.multiple = true;
+    for (const value of ["healthy", "watch", "high", "unknown"]) {
+        const option = node("option");
+        option.value = value;
+        usageSelect.append(option);
+    }
     const code = readFileSync(new URL("./app.js", import.meta.url), "utf8").replace(/^import .*;\r?\n/, "");
     runInNewContext(code, {
         document, window: { addEventListener() {}, matchMedia: () => ({ addEventListener() {} }) },
@@ -522,7 +551,7 @@ function renderer({ sessions = [], pinsAvailable = true, includeMissing = false 
         availableModels, matchesFilters, buildUsageScale, usageColor, paginateSessions,
         getComputedStyle: () => ({ getPropertyValue: (name) => currentPalette[name.replace("--usage-", "")] ?? "" }),
         MutationObserver: class { constructor(callback) { themeCallbacks.push(callback); } observe() {} },
-        AbortSignal: { timeout: () => ({}) },
+        AbortSignal: { timeout: () => ({}) }, Event,
         setTimeout(callback, delay) { timers.set(++id, { callback, due: clock + delay }); return id; },
         clearTimeout(timerId) { timers.delete(timerId); },
         fetch(url, options) {
@@ -601,12 +630,12 @@ function renderer({ sessions = [], pinsAvailable = true, includeMissing = false 
         },
         filterModel(value) {
             const control = document.getElementById("model-filter");
-            control.value = value;
+            for (const option of control.options) option.selected = (Array.isArray(value) ? value : [value]).includes(option.value);
             control.listeners.get("change")();
         },
         usageLevel(value) {
             const control = document.getElementById("usage-filter");
-            control.value = value;
+            for (const option of control.options) option.selected = (Array.isArray(value) ? value : [value]).includes(option.value);
             control.listeners.get("change")();
         },
         onlyPinned(checked) {
@@ -909,17 +938,17 @@ test("renderer filters pins and models while distinguishing parent context from 
     const ui = renderer({ sessions });
     await ui.settle();
     const ids = () => ui.elements().filter((node) => node.dataset.action === "details").map((node) => node.dataset.id);
-    assert.deepEqual(ui.nodes.get("model-filter").children.map((node) => node.value), ["", "claude-sonnet-5.5", "gpt-6.1-sol"]);
+    assert.deepEqual(ui.nodes.get("model-filter").children.map((node) => node.value), ["claude-sonnet-5.5", "gpt-6.1-sol"]);
     ui.onlyPinned(true);
     ui.filterModel("claude-sonnet-5.5");
     assert.deepEqual(ids(), ["root", "child"]);
     assert.equal(ui.nodes.get("count").textContent, "1 parent shown for context");
     assert.ok(ui.elements().some((node) => node.textContent === "Parent of matching sessions"));
     assert.ok(ui.elements().some((node) => node.textContent === "Nested session / Pinned"));
-    const existingOption = ui.nodes.get("model-filter").children[1];
+    const existingOption = ui.nodes.get("model-filter").children[0];
     await ui.manual();
     assert.equal(ui.nodes.get("model-filter").value, "claude-sonnet-5.5");
-    assert.equal(ui.nodes.get("model-filter").children[1], existingOption);
+    assert.equal(ui.nodes.get("model-filter").children[0], existingOption);
     ui.search("not found");
     assert.ok(ui.elements().some((node) => node.textContent === "No matching sessions"));
     ui.search("");
@@ -935,13 +964,37 @@ test("model options update on refresh and explicitly reset a selection that disa
     ui.filterModel("gpt-6.1-sol");
     sessions[0] = { ...sessions[0], model: "claude-sonnet-5.5" };
     await ui.manual();
-    assert.deepEqual(ui.nodes.get("model-filter").children.map((node) => node.value), ["", "claude-sonnet-5.5"]);
+    assert.deepEqual(ui.nodes.get("model-filter").children.map((node) => node.value), ["claude-sonnet-5.5"]);
     assert.equal(ui.nodes.get("model-filter").value, "");
     assert.equal(ui.nodes.get("filter-status").hidden, false);
-    assert.match(ui.nodes.get("filter-status").textContent, /gpt-6.1-sol is no longer used/);
+    assert.match(ui.nodes.get("filter-status").textContent, /Removed unavailable model selections: gpt-6.1-sol\. Showing all models/);
     const unavailable = renderer({ sessions, pinsAvailable: false });
     await unavailable.settle();
     assert.equal(unavailable.nodes.get("pinned-only").disabled, true);
+});
+
+test("multi-selection survives refresh and removes only unavailable models or excluded missing data", async () => {
+    const sessions = [
+        { id: "sol", name: "Sol", model: "sol", context: { used: 10, capacity: 100 } },
+        { id: "opus", name: "Opus", model: "opus", context: { used: 90, capacity: 100 } },
+        { id: "unknown", name: "Unknown", model: "opus", context: {} },
+    ];
+    const ui = renderer({ sessions });
+    await ui.settle();
+    ui.filterModel(["sol", "opus"]);
+    ui.usageLevel(["healthy", "high", "unknown"]);
+    assert.equal(ui.nodes.get("include-missing").checked, true);
+    assert.equal(ui.heatCells().length, 3);
+    await ui.manual();
+    assert.deepEqual(ui.nodes.get("model-filter").selectedOptions.map((option) => option.value), ["opus", "sol"]);
+    ui.hideMissing(true);
+    assert.deepEqual(ui.nodes.get("usage-filter").selectedOptions.map((option) => option.value), ["healthy", "high"]);
+    assert.equal(ui.heatCells().length, 2);
+    sessions[0] = { ...sessions[0], model: "astra" };
+    await ui.manual();
+    assert.deepEqual(ui.nodes.get("model-filter").selectedOptions.map((option) => option.value), ["opus"]);
+    assert.equal(ui.heatCells().length, 1);
+    assert.match(ui.nodes.get("filter-status").textContent, /Other selections kept/);
 });
 
 test("usage filtering updates immediately after threshold changes and survives refresh", async () => {

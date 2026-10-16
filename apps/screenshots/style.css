@@ -46,8 +46,9 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .control-panel > .display-controls { margin-top: 10px; }
 .check-filter { display: flex; align-items: center; gap: 7px; min-height: 32px; font-size: 12px; color: var(--muted); cursor: pointer; }
 .check-filter input { appearance: none; display: grid; place-content: center; flex: 0 0 14px; width: 14px; height: 14px; margin: 0; border: 1.5px solid var(--muted); border-radius: 3px; background: transparent; cursor: pointer; }
-.check-filter input:checked { background: var(--ink); border-color: var(--ink); }
-.check-filter input:checked::before { content: ""; width: 4px; height: 7px; border: solid var(--surface); border-width: 0 1.5px 1.5px 0; transform: translateY(-1px) rotate(45deg); }
+.check-filter input:checked { background: transparent; border-color: var(--accent); }
+.check-filter input:checked::before { content: ""; width: 4px; height: 7px; border: solid var(--accent); border-width: 0 1.5px 1.5px 0; transform: translateY(-1px) rotate(45deg); }
+.field .multi-select > summary { min-height: 32px; padding: 4px 8px; font-size: 12px; line-height: 22px; }
 .check-filter input:disabled { opacity: .55; cursor: default; }
 .control-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-self: end; }
 .control-actions button { min-height: 32px; padding: 5px 10px; font-size: 12px; }

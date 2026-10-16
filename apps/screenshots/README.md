@@ -27,7 +27,7 @@ the list, say so. Then open Screenshots.
 Opens with the current Copilot session selected. You can choose another session in the navigator.
 
 - Search sessions and expand parents. **Include child screenshots** adds their images to the gallery.
-- Filter by filename, source, or date; sort and group results. Pages show **8**, **16**, or **32** images.
+- Filter by filename, source, or date. Source accepts multiple selections; clear it to include all sources. Sort and group results. Pages show **8**, **16**, or **32** images.
 - Set **Auto-refresh** to 5, 10, or 30 seconds, 1 minute, or 5 minutes. It starts off, pauses when hidden, and keeps your filters, session, and page.
 - Select an image to zoom. **Reset zoom** restores its opening size; **Actual size** shows 100%. Arrow keys navigate; Escape closes.
 - Download one image or **Download all** filtered results as one ZIP. Files go to Downloads without overwriting existing files. **Open in folder** reveals the file; **Dismiss** hides the notice.
