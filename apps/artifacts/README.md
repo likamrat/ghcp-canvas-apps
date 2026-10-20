@@ -66,4 +66,4 @@ node server.mjs <session-id>
 
 Open the local URL printed by the server. After changing an installed copy, reload extensions in the GitHub Copilot app and reopen browser tabs. Cross-app browser, filter, and branding checks are in `tests/`.
 
-The wordmark uses Bricolage Grotesque and replaces the second **a** in **artifacts** with Lucide's [hat-and-glasses icon](https://lucide.dev/icons/hat-glasses). See the [font license](FONT-LICENSE.txt) and [Lucide license](LUCIDE-LICENSE.txt).
+The wordmark uses Bricolage Grotesque and replaces the second **a** in **artifacts** with Lucide's [hat-and-glasses icon](https://lucide.dev/icons/hat-glasses). In the app header, it has a transparent background and follows the text color of the current theme. The black tile is reserved for the app icon and favicon. See the [font license](FONT-LICENSE.txt) and [Lucide license](LUCIDE-LICENSE.txt).

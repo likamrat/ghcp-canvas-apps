@@ -38,3 +38,22 @@ test("the server scopes reads, publishes only JSON, and exposes no arbitrary fil
     assert.equal((await fetch(url("api/sessions"), { headers: { "Sec-Fetch-Site": "cross-site" } })).status, 403);
     assert.equal((await fetch(url("api/sessions"), { method: "DELETE" })).status, 405);
 });
+
+test("the app header embeds a transparent wordmark with theme-aware lettering", async t => {
+    const server = await startServer({});
+    t.after(() => server.close());
+    const response = await fetch(server.url);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    const header = html.match(/<h1 class="app-wordmark"[\s\S]*?<\/h1>/)?.[0];
+    assert.ok(header, "Render the wordmark inside the accessible app heading");
+    assert.match(header, /aria-label="Artifacts"/);
+    assert.match(header, /<svg[^>]+aria-hidden="true"/);
+    assert.match(header, /viewBox="52 52 552 120"/);
+    assert.match(header, /class="word-prefix" fill="currentColor"/);
+    assert.match(header, /class="word-suffix" fill="currentColor"/);
+    assert.doesNotMatch(header, /<img|<rect|__ARTIFACTS_WORDMARK__/);
+    assert.match(header, /<path d="M2 11h20"/);
+    const css = await (await fetch(new URL("style.css", server.url))).text();
+    assert.match(css, /\.app-wordmark[^}]*color:\s*var\(--ink\)/);
+});

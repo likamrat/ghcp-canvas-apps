@@ -13,6 +13,18 @@ const assets = new Map([
     ["favicon.ico", ["icon.png", "image/png"]],
 ]);
 const fail = (message, code = "invalid_input") => { throw Object.assign(new Error(message), { code }); };
+function inlineWordmark(svg) {
+    const viewBox = svg.match(/data-header-view-box="([\d. ]+)"/)?.[1];
+    const dimensions = viewBox?.split(" ").map(Number);
+    if (dimensions?.length !== 4 || !dimensions.every(Number.isFinite) || dimensions[2] <= 0 || dimensions[3] <= 0) {
+        throw new Error("The bundled Artifacts wordmark has no valid header bounds.");
+    }
+    return svg
+        .replace(/<svg\b[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" aria-hidden="true" focusable="false">`)
+        .replace(/<title>[^<]*<\/title>\s*/, "")
+        .replace(/<rect width="920" height="220"[^>]*\/>\s*/, "")
+        .replace(/class="(word-prefix|word-suffix)" fill="#000000"/g, 'class="$1" fill="currentColor"');
+}
 function parameters(url, allowed) {
     for (const key of url.searchParams.keys()) if (!allowed.includes(key) || url.searchParams.getAll(key).length !== 1) fail("Unsupported or repeated query parameter.");
     return url.searchParams;
@@ -82,7 +94,10 @@ export async function startServer(catalog, { sessionId, launchBrowser } = {}) {
                 let content = await readFile(new URL(path, import.meta.url));
                 if (path === "index.html") {
                     const icon = await readFile(new URL("icon.svg", import.meta.url));
-                    content = content.toString("utf8").replace("__ICON_VERSION__", createHash("sha256").update(icon).digest("hex").slice(0, 12));
+                    const wordmark = inlineWordmark(await readFile(new URL("logo.svg", import.meta.url), "utf8"));
+                    content = content.toString("utf8")
+                        .replace("__ICON_VERSION__", createHash("sha256").update(icon).digest("hex").slice(0, 12))
+                        .replace("__ARTIFACTS_WORDMARK__", wordmark);
                 }
                 res.writeHead(200, { "Content-Type": mime }).end(content); return;
             }
