@@ -39,6 +39,16 @@ test("all apps declare and serve bundled favicons in standalone browser views", 
     }
 });
 
+test("Artifacts uses the hat-and-glasses symbol in its wordmark and app icon", async () => {
+    for (const name of ["logo.svg", "icon.svg"]) {
+        const svg = await readFile(new URL(`../apps/artifacts/${name}`, import.meta.url), "utf8");
+        assert.match(svg, /<path d="M14 18a2 2 0 0 0-4 0"/);
+        assert.match(svg, /<path d="M2 11h20"/);
+        assert.match(svg, /<circle cx="17" cy="18" r="3"/);
+        assert.match(svg, /<circle cx="7" cy="18" r="3"/);
+    }
+});
+
 test("each app has one complete background-backed logo and a matching Lucide app icon", async () => {
     const luminance = (hex) => {
         const rgb = hex.match(/[a-f0-9]{2}/gi).map((part) => parseInt(part, 16) / 255)
