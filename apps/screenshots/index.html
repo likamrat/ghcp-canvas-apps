@@ -6,6 +6,7 @@
     <title>Screenshots</title>
     <link rel="icon" type="image/svg+xml" href="./icon.svg?v=__ICON_VERSION__">
     <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./branding.css">
     <link rel="stylesheet" href="./multiselect.css">
     <script src="./multiselect.js" defer></script>
     <script type="module" src="./app.js"></script>
@@ -13,9 +14,10 @@
 </head>
 <body>
 <main>
-    <header><h1>Screenshots</h1><div class="header-actions"><span class="local-label">Local / read-only</span><button id="open-browser" type="button">Open in browser</button></div></header>
+    <header><h1 class="app-wordmark" aria-label="Screenshots"><span class="visually-hidden">Screenshots</span>__APP_WORDMARK__</h1><div class="header-actions"><span class="local-label">Local / read-only</span><button id="open-browser" type="button">Open in browser</button></div></header>
     <p id="browser-status" class="browser-status" role="status" hidden></p>
     <section class="control-panel" aria-label="Screenshot controls">
+        <h2 class="filter-heading">Filters and refresh</h2>
         <div class="control-row session-controls">
             <label class="check-filter"><input id="include-archived" type="checkbox"> Include archived sessions</label>
             <label class="check-filter" title="Include screenshots from descendants of the selected session. Expanding the navigator does not change image scope."><input id="include-children" type="checkbox" aria-describedby="child-scope-help"> Include child screenshots</label>
@@ -34,7 +36,7 @@
             <div class="field"><label for="thumbnail">Thumbnail size</label><select id="thumbnail"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
             <div class="field"><label for="page-size">Screenshots per page</label><select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select></div>
             <div class="field"><label for="auto-refresh">Auto-refresh</label><select id="auto-refresh" aria-describedby="refresh-status"><option value="0" selected>Off</option><option value="5000">Every 5 seconds</option><option value="10000">Every 10 seconds</option><option value="30000">Every 30 seconds</option><option value="60000">Every minute</option><option value="300000">Every 5 minutes</option></select></div>
-            <div class="control-actions"><button id="refresh" type="button">Refresh</button><button id="clear" class="quiet" type="button">Clear filters</button><button id="download-all" type="button" disabled><span class="download-icon" aria-hidden="true"></span>Download all</button></div>
+            <div class="control-actions"><button id="refresh" class="refresh-control" type="button">Refresh</button><button id="clear" class="quiet" type="button">Clear filters</button><button id="download-all" type="button" disabled><span class="download-icon" aria-hidden="true"></span>Download all</button></div>
         </div>
     </section>
     <div class="overview"><p id="summary" role="status">Reading local sessions...</p><div class="refresh-summary"><span id="sync"></span><span id="refresh-status" role="status">Auto-refresh off</span></div></div>

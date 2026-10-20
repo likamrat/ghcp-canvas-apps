@@ -7,6 +7,7 @@
     <title>Artifacts</title>
     <link rel="icon" type="image/svg+xml" href="icon.svg?v=__ICON_VERSION__">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="branding.css">
     <link rel="stylesheet" href="multiselect.css">
     <script src="multiselect.js" defer></script>
     <script src="browser.js" defer></script>
@@ -15,17 +16,17 @@
 <body>
 <main>
     <header>
-        <h1 class="app-wordmark" aria-label="Artifacts"><span class="visually-hidden">Artifacts</span>__ARTIFACTS_WORDMARK__</h1>
+        <h1 class="app-wordmark" aria-label="Artifacts"><span class="visually-hidden">Artifacts</span>__APP_WORDMARK__</h1>
         <div class="header-actions">
             <span class="local-label">Local / session artifacts</span>
             <button id="new-note" type="button" disabled>New note</button>
-            <button id="refresh" type="button">Refresh</button>
+            <button id="refresh" class="refresh-control" type="button">Refresh</button>
             <button id="open-browser" type="button">Open in browser</button>
         </div>
     </header>
     <p id="browser-status" class="browser-status" role="status" hidden></p>
     <details id="filters" class="control-panel" open>
-        <summary>Filters and refresh</summary>
+        <summary class="filter-heading">Filters and refresh</summary>
         <div class="session-controls">
             <label class="check-filter"><input id="include-children" type="checkbox">Include child sessions</label>
             <label class="check-filter"><input id="include-archived" type="checkbox">Include archived sessions</label>
@@ -68,12 +69,12 @@
         <section class="artifact-area">
             <div class="field compact-picker"><label for="session-picker">Session</label><select id="session-picker"></select></div>
             <div id="surface" data-layout="workspace">
-                <section id="artifact-list" aria-label="Artifacts"></section>
-                <section id="reader" aria-label="Selected artifact">
+                <section id="artifact-list" aria-label="Artifacts" aria-busy="true"><div class="load-state" role="status"><span class="loading-spinner" aria-hidden="true"></span><h2>Loading artifacts...</h2><p>Reading local session data.</p></div></section>
+                <section id="reader" aria-label="Selected artifact" aria-busy="true">
                     <div class="reader-toolbar"><button id="back" type="button">Back to artifacts</button>
                         <div class="tabs" role="group" aria-label="Artifact information"><button data-tab="preview" aria-pressed="true">Preview</button><button data-tab="activity" aria-pressed="false">Activity</button><button data-tab="details" aria-pressed="false">Details</button></div>
                     </div>
-                    <div id="reader-content"><p class="empty">Select an artifact to preview it.</p></div>
+                    <div id="reader-content"><div class="load-state" role="status"><span class="loading-spinner" aria-hidden="true"></span><h2>Preparing the preview...</h2><p>The preview will appear when the files are ready.</p></div></div>
                 </section>
             </div>
             <div class="pagination"><button id="previous-page" type="button">Previous page</button><span id="page-summary"></span><button id="next-page" type="button">Next page</button></div>

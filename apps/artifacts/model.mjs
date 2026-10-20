@@ -54,6 +54,15 @@ export function createRequestGate() {
     return { next: () => ++revision, current: request => request === revision };
 }
 
+export function catalogPresentation({ phase, hasSnapshot, hasSession, total, matching }) {
+    if (phase === "loading" && (!hasSnapshot || total === 0)) return "loading";
+    if (phase === "error" && !hasSnapshot) return "error";
+    if (!hasSession) return "idle";
+    if (!hasSnapshot) return "loading";
+    if (total === 0) return "empty";
+    return matching ? "content" : "filtered";
+}
+
 export function sessionTree(sessions, { search = "", includeArchived = false } = {}, collapsed = new Set()) {
     const eligible = sessions.filter(session => includeArchived || !session.archived);
     const byId = new Map(eligible.map(session => [session.id, session]));

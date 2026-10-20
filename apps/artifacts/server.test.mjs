@@ -52,8 +52,8 @@ test("the app header embeds a transparent wordmark with theme-aware lettering", 
     assert.match(header, /viewBox="52 52 552 120"/);
     assert.match(header, /class="word-prefix" fill="currentColor"/);
     assert.match(header, /class="word-suffix" fill="currentColor"/);
-    assert.doesNotMatch(header, /<img|<rect|__ARTIFACTS_WORDMARK__/);
+    assert.doesNotMatch(header, /<img|<rect|__APP_WORDMARK__/);
     assert.match(header, /<path d="M2 11h20"/);
-    const css = await (await fetch(new URL("style.css", server.url))).text();
-    assert.match(css, /\.app-wordmark[^}]*color:\s*var\(--ink\)/);
+    const css = await (await fetch(new URL("branding.css", server.url))).text();
+    assert.match(css, /\.app-wordmark[^}]*color:\s*var\(--ink,/);
 });

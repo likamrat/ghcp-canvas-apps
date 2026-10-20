@@ -71,6 +71,8 @@ input::placeholder { color: var(--muted); opacity: 1; }
 .download-notice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .download-notice-actions button { min-height: 30px; padding: 4px 8px; font-size: 12px; }
 .error-text { color: var(--error); font-size: 12px; }
+.loading-state { padding: 24px 0; color: var(--muted); font-size: 13px; text-align: center; }
+.loading-state .skeleton { margin-top: 16px; }
 #date-error { margin: 8px 0; }
 [aria-invalid="true"] { border-color: var(--error) !important; }
 .browse { display: grid; grid-template-columns: minmax(180px, 230px) minmax(0, 1fr); gap: 24px; min-height: 300px; }

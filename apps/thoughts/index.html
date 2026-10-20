@@ -7,6 +7,7 @@
   <title>Thoughts</title>
   <link rel="icon" type="image/svg+xml" href="/icon.svg?v=__ICON_VERSION__">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/branding.css">
   <script src="/app.js" defer></script>
   <script src="/browser.js" defer></script>
 </head>
@@ -24,7 +25,7 @@
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/></svg>
   </template>
   <main>
-    <header><div class="title-row"><h1>Thoughts</h1><button id="open-browser" type="button">Open in browser</button></div><p>A place to leave thoughts while you work.</p></header>
+    <header><div class="title-row"><h1 class="app-wordmark" aria-label="Thoughts"><span class="visually-hidden">Thoughts</span>__APP_WORDMARK__</h1><button id="open-browser" type="button">Open in browser</button></div><p>A place to leave thoughts while you work.</p></header>
     <p id="browser-status" class="browser-status" role="status" hidden></p>
     <form id="capture">
       <label for="idea">What's on your mind?</label>
@@ -35,7 +36,7 @@
     <nav aria-label="Filter thoughts">
       <button type="button" data-filter="open" aria-pressed="true">Open <span id="open-count">0</span></button>
       <button type="button" data-filter="done" aria-pressed="false">Done <span id="done-count">0</span></button>
-      <button type="button" id="reload">Reload</button>
+      <button type="button" id="reload" class="refresh-control">Reload</button>
     </nav>
     <section aria-label="Thoughts" id="list" aria-busy="true"><p class="empty">Loading your thoughts...</p></section>
     <span id="copy-status" class="sr-only" role="status"></span>

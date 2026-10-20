@@ -25,6 +25,8 @@ Choose **Add thought** or press **Ctrl/Cmd + Enter** to save an idea. You can al
 
 **Open in browser** uses your normal system-default browser, with the Thoughts favicon. Both views share saved thoughts; unsaved drafts are independent. Closing the canvas leaves the browser view running, but ending its Copilot session or reloading extensions in the GitHub Copilot app stops the old URL.
 
+The header wordmark follows the app theme. Its circular mark inverts in dark mode.
+
 ## Data
 
 Thoughts are saved locally in SQLite and shared across chats. They stay on your computer when the canvas or app closes.

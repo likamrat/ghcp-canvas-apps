@@ -33,6 +33,8 @@ Sessions without context data are hidden by default. Check Include sessions with
 
 **Open in browser** uses your normal system-default browser, with a local favicon. Closing the canvas leaves that view running; keep the owning Copilot session active. Reloading extensions in the GitHub Copilot app ends the old browser URL. Saved thresholds are shared; filters are independent between views.
 
+The header wordmark follows the app theme. Its circular mark inverts in dark mode. Filter and refresh controls use matching icons.
+
 ## Data
 
 Reads the local app database without changing it. Explicit parent links take precedence over legacy creator references; historical session aliases are resolved.

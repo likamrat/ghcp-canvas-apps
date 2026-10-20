@@ -34,6 +34,8 @@ Opens with the current Copilot session selected. You can choose another session 
 
 **Open in browser** uses your system browser. Keep the Copilot session running; reloading extensions in the GitHub Copilot app ends the old browser connection.
 
+The header wordmark follows the app theme. Its circular mark inverts in dark mode. Filter and refresh controls use matching icons; image discovery shows a labeled loading indicator.
+
 ## Data
 
 Local only. Original images and session metadata stay unchanged. Supports PNG, JPEG, GIF, and WebP. Missing files can use a retained session image, sometimes resized; images without a local file or retained bytes remain unavailable. Remote files are not fetched.

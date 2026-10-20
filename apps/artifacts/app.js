@@ -1,4 +1,4 @@
-import { KINDS, SOURCES, defaultFilters, queryArtifacts, reconcileView, sessionTree, createRequestGate } from "./model.mjs";
+import { KINDS, SOURCES, defaultFilters, queryArtifacts, reconcileView, sessionTree, createRequestGate, catalogPresentation } from "./model.mjs";
 import { renderMarkdown, parseDelimited, escapeHtml as esc } from "./render.mjs";
 import { createRefreshCycle } from "./refresh.mjs";
 
@@ -8,6 +8,7 @@ const state = {
     sessionSearch: "", includeChildren: false, includeArchived: false, collapsed: new Set(),
     filters: defaultFilters(), view: { selectedId: null, revision: null, page: 1, pageSize: 16, layout: "workspace" },
     tab: "preview", content: null, busy: false, queued: false, updatedAt: null, zoom: 1, selection: "",
+    phase: "loading", hasSnapshot: false,
 };
 const layout = new URL(location.href).searchParams.get("layout");
 if (["workspace", "library", "activity"].includes(layout)) state.view.layout = layout;
@@ -46,15 +47,38 @@ async function api(path, input) {
 }
 function syncStatus() {
     const interval = Number($("auto-refresh").value);
-    $("sync").textContent = state.busy ? "Reading local artifacts..." :
+    $("sync").textContent = state.phase === "loading" ? "Reading local artifacts..." :
         `${state.updatedAt ? `Updated ${date(state.updatedAt)}` : "Not refreshed yet"} · ${interval ? `Auto-refresh every ${interval / 1000} seconds${document.hidden ? " (paused while hidden)" : ""}` : "Auto-refresh off"}`;
+}
+function presentation(matching = state.records.length) {
+    return catalogPresentation({ phase: state.phase, hasSnapshot: state.hasSnapshot,
+        hasSession: Boolean(session()), total: state.records.length, matching });
+}
+function loadingMarkup(reader = false) {
+    return `<div class="load-state" role="status"><span class="loading-spinner" aria-hidden="true"></span>
+        <h2>${reader ? "Preparing the preview..." : "Loading artifacts..."}</h2>
+        <p>${reader ? "The preview will appear when the files are ready." : "Reading this session's files."}</p>
+        <div class="loading-lines" aria-hidden="true"><span></span><span></span><span></span></div></div>`;
+}
+function beginScopeLoad() {
+    readGate.next();
+    state.phase = "loading"; state.hasSnapshot = false;
+    state.records = []; state.content = null; state.updatedAt = null; state.selection = "";
+    setError(""); showWarnings([]);
 }
 const refreshCycle = createRefreshCycle({ refresh: () => refresh() });
 async function refresh() {
     if (state.busy) { state.queued = true; scanGate.next(); return; }
     state.busy = true;
+    state.phase = "loading";
     refreshCycle.setBusy(true);
     $("refresh").disabled = true;
+    setError("");
+    if (!state.hasSnapshot) showWarnings([]);
+    if (!state.hasSnapshot || !state.records.length) {
+        renderList();
+        void loadSelected();
+    } else $("artifact-list").setAttribute("aria-busy", "true");
     syncStatus();
     const request = scanGate.next();
     try {
@@ -68,6 +92,7 @@ async function refresh() {
         renderSessions();
         $("new-note").disabled = !session() || session().location !== "local";
         if (!session()) {
+            state.phase = state.sessionId ? "error" : "idle"; state.hasSnapshot = false;
             state.records = []; renderList(); await loadSelected();
             $("scope-summary").textContent = "Choose a session.";
             showWarnings(snapshot.warnings);
@@ -79,6 +104,7 @@ async function refresh() {
         const result = await api(`api/artifacts?${scope}`);
         if (!scanGate.current(request)) return;
         state.records = result.artifacts;
+        state.phase = "ready"; state.hasSnapshot = true;
         state.updatedAt = result.collectedAt;
         setError("");
         showWarnings([...(snapshot.warnings ?? []), ...(result.warnings ?? [])]);
@@ -86,7 +112,10 @@ async function refresh() {
         await loadSelected(true);
     } catch (error) {
         if (scanGate.current(request)) {
+            state.phase = "error";
             setError(`${error.message}${state.updatedAt ? ` Last successful refresh: ${date(state.updatedAt)}.` : ""}`);
+            renderList();
+            if (!state.hasSnapshot) void loadSelected();
             if (!state.sessions.length) $("scope-summary").textContent = "Sessions unavailable";
         }
     } finally {
@@ -140,6 +169,20 @@ function card(record) {
         <span class="card-footer"><span class="artifact-title">${esc(record.name)}</span><span class="artifact-meta">${esc(SOURCES[record.source] ?? record.source)}${record.version ? ` · v${record.version}` : ""}</span></span></button>`;
 }
 function renderList() {
+    $("surface").dataset.layout = state.view.layout;
+    $("artifact-list").setAttribute("aria-busy", String(state.phase === "loading"));
+    for (const control of document.querySelectorAll("button[data-layout]")) control.setAttribute("aria-pressed", String(control.dataset.layout === state.view.layout));
+    const display = presentation();
+    if (["loading", "error", "idle"].includes(display)) {
+        $("artifact-list").innerHTML = display === "loading" ? loadingMarkup() :
+            display === "error" ? `<div class="empty"><h2>Artifacts could not be loaded</h2>${button("refresh", "Retry")}</div>` :
+                '<div class="empty"><h2>Choose a session</h2><p>Select a session to read its artifacts.</p></div>';
+        $("scope-summary").textContent = display === "loading" ? `${session()?.name ?? "Local sessions"} · Loading artifacts...` :
+            display === "error" ? "Artifacts unavailable" : "Choose a session.";
+        $("page-summary").textContent = display === "loading" ? "Loading..." : "";
+        $("previous-page").disabled = true; $("next-page").disabled = true;
+        return;
+    }
     let records;
     try {
         records = queryArtifacts(state.records, state.filters);
@@ -148,16 +191,16 @@ function renderList() {
     } catch (error) {
         $("filter-error").textContent = error.message; $("filter-error").hidden = false;
         $("from").setAttribute("aria-invalid", "true"); $("to").setAttribute("aria-invalid", "true");
+        if ($("artifact-list").querySelector(".load-state")) $("artifact-list").innerHTML = '<p class="empty">Check the filters above to see the results.</p>';
         return;
     }
     const previousSelection = state.view.selectedId;
     state.view = reconcileView(state.view, records);
+    if (!state.view.selectedId) $("surface").classList.remove("show-detail");
     if (previousSelection !== state.view.selectedId) { state.selection = ""; state.zoom = 1; }
     const start = (state.view.page - 1) * state.view.pageSize;
     const page = records.slice(start, start + state.view.pageSize);
     $("scope-summary").textContent = `${session()?.name ?? "No session selected"} · ${records.length} of ${state.records.length} artifacts${state.includeChildren ? " including children" : ""}`;
-    $("surface").dataset.layout = state.view.layout;
-    for (const control of document.querySelectorAll("button[data-layout]")) control.setAttribute("aria-pressed", String(control.dataset.layout === state.view.layout));
     $("artifact-list").innerHTML = !page.length ? `<div class="empty"><h2>${state.records.length ? "No matching artifacts" : "No artifacts found"}</h2><p>${state.records.length ? "Change or clear the filters." : session()?.location !== "local" && session() ? "Remote files are not available through the local adapter." : "Publish a note or refresh after the session creates a supported file."}</p></div>` :
         state.view.layout === "library" ? page.map(card).join("") :
         state.view.layout === "activity" ? page.map(record => `<article class="activity-entry"><p>${esc(date(record.timestamp))} · ${esc(record.source === "published" ? `Published version ${record.version}` : record.timestampBasis || "File reference")}</p>${row(record)}</article>`).join("") : page.map(row).join("");
@@ -185,7 +228,16 @@ async function loadSelected(preserveScroll = false) {
     const request = readGate.next(), record = selected(), container = $("reader-content");
     const scroll = preserveScroll ? container.scrollTop : 0;
     for (const control of document.querySelectorAll("[data-tab]")) control.setAttribute("aria-pressed", String(control.dataset.tab === state.tab));
-    if (!record) { state.content = null; container.innerHTML = '<p class="empty">Select an artifact to preview it.</p>'; return; }
+    if (!record) {
+        state.content = null;
+        const display = presentation();
+        $("reader").setAttribute("aria-busy", String(display === "loading"));
+        container.innerHTML = display === "loading" ? loadingMarkup(true) :
+            display === "error" ? '<p class="empty">Refresh to retry loading this session.</p>' :
+                '<p class="empty">Select an artifact to preview it.</p>';
+        return;
+    }
+    $("reader").setAttribute("aria-busy", "true");
     if (!preserveScroll || state.content?.metadata?.id !== record.id) container.innerHTML = '<p class="empty" role="status">Loading artifact...</p>';
     let result;
     try {
@@ -223,7 +275,7 @@ async function loadSelected(preserveScroll = false) {
         if (!readGate.current(request)) return;
         state.content = null;
         container.innerHTML = `<h2 class="document-title">${esc(record.title || record.name)}</h2><p class="notice error-text" role="alert">${esc(error.message)}</p>${button("retry-preview", "Retry preview")} ${button("refresh", "Refresh artifacts")}`;
-    }
+    } finally { if (readGate.current(request)) $("reader").setAttribute("aria-busy", "false"); }
 }
 function applyZoom() {
     const image = $("preview-image");
@@ -233,7 +285,7 @@ function applyZoom() {
     $("zoom-label").textContent = `${Math.round(state.zoom * 100)}%`;
 }
 function changeSession(id) {
-    readGate.next(); state.sessionId = id || null; state.records = []; state.content = null;
+    state.sessionId = id || null; beginScopeLoad();
     state.view.selectedId = null; state.view.revision = null; state.view.page = 1;
     state.selection = ""; $("surface").classList.remove("show-detail");
     renderSessions(); renderList(); void loadSelected(); void refresh();
@@ -289,7 +341,7 @@ $("session-picker").addEventListener("change", () => changeSession($("session-pi
 for (const id of ["search", "from", "to"]) $(id).addEventListener("input", filtersChanged);
 for (const id of ["kinds", "sources", "sort", "order", "pinned"]) $(id).addEventListener("change", filtersChanged);
 for (const [id, key] of [["include-children", "includeChildren"], ["include-archived", "includeArchived"]]) $(id).addEventListener("change", () => {
-    state[key] = $(id).checked; renderSessions(); void refresh();
+    state[key] = $(id).checked; beginScopeLoad(); renderSessions(); renderList(); void loadSelected(); void refresh();
 });
 $("page-size").addEventListener("change", () => { state.view.pageSize = Number($("page-size").value); state.view.page = 1; renderList(); });
 $("previous-page").addEventListener("click", () => { state.view.page--; renderList(); });

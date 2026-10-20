@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg?v=__ICON_VERSION__">
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/branding.css">
     <link rel="stylesheet" href="/multiselect.css">
     <script src="/multiselect.js" defer></script>
     <script type="module" src="/app.js"></script>
@@ -15,9 +16,10 @@
 </head>
 <body>
     <main>
-        <header><h1>Context Monitor</h1><button id="open-browser" type="button">Open in browser</button></header>
+        <header><h1 class="app-wordmark" aria-label="Context Monitor"><span class="visually-hidden">Context Monitor</span>__APP_WORDMARK__</h1><button id="open-browser" type="button">Open in browser</button></header>
         <p id="browser-status" class="browser-status" role="status" hidden></p>
         <section class="control-panel" aria-label="Session controls">
+            <h2 class="filter-heading">Filters and refresh</h2>
             <div class="control-filters">
                 <div class="search"><label for="search">Search sessions</label><input id="search" type="search" placeholder="Name, project, or model" autocomplete="off"></div>
                 <div class="model-choice">
@@ -68,7 +70,7 @@
                     <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
                     <label class="check-filter"><input id="include-missing" type="checkbox"> Include sessions without context data</label>
                 </div>
-                <button id="refresh" type="button">Refresh</button>
+                <button id="refresh" class="refresh-control" type="button">Refresh</button>
             </div>
             <div class="control-settings">
                 <details class="threshold-settings">

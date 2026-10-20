@@ -21,9 +21,6 @@ body { margin: 0; background: var(--surface); color: var(--ink); font-family: va
 main { max-width: 1560px; margin: auto; padding: 28px 24px 18px; }
 header, .header-actions, .overview, .view-switch, .reader-toolbar, .pagination, .dialog-heading, .dialog-actions, .reader-actions, .image-tools { display: flex; align-items: center; gap: 10px; }
 header, .overview, .reader-toolbar, .dialog-heading { justify-content: space-between; }
-.app-wordmark { flex: 0 0 auto; color: var(--ink); }
-.app-wordmark svg { display: block; width: 156px; height: 34px; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .header-actions { flex-wrap: wrap; justify-content: end; }
 h1 { margin: 0; font-size: 25px; font-weight: 600; letter-spacing: -.6px; line-height: 1.3; }
 h2 { font-size: 14px; font-weight: 600; margin: 0 0 14px; }
@@ -45,7 +42,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .field { min-width: 0; }
 .field > label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
 .control-panel { margin-top: 16px; border: 1px solid var(--edge); border-radius: 8px; padding: 12px; }
-.control-panel > summary { cursor: pointer; font-size: 13px; }
+.control-panel > summary { cursor: pointer; font-size: 13px; margin: 0; }
 .control-panel[open] > summary { margin-bottom: 12px; }
 .control-row { display: grid; align-items: end; gap: 10px; }
 .control-row + .control-row { margin-top: 10px; }
@@ -137,6 +134,13 @@ th { font-weight: 500; color: var(--muted); }
 .empty h2 { font-size: 16px; color: var(--ink); }
 .empty p { margin: 8px 0; }
 #artifact-list > .empty { grid-column: 1 / -1; }
+.load-state { grid-column: 1 / -1; padding: 28px 14px; text-align: center; color: var(--muted); }
+.load-state h2 { margin: 12px 0 8px; color: var(--ink); font-size: 16px; }
+.load-state p { margin: 0; font-size: 13px; }
+.loading-lines { display: grid; gap: 10px; margin: 22px auto 0; max-width: 300px; }
+.loading-lines span { height: 10px; border-radius: 3px; background: var(--hover); }
+.loading-lines span:nth-child(2) { width: 75%; }
+.loading-lines span:nth-child(3) { width: 88%; }
 .pagination { justify-content: center; margin: 20px 0 0; font-size: 12px; color: var(--muted); }
 .pagination button { min-height: 31px; padding: 5px 9px; font-size: 12px; }
 #surface[data-layout="library"] { display: block; }

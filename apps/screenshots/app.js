@@ -201,7 +201,17 @@ function renderGallery() {
     if (!selected) { empty("Choose a session", "Select a session from the navigator to load its uploaded images and tool screenshots."); return; }
     if (scanning && !images.length) {
         $("pagination").hidden = true;
-        $("gallery").replaceChildren(node("div", null, "skeleton"));
+        $("summary").textContent = `Loading screenshots for ${session?.name || "this session"}...`;
+        $("sync").textContent = "Reading local image references...";
+        const progress = node("div", null, "loading-state");
+        progress.setAttribute("role", "status");
+        const spinner = node("span", null, "loading-spinner");
+        spinner.setAttribute("aria-hidden", "true");
+        progress.append(spinner, node("p", "Loading screenshots..."));
+        const skeleton = node("div", null, "skeleton");
+        skeleton.setAttribute("aria-hidden", "true");
+        progress.append(skeleton);
+        $("gallery").replaceChildren(progress);
         return;
     }
     if (!images.length) { empty("No retained images", "This session has no supported local image references. Check source warnings or include child sessions."); return; }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { queryArtifacts, reconcileView, createRequestGate, sessionTree } from "./model.mjs";
+import { queryArtifacts, reconcileView, createRequestGate, sessionTree, catalogPresentation } from "./model.mjs";
 
 test("filters combine across fields and accept multiple kinds and sources", () => {
     const records = [
@@ -52,4 +52,16 @@ test("session search keeps ancestors and collapsed branches expand only when sea
     assert.deepEqual(sessionTree(sessions, {}, new Set(["root"])).map(row => row.id), ["root"]);
     assert.deepEqual(sessionTree(sessions, { search: "Research" }, new Set(["root"])).map(row => [row.id, row.depth]), [["root", 0], ["child", 1]]);
     assert.equal(sessionTree(sessions, { includeArchived: true }).length, 3);
+});
+
+test("pending discovery is never presented as empty, and refresh keeps a confirmed snapshot", () => {
+    const pending = { phase: "loading", hasSnapshot: false, hasSession: true, total: 0, matching: 0 };
+    assert.equal(catalogPresentation(pending), "loading");
+    assert.equal(catalogPresentation({ ...pending, hasSession: false }), "loading");
+    assert.equal(catalogPresentation({ ...pending, phase: "ready", hasSnapshot: true }), "empty");
+    assert.equal(catalogPresentation({ ...pending, phase: "error" }), "error");
+    assert.equal(catalogPresentation({ ...pending, phase: "idle", hasSession: false }), "idle");
+    assert.equal(catalogPresentation({ ...pending, hasSnapshot: true, total: 2, matching: 2 }), "content");
+    assert.equal(catalogPresentation({ ...pending, phase: "error", hasSnapshot: true, total: 2, matching: 2 }), "content");
+    assert.equal(catalogPresentation({ ...pending, phase: "ready", hasSnapshot: true, total: 2, matching: 0 }), "filtered");
 });
