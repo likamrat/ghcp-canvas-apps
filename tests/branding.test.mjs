@@ -19,7 +19,7 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
         assert.doesNotMatch(html, /__APP_WORDMARK__/);
         assert.match(html, /class="word-prefix" fill="currentColor"/);
         assert.match(html, /class="icon-halo"/);
-        assert.match(html, /class="refresh-control"/);
+        assert.match(html, /class="[^"]*\brefresh-control\b[^"]*"/);
         if (app !== "thoughts") assert.match(html, /class="filter-heading"/);
         for (const file of ["branding.css", "filter.svg", "refresh.svg"]) {
             const response = await fetch(new URL(file, server.url));

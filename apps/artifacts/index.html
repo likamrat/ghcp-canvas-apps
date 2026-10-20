@@ -19,9 +19,9 @@
         <h1 class="app-wordmark" aria-label="Artifacts"><span class="visually-hidden">Artifacts</span>__APP_WORDMARK__</h1>
         <div class="header-actions">
             <span class="local-label">Local / session artifacts</span>
-            <button id="new-note" type="button" disabled>New note</button>
-            <button id="refresh" class="refresh-control" type="button">Refresh</button>
-            <button id="open-browser" type="button">Open in browser</button>
+            <button id="new-note" class="control-button" type="button" disabled>New note</button>
+            <button id="refresh" class="control-button refresh-control" type="button">Refresh</button>
+            <button id="open-browser" class="control-button" type="button">Open in browser</button>
         </div>
     </header>
     <p id="browser-status" class="browser-status" role="status" hidden></p>
@@ -48,13 +48,13 @@
             <div class="field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
             <div class="field"><label for="page-size">Artifacts per page</label><select id="page-size"><option>8</option><option selected>16</option><option>32</option></select></div>
             <div class="field"><label for="auto-refresh">Auto-refresh</label><select id="auto-refresh"><option value="0">Off</option><option value="5000">5 seconds</option><option value="10000">10 seconds</option><option value="30000">30 seconds</option><option value="60000">1 minute</option><option value="300000">5 minutes</option></select></div>
-            <div class="control-actions"><button id="clear-filters" type="button">Clear filters</button></div>
+            <div class="control-actions"><button id="clear-filters" class="control-button" type="button">Clear filters</button></div>
         </div>
         <p id="filter-error" class="error-text" role="alert" hidden></p>
     </details>
     <div class="overview">
         <p id="scope-summary">Loading sessions...</p>
-        <div class="view-switch" role="group" aria-label="Artifact view"><button data-layout="workspace" aria-pressed="true">Workspace</button><button data-layout="library" aria-pressed="false">Library</button><button data-layout="activity" aria-pressed="false">Activity</button></div>
+        <div class="view-switch" role="group" aria-label="Artifact view"><button class="control-button" type="button" data-layout="workspace" aria-pressed="true">Workspace</button><button class="control-button" type="button" data-layout="library" aria-pressed="false">Library</button><button class="control-button" type="button" data-layout="activity" aria-pressed="false">Activity</button></div>
     </div>
     <p id="sync" class="muted" role="status"></p>
     <div id="error" class="notice error-text" role="alert" hidden></div>
@@ -68,7 +68,7 @@
         </aside>
         <section class="artifact-area">
             <div class="field compact-picker"><label id="session-picker-label" for="session-picker">Session</label>
-                <button id="session-picker" type="button" aria-labelledby="session-picker-label session-picker-value" aria-haspopup="dialog" aria-expanded="false" aria-controls="session-menu" disabled><span id="session-picker-value">Choose a session</span></button>
+                <button id="session-picker" class="control-button" type="button" aria-labelledby="session-picker-label session-picker-value" aria-haspopup="dialog" aria-expanded="false" aria-controls="session-menu" disabled><span id="session-picker-value">Choose a session</span></button>
             </div>
             <div id="surface" data-layout="workspace">
                 <section id="artifact-list" aria-label="Artifacts" aria-busy="true"><div class="load-state" role="status"><span class="loading-spinner" aria-hidden="true"></span><h2>Loading artifacts...</h2><p>Reading local session data.</p></div></section>
@@ -79,7 +79,7 @@
                     <div id="reader-content"><div class="load-state" role="status"><span class="loading-spinner" aria-hidden="true"></span><h2>Preparing the preview...</h2><p>The preview will appear when the files are ready.</p></div></div>
                 </section>
             </div>
-            <div class="pagination"><button id="previous-page" type="button">Previous page</button><span id="page-summary"></span><button id="next-page" type="button">Next page</button></div>
+            <div class="pagination"><button id="previous-page" class="control-button" type="button">Previous page</button><span id="page-summary"></span><button id="next-page" class="control-button" type="button">Next page</button></div>
         </section>
     </div>
 </main>
@@ -87,32 +87,32 @@
     <div class="picker-head">
         <div class="picker-search-row">
             <input id="session-picker-search" type="search" role="combobox" aria-label="Search sessions or projects" aria-controls="session-options" aria-expanded="false" aria-autocomplete="list" aria-describedby="session-picker-help" placeholder="Session or project" autocomplete="off">
-            <button id="session-picker-close" type="button" aria-label="Close session picker">Close</button>
+            <button id="session-picker-close" class="control-button" type="button" aria-label="Close session picker">Close</button>
         </div>
         <p id="session-picker-count" role="status"></p>
         <span id="session-picker-help" class="visually-hidden">Use arrow keys to move through sessions and Enter to select. Escape closes the picker. Home and End work when the list is focused.</span>
     </div>
     <div id="session-options" class="session-scroll" role="listbox" aria-label="Sessions" tabindex="0"></div>
     <div class="picker-footer">
-        <button id="session-picker-current" type="button" title="Clear search and reveal the selected session">Show selected</button>
-        <button id="session-picker-top" type="button" title="Scroll the session list to the top">Back to top</button>
+        <button id="session-picker-current" class="control-button" type="button" title="Clear search and reveal the selected session">Show selected</button>
+        <button id="session-picker-top" class="control-button" type="button" title="Scroll the session list to the top">Back to top</button>
     </div>
 </div>
 <dialog id="note-dialog">
     <form id="note-form">
-        <div class="dialog-heading"><h2 id="note-heading">New note</h2><button type="button" id="close-note" aria-label="Close note editor">Close</button></div>
+        <div class="dialog-heading"><h2 id="note-heading">New note</h2><button type="button" id="close-note" class="control-button" aria-label="Close note editor">Close</button></div>
         <p class="muted">Saved in Artifacts. Original session files stay unchanged.</p>
         <label for="note-title">Title</label><input id="note-title" maxlength="200" required>
         <label for="note-content">Markdown</label><textarea id="note-content" rows="16" required></textarea>
         <p id="note-error" class="error-text" role="alert" hidden></p>
-        <div class="dialog-actions"><button type="button" id="cancel-note">Cancel</button><button id="save-note" type="submit">Save note</button></div>
+        <div class="dialog-actions"><button type="button" id="cancel-note" class="control-button">Cancel</button><button id="save-note" class="control-button" type="submit">Save note</button></div>
     </form>
 </dialog>
 <dialog id="request-dialog">
-    <div class="dialog-heading"><h2>Request a change</h2><button type="button" id="close-request" aria-label="Close request">Close</button></div>
+    <div class="dialog-heading"><h2>Request a change</h2><button type="button" id="close-request" class="control-button" aria-label="Close request">Close</button></div>
     <p class="muted">Copy this request into Copilot chat. No message is sent from this canvas.</p>
     <label for="request-content">Request</label><textarea id="request-content" rows="10"></textarea>
-    <p id="copy-status" role="status"></p><div class="dialog-actions"><button type="button" id="copy-request">Copy request</button></div>
+    <p id="copy-status" role="status"></p><div class="dialog-actions"><button type="button" id="copy-request" class="control-button">Copy request</button></div>
 </dialog>
 </body>
 </html>

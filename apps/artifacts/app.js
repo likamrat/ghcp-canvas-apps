@@ -29,7 +29,7 @@ const selected = () => state.records.find(record => record.id === state.view.sel
 const session = () => state.sessions.find(row => row.id === state.sessionId);
 const date = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Unknown date";
 const size = value => value == null ? "Size unavailable" : value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KiB` : `${(value / 1048576).toFixed(1)} MiB`;
-const button = (action, text, attributes = "") => `<button type="button" data-action="${action}" ${attributes}>${text}</button>`;
+const button = (action, text, attributes = "", className = "control-button") => `<button type="button" class="${className}" data-action="${action}" ${attributes}>${text}</button>`;
 const fileUrl = (record, download = false) => {
     const url = new URL(`file/${record.id}`, location.href);
     if (download) url.searchParams.set("download", "true");
@@ -140,7 +140,7 @@ function renderSessions() {
     const rows = sessionTree(state.sessions, { search: state.sessionSearch, includeArchived: state.includeArchived }, state.collapsed);
     $("session-count").textContent = `(${rows.length})`;
     $("session-tree").innerHTML = rows.length ? rows.map(row => `<div class="session-row" style="--depth:${row.depth}">
-        ${row.childCount ? button("fold", state.collapsed.has(row.id) ? "›" : "⌄", `class="fold" data-id="${esc(row.id)}" aria-label="Toggle ${esc(row.name)} children" aria-expanded="${!state.collapsed.has(row.id)}"`) : '<span class="fold-spacer"></span>'}
+        ${row.childCount ? button("fold", state.collapsed.has(row.id) ? "›" : "⌄", `data-id="${esc(row.id)}" aria-label="Toggle ${esc(row.name)} children" aria-expanded="${!state.collapsed.has(row.id)}"`, "fold") : '<span class="fold-spacer"></span>'}
         <button type="button" class="session-button" data-action="session" data-id="${esc(row.id)}" aria-current="${row.id === state.sessionId}">
         <span class="session-name">${esc(row.name)}</span><span class="session-meta">${esc([row.project, row.location !== "local" ? row.location : null, row.archived ? "Archived" : null].filter(Boolean).join(" · "))}</span></button></div>`).join("") : '<p class="empty">No matching sessions.</p>';
     sessionPicker.update({ sessions: state.sessions, selectedId: state.sessionId, includeArchived: state.includeArchived });
@@ -219,7 +219,7 @@ function detailList(record) {
 function revisions(record, list) {
     return list.length ? `<div class="revision-list">${[...list].sort((a, b) => b.version - a.version).map(item =>
         button("revision", `<span>Version ${item.version}${item.version === record.version ? " · Latest" : ""}<span class="revision-time">${esc(date(item.timestamp))}</span></span>`,
-            `class="revision" data-version="${item.version}" aria-pressed="${item.version === (state.view.revision ?? record.version)}"`)).join("")}</div>` :
+            `data-version="${item.version}" aria-pressed="${item.version === (state.view.revision ?? record.version)}"`, "revision")).join("")}</div>` :
         '<p class="captured-note">This is a discovered file reference. Earlier file contents were not captured.</p>';
 }
 async function loadSelected(preserveScroll = false) {
@@ -246,7 +246,7 @@ async function loadSelected(preserveScroll = false) {
         state.content = result;
         const metadata = result.metadata;
         const actions = `<div class="reader-actions">${button("pin", record.pinned ? "Unpin" : "Pin", `aria-pressed="${record.pinned}"`)}
-            ${record.availability === "available" ? `<a class="download-link" href="${esc(fileUrl(record, true))}" download>Download</a>${button("request", "Request a change")}` : ""}
+            ${record.availability === "available" ? `<a class="control-button download-link" href="${esc(fileUrl(record, true))}" download>Download</a>${button("request", "Request a change")}` : ""}
             ${record.source === "published" && !state.view.revision ? button("edit", "Edit note") : ""}</div>`;
         const historyNotice = state.view.revision ? `<p class="notice">Captured version ${state.view.revision}. ${button("latest", "Back to latest")}</p>` : "";
         let body;

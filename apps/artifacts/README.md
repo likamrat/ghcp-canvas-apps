@@ -61,7 +61,7 @@ The canvas exposes `list_sessions`, `query_artifacts`, `get_artifact`, `read_art
 Node 24+. No build step or package installation. From this folder:
 
 ```sh
-node --test model.test.mjs session-picker.test.mjs render.test.mjs refresh.test.mjs server.test.mjs source.test.mjs store.test.mjs extension.test.mjs
+node --test controls.test.mjs model.test.mjs session-picker.test.mjs render.test.mjs refresh.test.mjs server.test.mjs source.test.mjs store.test.mjs extension.test.mjs
 ```
 
 For a standalone browser view of real local data:
