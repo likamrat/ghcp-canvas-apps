@@ -1,6 +1,7 @@
 import { KINDS, SOURCES, defaultFilters, queryArtifacts, reconcileView, sessionTree, createRequestGate, catalogPresentation } from "./model.mjs";
 import { renderMarkdown, parseDelimited, escapeHtml as esc } from "./render.mjs";
 import { createRefreshCycle } from "./refresh.mjs";
+import { createSessionPicker } from "./session-picker.mjs";
 
 const $ = id => document.getElementById(id);
 const state = {
@@ -14,6 +15,7 @@ const layout = new URL(location.href).searchParams.get("layout");
 if (["workspace", "library", "activity"].includes(layout)) state.view.layout = layout;
 const scanGate = createRequestGate(), readGate = createRequestGate();
 let editing = null;
+const sessionPicker = createSessionPicker({ onSelect: changeSession });
 const kindLabels = { document: "Document", image: "Image", diagram: "Diagram", table: "Table", file: "File" };
 const paths = {
     document: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
@@ -141,11 +143,7 @@ function renderSessions() {
         ${row.childCount ? button("fold", state.collapsed.has(row.id) ? "›" : "⌄", `class="fold" data-id="${esc(row.id)}" aria-label="Toggle ${esc(row.name)} children" aria-expanded="${!state.collapsed.has(row.id)}"`) : '<span class="fold-spacer"></span>'}
         <button type="button" class="session-button" data-action="session" data-id="${esc(row.id)}" aria-current="${row.id === state.sessionId}">
         <span class="session-name">${esc(row.name)}</span><span class="session-meta">${esc([row.project, row.location !== "local" ? row.location : null, row.archived ? "Archived" : null].filter(Boolean).join(" · "))}</span></button></div>`).join("") : '<p class="empty">No matching sessions.</p>';
-    const choices = state.sessions.filter(row => state.includeArchived || !row.archived);
-    $("session-picker").replaceChildren(new Option("Choose a session", ""), ...choices.map(row => {
-        const option = new Option(`${row.name}${row.project ? ` · ${row.project}` : ""}`, row.id);
-        option.selected = row.id === state.sessionId; return option;
-    }));
+    sessionPicker.update({ sessions: state.sessions, selectedId: state.sessionId, includeArchived: state.includeArchived });
 }
 function applyFilters() {
     const old = state.view.selectedId;
@@ -337,7 +335,6 @@ $("new-note").addEventListener("click", () => openNote());
 $("refresh").addEventListener("click", () => refresh());
 $("clear-filters").addEventListener("click", clearFilters);
 $("session-search").addEventListener("input", () => { state.sessionSearch = $("session-search").value; renderSessions(); });
-$("session-picker").addEventListener("change", () => changeSession($("session-picker").value));
 for (const id of ["search", "from", "to"]) $(id).addEventListener("input", filtersChanged);
 for (const id of ["kinds", "sources", "sort", "order", "pinned"]) $(id).addEventListener("change", filtersChanged);
 for (const [id, key] of [["include-children", "includeChildren"], ["include-archived", "includeArchived"]]) $(id).addEventListener("change", () => {

@@ -7,7 +7,7 @@ import { inlineWordmark } from "./branding.mjs";
 
 const assets = new Map([
     ["", ["index.html", "text/html; charset=utf-8"]],
-    ...["app.js", "model.mjs", "render.mjs", "refresh.mjs", "browser.js", "multiselect.js"].map(name => [name, [name, "text/javascript; charset=utf-8"]]),
+    ...["app.js", "model.mjs", "render.mjs", "refresh.mjs", "browser.js", "multiselect.js", "session-picker.mjs", "session-picker-model.mjs"].map(name => [name, [name, "text/javascript; charset=utf-8"]]),
     ...["style.css", "multiselect.css", "branding.css"].map(name => [name, [name, "text/css; charset=utf-8"]]),
     ...["logo.svg", "icon.svg", "filter.svg", "refresh.svg"].map(name => [name, [name, "image/svg+xml"]]),
     ["icon.png", ["icon.png", "image/png"]],

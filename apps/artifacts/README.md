@@ -26,6 +26,10 @@ If you cannot inspect that list, say so. Then open Artifacts.
 
 Opens with the current session selected. Choose another session in the navigator or include its child sessions.
 
+In narrow views, the session picker has search, its own scrollbar, **Back to top**, and **Show selected**. These controls stay visible while the list scrolls. Use arrow keys and Enter to choose a session, or Escape to close.
+
+[Session picker with example sessions](screenshot-sessions.png)
+
 - **Workspace** puts the artifact list beside a reader. **Library** shows file cards and image previews. **Activity** lists artifact references by date. All three use the same filters.
 - Filter by filename or title, type, source, date, or pinned status. Type and Source accept multiple selections. Selections within a filter are combined; different filters narrow the results together.
 - Sort by date, filename, or size. Activity switches to date sorting. Browse 8, 16, or 32 artifacts per page.
@@ -57,7 +61,7 @@ The canvas exposes `list_sessions`, `query_artifacts`, `get_artifact`, `read_art
 Node 24+. No build step or package installation. From this folder:
 
 ```sh
-node --test model.test.mjs render.test.mjs refresh.test.mjs server.test.mjs source.test.mjs store.test.mjs extension.test.mjs
+node --test model.test.mjs session-picker.test.mjs render.test.mjs refresh.test.mjs server.test.mjs source.test.mjs store.test.mjs extension.test.mjs
 ```
 
 For a standalone browser view of real local data:
