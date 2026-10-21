@@ -1,0 +1,47 @@
+{
+  "format": "Bundled ESM, no runtime package installation",
+  "packages": [
+    {
+      "name": "dom-serializer",
+      "version": "3.1.1",
+      "license": "MIT",
+      "integrity": "sha1-VL5w7k/MLaAQ9IgWXmIpR5jcV9M="
+    },
+    {
+      "name": "domelementtype",
+      "version": "3.0.0",
+      "license": "BSD-2-Clause",
+      "integrity": "sha1-5sCiS9Ocpet+pnqY0vaZSX17zFU="
+    },
+    {
+      "name": "domhandler",
+      "version": "6.0.1",
+      "license": "BSD-2-Clause",
+      "integrity": "sha1-dfNRoDpuEMNeCEGPnPDSh+AHl88="
+    },
+    {
+      "name": "domutils",
+      "version": "4.0.2",
+      "license": "BSD-2-Clause",
+      "integrity": "sha1-DBrB/b6PVUpgpvXrFD7oVjAyfJQ="
+    },
+    {
+      "name": "entities",
+      "version": "8.1.0",
+      "license": "BSD-2-Clause",
+      "integrity": "sha1-ljLWlhnr2+DPDvIvUwiP5aIWPYY="
+    },
+    {
+      "name": "htmlparser2",
+      "version": "12.0.0",
+      "license": "MIT",
+      "integrity": "sha1-amedD1fFJZkPnLrYpYWzIOzG0Zg="
+    },
+    {
+      "name": "marked",
+      "version": "18.1.1",
+      "license": "MIT",
+      "integrity": "sha512-zEGgrtUG8crk+TrMacJSVABU4DYDDkS8uqgU3ohrn/2fW9C2AEfUrO3m6IhpIpQpl7YcVpiXXC9cSMWDANT3dg=="
+    }
+  ]
+}

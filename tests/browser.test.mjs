@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { startServer as screenshots } from "../apps/screenshots/server.mjs";
 import { startServer as monitor } from "../apps/context-monitor/server.mjs";
 import { startServer as thoughts } from "../apps/thoughts/server.mjs";
+import { startServer as artifacts } from "../apps/artifacts/server.mjs";
 import { browserCommand } from "../apps/screenshots/browser.mjs";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
@@ -15,6 +16,7 @@ test("every app exposes an authenticated browser pop-out and retains its server 
         await screenshots({}, { launchBrowser }),
         await monitor(() => ({}), undefined, { launchBrowser }),
         await thoughts({}, { launchBrowser }),
+        await artifacts({}, { launchBrowser }),
     ];
     t.after(() => Promise.all(servers.map((server) => server.close())));
     for (const server of servers) {
@@ -36,7 +38,7 @@ test("every app exposes an authenticated browser pop-out and retains its server 
         const invalid = await fetch(endpoint, { method: "POST", headers, body: '{"url":"https://example.com"}' });
         assert.equal(invalid.status, 400);
     }
-    assert.equal(launches.length, 3);
+    assert.equal(launches.length, 4);
     assert.ok(launches.every((url) => new URL(url).hostname === "127.0.0.1" && new URL(url).searchParams.get("view") === "browser"));
 });
 
@@ -75,11 +77,11 @@ test("browser launch failures stay visible and do not retain the server", async 
 test("standalone apps carry identical browser helpers and header controls", async () => {
     for (const filename of ["browser.mjs", "browser.js"]) {
         const canonical = await readFile(new URL(`screenshots/${filename}`, apps), "utf8");
-        for (const app of ["context-monitor", "thoughts"]) {
+        for (const app of ["context-monitor", "thoughts", "artifacts"]) {
             assert.equal(await readFile(new URL(`${app}/${filename}`, apps), "utf8"), canonical);
         }
     }
-    for (const app of ["screenshots", "context-monitor", "thoughts"]) {
+    for (const app of ["screenshots", "context-monitor", "thoughts", "artifacts"]) {
         const html = await readFile(new URL(`${app}/index.html`, apps), "utf8");
         assert.match(html, /id="open-browser"/);
         assert.match(html, /id="browser-status"/);
@@ -87,14 +89,15 @@ test("standalone apps carry identical browser helpers and header controls", asyn
 });
 
 test("each extension closes ordinary canvases but keeps explicit browser views alive and reuses them", async () => {
-    for (const app of ["screenshots", "context-monitor", "thoughts"]) {
+    for (const app of ["screenshots", "context-monitor", "thoughts", "artifacts"]) {
         const source = (await readFile(new URL(`${app}/extension.mjs`, apps), "utf8")).replace(/^import .*;\r?\n/gm, "");
         let declaration, started = 0, closed = 0, poppedOut = false;
         const fakeServer = { url: "http://127.0.0.1:12345/", hasBrowserWindow: () => poppedOut, close: async () => { closed++; } };
         const context = {
             joinSession: async (options) => { declaration = options.canvases[0]; return {}; },
             createCanvas: (options) => ({ ...options, declaration: {} }), CanvasError: Error,
-            createCatalog: () => ({}), querySchema: {}, queryImages: () => ({}),
+            createCatalog: () => ({ close() {} }), querySchema: {}, queryImages: () => ({}),
+            queryArtifacts: () => [], KINDS: {}, SOURCES: {},
             createSettings: () => ({}), settingsSchema: {}, readSnapshot: () => ({}),
             createStore: () => ({}), actionSchemas: {},
             startServer: async () => { started++; return fakeServer; },

@@ -86,7 +86,7 @@ test("loopback renderer routes validate origin, token, body and stale writes", a
         assert.equal(response.status, 200);
         const html = await response.text();
         assert.match(html, /<title>Thoughts<\/title>/);
-        assert.match(html, /<h1>Thoughts<\/h1>/);
+        assert.ok(/<h1[^>]*aria-label="Thoughts"/.test(html), "The heading retains the accessible app name.");
         const token = html.match(/name="inbox-token" content="([a-f0-9]+)"/)[1];
         const headers = { "Content-Type": "application/json", "X-Inbox-Token": token };
         const post = (payload, extra = {}) => fetch(`${entry.url}api`, {

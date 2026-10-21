@@ -106,7 +106,7 @@ function renderSessions() {
         $("sessions").append(row);
     }
     if (rows.length > sessionLimit) {
-        const more = node("button", "Show more sessions");
+        const more = node("button", "Show more sessions", "control-button");
         more.onclick = () => { sessionLimit += 300; renderSessions(); };
         $("sessions").append(more);
     }
@@ -201,7 +201,17 @@ function renderGallery() {
     if (!selected) { empty("Choose a session", "Select a session from the navigator to load its uploaded images and tool screenshots."); return; }
     if (scanning && !images.length) {
         $("pagination").hidden = true;
-        $("gallery").replaceChildren(node("div", null, "skeleton"));
+        $("summary").textContent = `Loading screenshots for ${session?.name || "this session"}...`;
+        $("sync").textContent = "Reading local image references...";
+        const progress = node("div", null, "loading-state");
+        progress.setAttribute("role", "status");
+        const spinner = node("span", null, "loading-spinner");
+        spinner.setAttribute("aria-hidden", "true");
+        progress.append(spinner, node("p", "Loading screenshots..."));
+        const skeleton = node("div", null, "skeleton");
+        skeleton.setAttribute("aria-hidden", "true");
+        progress.append(skeleton);
+        $("gallery").replaceChildren(progress);
         return;
     }
     if (!images.length) { empty("No retained images", "This session has no supported local image references. Check source warnings or include child sessions."); return; }
@@ -233,7 +243,7 @@ function renderGallery() {
             if (image.storage === "session") caption.append(node("span", "Retained session image", "image-meta"));
             button.append(thumbnail, caption);
             button.onclick = () => openPreview(image.id, button);
-            const download = node("button", null, "download-button");
+            const download = node("button", null, "control-button icon-button download-button");
             download.type = "button";
             download.title = `Download ${image.name}`;
             download.setAttribute("aria-label", `Download ${image.name}`);

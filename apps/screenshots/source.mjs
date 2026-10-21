@@ -6,7 +6,7 @@ import { basename, extname, isAbsolute, join, resolve } from "node:path";
 
 const formats = new Map([[".png", "image/png"], [".jpg", "image/jpeg"], [".jpeg", "image/jpeg"],
     [".gif", "image/gif"], [".webp", "image/webp"]]);
-const MAX_LOG = 64 * 1024 * 1024;
+const MAX_RECORD = 64 * 1024 * 1024;
 const MAX_IMAGE = 32 * 1024 * 1024;
 const MAX_IMAGES = 5000;
 export const sourceError = (code, message) => Object.assign(new Error(message), { code });
@@ -17,20 +17,25 @@ const validAssetId = (value) => typeof value === "string" && /^sha256:[a-f0-9]{6
 const screenshotTool = (name) => typeof name === "string" && /(?:^|[-_])(?:browser_take_screenshot|take_screenshot|screenshot)$/.test(name);
 
 async function* journalLines(file, size) {
+    if (!size) return;
     let parts = [], length = 0, offset = 0;
-    for await (const chunk of file.createReadStream({ autoClose: false, end: Math.max(0, size - 1) })) {
+    const append = part => {
+        length += part.length;
+        if (length <= MAX_RECORD) parts.push(part);
+        else parts = [];
+    };
+    const text = () => length <= MAX_RECORD ? Buffer.concat(parts, length).toString("utf8") : null;
+    for await (const chunk of file.createReadStream({ autoClose: false, end: size - 1 })) {
         let start = 0, end;
         while ((end = chunk.indexOf(10, start)) !== -1) {
-            parts.push(chunk.subarray(start, end + 1));
-            length += end + 1 - start;
-            const line = parts.length === 1 ? parts[0] : Buffer.concat(parts, length);
-            yield { text: line.toString("utf8"), offset, length };
+            append(chunk.subarray(start, end + 1));
+            yield { text: text(), offset, length };
             offset += length;
             parts = []; length = 0; start = end + 1;
         }
-        if (start < chunk.length) { parts.push(chunk.subarray(start)); length += chunk.length - start; }
+        if (start < chunk.length) append(chunk.subarray(start));
     }
-    if (length) yield { text: Buffer.concat(parts, length).toString("utf8"), offset, length };
+    if (length) yield { text: text(), offset, length };
 }
 
 function rows(db, table, required, optional = []) {
@@ -191,7 +196,7 @@ async function inspectImage(reference) {
 }
 
 async function retainedImage(asset) {
-    if (!asset || !validAssetId(asset.assetId) || asset.length <= 0 || asset.length > MAX_LOG) {
+    if (!asset || !validAssetId(asset.assetId) || asset.length <= 0 || asset.length > MAX_RECORD) {
         throw sourceError("asset_unavailable", "No retained session image is available.");
     }
     let file;
@@ -278,10 +283,6 @@ async function discover(home, session, warnings, budget) {
             file = await open(eventPath, "r");
             histories++;
             const info = await file.stat();
-            if (info.size > MAX_LOG) {
-                warnings.push(`${session.name}: history exceeds the 64 MiB discovery limit and was not scanned.`);
-                continue;
-            }
             if (info.size > budget.bytes) {
                 warnings.push(`${session.name}: history exceeds the remaining 128 MiB scope budget. Select a smaller session scope.`);
                 continue;
@@ -292,6 +293,10 @@ async function discover(home, session, warnings, budget) {
             let lineNumber = 0;
             for await (const line of journalLines(file, info.size)) {
                 lineNumber++;
+                if (line.text === null) {
+                    warnings.push(`${session.name}: a history record exceeds 64 MiB and was skipped.`);
+                    continue;
+                }
                 if (!line.text.trim()) continue;
                 let event;
                 try { event = JSON.parse(line.text); }

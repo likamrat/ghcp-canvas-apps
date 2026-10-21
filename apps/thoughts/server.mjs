@@ -2,11 +2,16 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { randomBytes, createHash } from "node:crypto";
 import { createBrowserPopout } from "./browser.mjs";
+import { inlineWordmark } from "./branding.mjs";
 
 const assets = new Map([
     ["/", ["index.html", "text/html; charset=utf-8"]],
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
+    ["/branding.css", ["branding.css", "text/css; charset=utf-8"]],
+    ["/filter.svg", ["filter.svg", "image/svg+xml"]],
+    ["/refresh.svg", ["refresh.svg", "image/svg+xml"]],
+    ["/ui-icons.svg", ["ui-icons.svg", "image/svg+xml"]],
     ["/browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
     ["/icon.png", ["icon.png", "image/png"]],
     ["/icon.svg", ["icon.svg", "image/svg+xml"]],
@@ -43,7 +48,8 @@ export async function startServer(store, { launchBrowser } = {}) {
                 if (file === "index.html") {
                     const icon = await readFile(new URL("icon.svg", import.meta.url));
                     content = content.toString("utf8").replace("__TOKEN__", token)
-                        .replace("__ICON_VERSION__", createHash("sha256").update(icon).digest("hex").slice(0, 12));
+                        .replace("__ICON_VERSION__", createHash("sha256").update(icon).digest("hex").slice(0, 12))
+                        .replace("__APP_WORDMARK__", inlineWordmark(await readFile(new URL("logo.svg", import.meta.url), "utf8")));
                 }
                 res.setHeader("Content-Type", type);
                 res.end(content);

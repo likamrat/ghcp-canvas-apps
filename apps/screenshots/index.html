@@ -6,6 +6,7 @@
     <title>Screenshots</title>
     <link rel="icon" type="image/svg+xml" href="./icon.svg?v=__ICON_VERSION__">
     <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./branding.css">
     <link rel="stylesheet" href="./multiselect.css">
     <script src="./multiselect.js" defer></script>
     <script type="module" src="./app.js"></script>
@@ -13,9 +14,16 @@
 </head>
 <body>
 <main>
-    <header><h1>Screenshots</h1><div class="header-actions"><span class="local-label">Local / read-only</span><button id="open-browser" type="button">Open in browser</button></div></header>
+    <header class="app-header">
+        <div class="app-brand">
+            <h1 class="app-wordmark" aria-label="Screenshots"><span class="visually-hidden">Screenshots</span>__APP_WORDMARK__</h1>
+            <p class="app-tagline">Less hunting for that one screenshot.</p>
+        </div>
+        <div class="header-actions"><button id="open-browser" class="control-button" type="button">Open in browser</button></div>
+    </header>
     <p id="browser-status" class="browser-status" role="status" hidden></p>
-    <section class="control-panel" aria-label="Screenshot controls">
+    <details class="control-panel">
+        <summary class="filter-heading">Filters and refresh</summary>
         <div class="control-row session-controls">
             <label class="check-filter"><input id="include-archived" type="checkbox"> Include archived sessions</label>
             <label class="check-filter" title="Include screenshots from descendants of the selected session. Expanding the navigator does not change image scope."><input id="include-children" type="checkbox" aria-describedby="child-scope-help"> Include child screenshots</label>
@@ -27,24 +35,24 @@
             <div class="field"><label for="to">To date</label><input id="to" type="date" aria-describedby="date-error"></div>
         </div>
         <p id="date-error" class="error-text" role="alert" hidden></p>
-        <div class="control-row display-controls">
-            <div class="field"><label for="sort">Sort by</label><select id="sort"><option value="timestamp">Timestamp</option><option value="name">Filename</option><option value="size">File size</option></select></div>
-            <div class="field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
-            <div class="field"><label for="group">Group by</label><select id="group"><option value="day">Day</option><option value="source">Source</option><option value="none">None</option></select></div>
-            <div class="field"><label for="thumbnail">Thumbnail size</label><select id="thumbnail"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
-            <div class="field"><label for="page-size">Screenshots per page</label><select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select></div>
-            <div class="field"><label for="auto-refresh">Auto-refresh</label><select id="auto-refresh" aria-describedby="refresh-status"><option value="0" selected>Off</option><option value="5000">Every 5 seconds</option><option value="10000">Every 10 seconds</option><option value="30000">Every 30 seconds</option><option value="60000">Every minute</option><option value="300000">Every 5 minutes</option></select></div>
-            <div class="control-actions"><button id="refresh" type="button">Refresh</button><button id="clear" class="quiet" type="button">Clear filters</button><button id="download-all" type="button" disabled><span class="download-icon" aria-hidden="true"></span>Download all</button></div>
+        <div class="control-row display-controls control-grid-three">
+            <div class="field select-field"><label for="sort">Sort by</label><select id="sort"><option value="timestamp">Timestamp</option><option value="name">Filename</option><option value="size">File size</option></select></div>
+            <div class="field select-field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
+            <div class="field select-field"><label for="group">Group by</label><select id="group"><option value="day">Day</option><option value="source">Source</option><option value="none">None</option></select></div>
+            <div class="field select-field"><label for="thumbnail">Thumbnail size</label><select id="thumbnail"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
+            <div class="field select-field"><label for="page-size">Screenshots per page</label><select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select></div>
+            <div class="field select-field"><label for="auto-refresh">Auto-refresh</label><select id="auto-refresh" aria-describedby="refresh-status"><option value="0" selected>Off</option><option value="5000">Every 5 seconds</option><option value="10000">Every 10 seconds</option><option value="30000">Every 30 seconds</option><option value="60000">Every minute</option><option value="300000">Every 5 minutes</option></select></div>
         </div>
-    </section>
+        <div class="control-actions"><button id="refresh" class="control-button refresh-control" type="button">Refresh</button><button id="clear" class="control-button" type="button">Clear filters</button><button id="download-all" class="control-button" type="button" disabled><span class="download-icon" aria-hidden="true"></span>Download all</button></div>
+    </details>
     <div class="overview"><p id="summary" role="status">Reading local sessions...</p><div class="refresh-summary"><span id="sync"></span><span id="refresh-status" role="status">Auto-refresh off</span></div></div>
     <p id="error" class="notice error-text" role="alert" hidden></p>
     <p id="warnings" class="notice" hidden></p>
     <div id="download-notice" class="notice download-notice" hidden>
         <p id="download-status" role="status"></p>
         <div class="download-notice-actions">
-            <button id="open-download-folder" type="button" hidden>Open in folder</button>
-            <button id="dismiss-download" type="button" aria-label="Dismiss download notification">Dismiss</button>
+            <button id="open-download-folder" class="control-button" type="button" hidden>Open in folder</button>
+            <button id="dismiss-download" class="control-button" type="button" aria-label="Dismiss download notification">Dismiss</button>
         </div>
     </div>
     <div class="browse">
@@ -57,7 +65,7 @@
                 </div>
                 <div class="compact-picker field">
                     <label id="session-picker-label" for="session-picker">Selected session</label>
-                    <button id="session-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="session-options" aria-labelledby="session-picker-label session-picker-value"><span id="session-picker-value">Select a session</span></button>
+                    <button id="session-picker" class="control-button" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="session-options" aria-labelledby="session-picker-label session-picker-value"><span id="session-picker-value">Select a session</span></button>
                 </div>
                 <div id="session-options" role="listbox" aria-label="Matching sessions" hidden></div>
             </div>
@@ -70,9 +78,9 @@
             <nav id="pagination" aria-label="Screenshot pages" hidden>
                 <span id="page-range" role="status"></span>
                 <div class="page-buttons">
-                    <button id="page-previous" type="button">Previous page</button>
+                    <button id="page-previous" class="control-button icon-button" type="button" aria-label="Previous page" title="Previous page"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#back"/></svg></button>
                     <span id="page-status" aria-live="polite"></span>
-                    <button id="page-next" type="button">Next page</button>
+                    <button id="page-next" class="control-button icon-button" type="button" aria-label="Next page" title="Next page"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#forward"/></svg></button>
                 </div>
             </nav>
         </section>
@@ -80,18 +88,18 @@
     <footer>Images stay on this computer. Only retained session image references are indexed.</footer>
 </main>
 <dialog id="viewer" aria-labelledby="preview-name">
-    <div class="viewer-header"><h2 id="preview-name">Screenshot</h2><button id="close-preview" type="button">Close</button></div>
+    <div class="viewer-header"><h2 id="preview-name">Screenshot</h2><button id="close-preview" class="control-button icon-button" type="button" aria-label="Close preview" title="Close preview"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#close"/></svg></button></div>
     <div class="preview-controls" aria-label="Preview controls">
-        <button id="previous" type="button" aria-label="Previous screenshot">Previous</button>
-        <button id="next" type="button" aria-label="Next screenshot">Next</button>
+        <button id="previous" class="control-button icon-button" type="button" aria-label="Previous screenshot" title="Previous screenshot"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#back"/></svg></button>
+        <button id="next" class="control-button icon-button" type="button" aria-label="Next screenshot" title="Next screenshot"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#forward"/></svg></button>
         <span id="position"></span>
         <div class="zoom-controls" role="group" aria-label="Zoom controls">
             <span class="zoom-label">Zoom</span>
-            <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+            <button id="zoom-out" class="control-button icon-button" type="button" aria-label="Zoom out" title="Zoom out"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#minus"/></svg></button>
             <output id="zoom" aria-label="Zoom level" aria-live="polite"></output>
-            <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
-            <button id="actual" type="button" aria-pressed="false" title="Show the image at 100%">Actual size</button>
-            <button id="reset-zoom" type="button" title="Restore the original preview size and position">Reset zoom</button>
+            <button id="zoom-in" class="control-button icon-button" type="button" aria-label="Zoom in" title="Zoom in"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#plus"/></svg></button>
+            <button id="actual" class="control-button" type="button" aria-pressed="false" title="Show the image at 100%">Actual size</button>
+            <button id="reset-zoom" class="control-button icon-button" type="button" aria-label="Reset zoom" title="Restore the original preview size and position"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#reset"/></svg></button>
         </div>
     </div>
     <div id="preview-stage" class="preview-stage" tabindex="0" aria-label="Image preview">

@@ -3,14 +3,15 @@ import assert from "node:assert/strict";
 import { startServer as screenshots } from "../apps/screenshots/server.mjs";
 import { startServer as monitor } from "../apps/context-monitor/server.mjs";
 import { startServer as thoughts } from "../apps/thoughts/server.mjs";
+import { startServer as artifacts } from "../apps/artifacts/server.mjs";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
 test("all apps declare and serve bundled favicons in standalone browser views", async (t) => {
-    const servers = [await screenshots({}), await monitor(() => ({})), await thoughts({})];
+    const servers = [await screenshots({}), await monitor(() => ({})), await thoughts({}), await artifacts({})];
     t.after(() => Promise.all(servers.map((server) => server.close())));
     for (const [index, server] of servers.entries()) {
-        const app = ["screenshots", "context-monitor", "thoughts"][index];
+        const app = ["screenshots", "context-monitor", "thoughts", "artifacts"][index];
         const base = new URL(`../apps/${app}/`, import.meta.url);
         const page = new URL(server.url);
         page.searchParams.set("view", "browser");
@@ -38,13 +39,23 @@ test("all apps declare and serve bundled favicons in standalone browser views", 
     }
 });
 
+test("Artifacts uses the hat-and-glasses symbol in its wordmark and app icon", async () => {
+    for (const name of ["logo.svg", "icon.svg"]) {
+        const svg = await readFile(new URL(`../apps/artifacts/${name}`, import.meta.url), "utf8");
+        assert.match(svg, /<path d="M14 18a2 2 0 0 0-4 0"/);
+        assert.match(svg, /<path d="M2 11h20"/);
+        assert.match(svg, /<circle cx="17" cy="18" r="3"/);
+        assert.match(svg, /<circle cx="7" cy="18" r="3"/);
+    }
+});
+
 test("each app has one complete background-backed logo and a matching Lucide app icon", async () => {
     const luminance = (hex) => {
         const rgb = hex.match(/[a-f0-9]{2}/gi).map((part) => parseInt(part, 16) / 255)
             .map((value) => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
         return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
     };
-    for (const [app, name] of [["screenshots", "Screenshots"], ["context-monitor", "Context Monitor"], ["thoughts", "Thoughts"]]) {
+    for (const [app, name] of [["screenshots", "Screenshots"], ["context-monitor", "Context Monitor"], ["thoughts", "Thoughts"], ["artifacts", "Artifacts"]]) {
         const base = new URL(`../apps/${app}/`, import.meta.url);
         const svg = await readFile(new URL("icon.svg", base), "utf8");
         assert.match(svg, /viewBox="0 0 64 64"/);
@@ -79,7 +90,7 @@ test("each app has one complete background-backed logo and a matching Lucide app
         assert.match(logo, /<g[^>]+aria-label=/, "The logo must contain the outlined wordmark");
         assert.doesNotMatch(logo, /<text|<script|<image|@font-face|prefers-color-scheme/, "One logo must work without font, image, or theme dependencies");
         assert.match(logo, /data-typeface="Bricolage Grotesque"/);
-        assert.match(logo, /data-replaced-letter="o"/);
+        assert.match(logo, new RegExp(`data-replaced-letter="${app === "artifacts" ? "a" : "o"}"`));
         assert.match(logo, /<circle[^>]+class="icon-halo"/, "The letter replacement must have a subtle circular background");
         const halo = logo.match(/<circle class="icon-halo"[^>]+>/)?.[0];
         assert.match(halo, /fill="#000000"/);
@@ -92,7 +103,7 @@ test("each app has one complete background-backed logo and a matching Lucide app
         assert.ok(metrics, "Record the glyph-edge spacing used to center the circle");
         assert.ok(Math.abs(Number(metrics[1]) - Number(metrics[2])) < .01,
             "The circle must be centered between the visible letter edges, not font advance boxes");
-        assert.match(logo, new RegExp(`data-letter-prefix="${app === "screenshots" ? "screensh" : app === "context-monitor" ? "context monit" : "th"}"`));
+        assert.match(logo, new RegExp(`data-letter-prefix="${app === "screenshots" ? "screensh" : app === "context-monitor" ? "context monit" : app === "artifacts" ? "artif" : "th"}"`));
         const wordmark = logo.slice(logo.indexOf(`<g aria-label="${name}"`));
         assert.equal((wordmark.match(/<path transform=/g) ?? []).length, name.length - 1,
             "The symbol replaces one letter; every other wordmark glyph belongs in the image");

@@ -6,8 +6,8 @@
     <meta name="monitor-token" content="__TOKEN__">
     <title>Context Monitor</title>
     <link rel="icon" type="image/svg+xml" href="/icon.svg?v=__ICON_VERSION__">
-    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/branding.css">
     <link rel="stylesheet" href="/multiselect.css">
     <script src="/multiselect.js" defer></script>
     <script type="module" src="/app.js"></script>
@@ -15,10 +15,17 @@
 </head>
 <body>
     <main>
-        <header><h1>Context Monitor</h1><button id="open-browser" type="button">Open in browser</button></header>
+        <header class="app-header">
+            <div class="app-brand">
+                <h1 class="app-wordmark" aria-label="Context Monitor"><span class="visually-hidden">Context Monitor</span>__APP_WORDMARK__</h1>
+                <p class="app-tagline">See which chats are running out of room.</p>
+            </div>
+            <button id="open-browser" class="control-button" type="button">Open in browser</button>
+        </header>
         <p id="browser-status" class="browser-status" role="status" hidden></p>
-        <section class="control-panel" aria-label="Session controls">
-            <div class="control-filters">
+        <details class="control-panel">
+            <summary class="filter-heading">Filters and refresh</summary>
+            <div class="control-filters control-grid-three">
                 <div class="search"><label for="search">Search sessions</label><input id="search" type="search" placeholder="Name, project, or model" autocomplete="off"></div>
                 <div class="model-choice">
                     <label for="model-filter">Model</label>
@@ -34,8 +41,8 @@
                     </select>
                 </div>
             </div>
-            <div class="control-options">
-                <div class="sort-choice">
+            <div class="control-options control-grid-three">
+                <div class="sort-choice select-field">
                     <label for="sort-by">Sort by</label>
                     <select id="sort-by" aria-describedby="sort-help">
                         <option value="recent" selected>Recent activity (default)</option>
@@ -48,7 +55,7 @@
                         <option value="name-za">Name: Z to A</option>
                     </select>
                 </div>
-                <div class="refresh-choice">
+                <div class="refresh-choice select-field">
                     <label for="auto-refresh">Auto-refresh</label>
                     <select id="auto-refresh">
                         <option value="0">Off</option>
@@ -59,17 +66,17 @@
                         <option value="300000">Every 5 minutes</option>
                     </select>
                 </div>
-                <div class="page-size-choice">
+                <div class="page-size-choice select-field">
                     <label for="page-size">List sessions per page</label>
                     <select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select>
                 </div>
-                <div class="scope-filters">
-                    <label class="check-filter"><input id="pinned-only" type="checkbox" disabled> Only pinned sessions</label>
-                    <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
-                    <label class="check-filter"><input id="include-missing" type="checkbox"> Include sessions without context data</label>
-                </div>
-                <button id="refresh" type="button">Refresh</button>
             </div>
+            <div class="scope-filters">
+                <label class="check-filter"><input id="pinned-only" type="checkbox" disabled> Only pinned sessions</label>
+                <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
+                <label class="check-filter"><input id="include-missing" type="checkbox"> Include sessions without context data</label>
+            </div>
+            <div class="control-actions"><button id="refresh" class="control-button refresh-control" type="button">Refresh</button></div>
             <div class="control-settings">
                 <details class="threshold-settings">
                     <summary>Usage settings</summary>
@@ -77,8 +84,8 @@
                         <fieldset id="threshold-controls" disabled>
                             <div class="threshold-field"><label for="amber-threshold">Warning level (%)</label><input id="amber-threshold" type="number" min="0" max="100" step="1" value="65" required aria-describedby="threshold-help"></div>
                             <div class="threshold-field"><label for="rose-threshold">High usage level (%)</label><input id="rose-threshold" type="number" min="0" max="100" step="1" value="85" required aria-describedby="threshold-help"></div>
-                            <button type="submit">Apply</button>
-                            <button id="reset-thresholds" type="button">Reset defaults</button>
+                            <button class="control-button" type="submit">Apply</button>
+                            <button id="reset-thresholds" class="control-button" type="button">Reset defaults</button>
                         </fieldset>
                         <p id="threshold-help" class="threshold-hint">Percent of context used. Warning must be below High usage.</p>
                         <p id="threshold-status" class="threshold-status" role="status"></p>
@@ -93,7 +100,7 @@
             <p id="filter-help" class="sr-only">Select any combination. No selection includes all. Models are from your open sessions. Usage levels follow your saved thresholds. Parents stay visible for matching nested sessions.</p>
             <p id="filter-status" class="filter-notice" role="status" hidden></p>
             <p id="sort-help" class="sr-only">Recent activity first. Parents and nested sessions stay together.</p>
-        </section>
+        </details>
         <div class="overview">
             <p id="count" role="status">Reading local sessions...</p>
             <div class="legend" aria-label="Context usage levels">
@@ -113,9 +120,9 @@
         <nav id="pagination" aria-label="Session list pages" hidden>
             <span id="page-range" role="status"></span>
             <div class="page-buttons">
-                <button id="page-previous" type="button" aria-label="Previous page">Previous page</button>
+                <button id="page-previous" class="control-button icon-button" type="button" aria-label="Previous page" title="Previous page"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#back"/></svg></button>
                 <span id="page-status" aria-live="polite"></span>
-                <button id="page-next" type="button" aria-label="Next page">Next page</button>
+                <button id="page-next" class="control-button icon-button" type="button" aria-label="Next page" title="Next page"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#forward"/></svg></button>
             </div>
         </nav>
         <div class="column-head" aria-hidden="true"><span>Session</span><span>Model / token totals</span><span>Context window</span><span></span></div>

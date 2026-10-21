@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Artifacts</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg?v=__ICON_VERSION__">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="branding.css">
+    <link rel="stylesheet" href="multiselect.css">
+    <script src="multiselect.js" defer></script>
+    <script src="browser.js" defer></script>
+    <script src="app.js" type="module"></script>
+</head>
+<body>
+<main>
+    <header class="app-header">
+        <div class="app-brand">
+            <h1 class="app-wordmark" aria-label="Artifacts"><span class="visually-hidden">Artifacts</span>__APP_WORDMARK__</h1>
+            <p class="app-tagline">Your work shouldn't get lost in the chat.</p>
+        </div>
+        <div class="header-actions">
+            <button id="new-note" class="control-button" type="button" disabled><span data-icon="plus"></span>New note</button>
+            <button id="refresh" class="control-button refresh-control" type="button">Refresh</button>
+            <button id="open-browser" class="control-button" type="button">Open in browser</button>
+        </div>
+    </header>
+    <p id="browser-status" class="browser-status" role="status" hidden></p>
+    <div class="field session-context"><label id="session-picker-label" for="session-picker">Session</label>
+        <button id="session-picker" class="control-button" type="button" aria-labelledby="session-picker-label session-picker-value" aria-haspopup="dialog" aria-expanded="false" aria-controls="session-menu" disabled><span id="session-picker-value">Choose a session</span></button>
+    </div>
+    <details id="filters" class="control-panel">
+        <summary class="filter-heading">Filters and refresh</summary>
+        <div class="session-controls">
+            <label class="check-filter"><input id="include-children" type="checkbox">Include child sessions</label>
+            <label class="check-filter"><input id="include-archived" type="checkbox">Include archived sessions</label>
+        </div>
+        <div class="control-row artifact-controls">
+            <div class="field"><label for="kinds">Type</label><select id="kinds" multiple data-multiselect="All types">
+                <option value="document">Documents</option><option value="image">Images</option><option value="diagram">Diagrams</option><option value="table">Tables</option><option value="file">Other files</option>
+            </select></div>
+            <div class="field"><label for="sources">Source</label><select id="sources" multiple data-multiselect="All sources">
+                <option value="published">Published</option><option value="session-file">Session files</option><option value="uploaded">Uploaded</option><option value="tool">Tool reference</option><option value="generated">Tool-generated</option><option value="unknown">Unknown</option>
+            </select></div>
+            <div class="field"><label for="from">From date</label><input id="from" type="date"></div>
+            <div class="field"><label for="to">To date</label><input id="to" type="date"></div>
+        </div>
+        <div class="control-row display-controls">
+            <div class="field select-field"><label for="sort">Sort by</label><select id="sort"><option value="timestamp">Date</option><option value="name">Filename</option><option value="size">File size</option></select></div>
+            <div class="field select-field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
+            <div class="field select-field"><label for="page-size">Artifacts per page</label><select id="page-size"><option>8</option><option selected>16</option><option>32</option></select></div>
+            <div class="field select-field"><label for="auto-refresh">Auto-refresh</label><select id="auto-refresh"><option value="0">Off</option><option value="5000">5 seconds</option><option value="10000">10 seconds</option><option value="30000">30 seconds</option><option value="60000">1 minute</option><option value="300000">5 minutes</option></select></div>
+        </div>
+        <div class="control-actions"><button id="clear-filters" class="control-button" type="button">Clear filters</button></div>
+        <p id="filter-error" class="error-text" role="alert" hidden></p>
+    </details>
+    <div class="overview">
+        <p id="scope-summary">Loading sessions...</p>
+        <div class="view-switch">
+            <details id="view-menu" class="view-menu">
+                <summary class="control-button" aria-label="Artifact layout"><span id="view-icon" data-icon="list"></span><span id="view-label">List</span><span data-icon="chevron"></span></summary>
+                <div class="view-options" role="group" aria-label="Artifact layout">
+                    <button class="control-button layout-option" type="button" data-layout="workspace" aria-pressed="true"><span data-icon="list"></span>List</button>
+                    <button class="control-button layout-option" type="button" data-layout="library" aria-pressed="false"><span data-icon="grid"></span>Gallery</button>
+                    <button class="control-button layout-option" type="button" data-layout="activity" aria-pressed="false"><span data-icon="history"></span>Timeline</button>
+                </div>
+            </details>
+        </div>
+    </div>
+    <p id="sync" class="muted" role="status"></p>
+    <div id="error" class="notice error-text" role="alert" hidden></div>
+    <details id="warnings" class="notice" hidden><summary>Discovery notes</summary><ul id="warning-list"></ul></details>
+    <div id="download-notice" class="notice download-notice" hidden>
+        <p id="download-status" role="status"></p>
+        <div class="download-notice-actions">
+            <button id="open-download-folder" class="control-button" type="button" hidden>Open in folder</button>
+            <button id="dismiss-download" class="control-button" type="button" aria-label="Dismiss download notification">Dismiss</button>
+        </div>
+    </div>
+    <div class="browse">
+        <section class="artifact-area">
+            <div id="surface" data-layout="workspace">
+                <aside class="artifact-nav" aria-label="Artifact navigator">
+                    <h2>Artifacts</h2>
+                    <div class="collection-nav" role="group" aria-label="Artifact collection">
+                        <button id="collection-all" class="control-button" type="button" data-collection="all" aria-pressed="true"><span data-icon="folder"></span>All artifacts</button>
+                        <button id="collection-pinned" class="control-button" type="button" data-collection="pinned" aria-pressed="false"><span data-icon="pin"></span>Pinned</button>
+                    </div>
+                    <div class="field artifact-search"><label for="search" class="visually-hidden">Filename or title</label><input id="search" type="search" maxlength="500" placeholder="Find an artifact"></div>
+                    <section id="artifact-list" aria-label="Artifacts" aria-busy="true"><div class="load-state" role="status"><span class="loading-spinner" aria-hidden="true"></span><h2>Loading artifacts...</h2><p>Reading local session data.</p></div></section>
+                    <div class="pagination"><button id="previous-page" class="control-button icon-button" type="button" aria-label="Previous page" title="Previous page"><span data-icon="back"></span></button><span id="page-summary"></span><button id="next-page" class="control-button icon-button" type="button" aria-label="Next page" title="Next page"><span data-icon="forward"></span></button></div>
+                </aside>
+                <section id="reader" aria-label="Selected artifact" aria-busy="true">
+                    <div class="reader-heading">
+                        <div class="reader-identity"><h2 id="reader-title">Selected artifact</h2><p id="reader-meta"></p></div>
+                        <div id="reader-actions" class="reader-actions" role="group" aria-label="Artifact actions"></div>
+                    </div>
+                    <div class="reader-toolbar"><button id="back" type="button"><span data-icon="back"></span>Artifacts</button>
+                        <div class="tabs" role="group" aria-label="Artifact information"><button type="button" data-tab="preview" aria-pressed="true"><span data-icon="eye"></span>Preview</button><button type="button" data-tab="versions" aria-pressed="false"><span data-icon="history"></span>Versions</button><button type="button" data-tab="details" aria-pressed="false"><span data-icon="info"></span>File info</button></div>
+                    </div>
+                    <div id="reader-content"><div class="load-state" role="status"><span class="loading-spinner" aria-hidden="true"></span><h2>Preparing the preview...</h2><p>The preview will appear when the files are ready.</p></div></div>
+                </section>
+            </div>
+        </section>
+    </div>
+</main>
+<div id="session-menu" class="session-popover" role="dialog" aria-label="Choose a session" hidden>
+    <div class="picker-head">
+        <div class="picker-search-row">
+            <input id="session-picker-search" type="search" role="combobox" aria-label="Search sessions or projects" aria-controls="session-options" aria-expanded="false" aria-autocomplete="list" aria-describedby="session-picker-help" placeholder="Session or project" autocomplete="off">
+            <button id="session-picker-close" class="control-button" type="button" aria-label="Close session picker">Close</button>
+        </div>
+        <p id="session-picker-count" role="status"></p>
+        <span id="session-picker-help" class="visually-hidden">Use arrow keys to move through sessions and Enter to select. Escape closes the picker. Home and End work when the list is focused.</span>
+    </div>
+    <div id="session-options" class="session-scroll" role="listbox" aria-label="Sessions" tabindex="0"></div>
+    <div class="picker-footer">
+        <button id="session-picker-current" class="control-button" type="button" title="Clear search and reveal the selected session">Show selected</button>
+        <button id="session-picker-top" class="control-button" type="button" title="Scroll the session list to the top">Back to top</button>
+    </div>
+</div>
+<dialog id="note-dialog">
+    <form id="note-form">
+        <div class="dialog-heading"><h2 id="note-heading">New note</h2><button type="button" id="close-note" class="control-button" aria-label="Close note editor">Close</button></div>
+        <p class="muted">Saved in Artifacts. Original session files stay unchanged.</p>
+        <label for="note-title">Title</label><input id="note-title" maxlength="200" required>
+        <label for="note-content">Markdown</label><textarea id="note-content" rows="16" required></textarea>
+        <p id="note-error" class="error-text" role="alert" hidden></p>
+        <div class="dialog-actions"><button type="button" id="cancel-note" class="control-button">Cancel</button><button id="save-note" class="control-button" type="submit">Save note</button></div>
+    </form>
+</dialog>
+<dialog id="request-dialog">
+    <div class="dialog-heading"><h2>Request a change</h2><button type="button" id="close-request" class="control-button" aria-label="Close request">Close</button></div>
+    <p class="muted">Copy this request into Copilot chat. No message is sent from this canvas.</p>
+    <label for="request-content">Request</label><textarea id="request-content" rows="10"></textarea>
+    <p id="copy-status" role="status"></p><div class="dialog-actions"><button type="button" id="copy-request" class="control-button">Copy request</button></div>
+</dialog>
+</body>
+</html>
