@@ -15,6 +15,7 @@ const layout = new URL(location.href).searchParams.get("layout");
 if (["workspace", "library", "activity"].includes(layout)) state.view.layout = layout;
 const scanGate = createRequestGate(), readGate = createRequestGate();
 let editing = null;
+let downloading = false, lastDownload = null;
 const sessionPicker = createSessionPicker({ onSelect: changeSession });
 const kindLabels = { document: "Document", image: "Image", diagram: "Diagram", table: "Table", file: "File" };
 const glyphNames = new Set(["document", "image", "diagram", "table", "pin", "folder", "list", "grid", "history", "chevron", "back", "forward", "eye", "info", "download", "message", "edit", "minus", "plus", "reset"]);
@@ -32,9 +33,8 @@ const pinButton = record => {
     return iconButton("pin", `${label} ${artifactLabel(record)}`, "pin",
         `data-id="${esc(record.id)}" aria-pressed="${record.pinned}" ${state.pendingPins.has(record.id) ? "disabled" : ""}`, label);
 };
-const fileUrl = (record, download = false) => {
+const fileUrl = record => {
     const url = new URL(`file/${record.id}`, location.href);
-    if (download) url.searchParams.set("download", "true");
     if (state.view.selectedId === record.id && state.view.revision) url.searchParams.set("version", state.view.revision);
     return url.href;
 };
@@ -75,6 +75,45 @@ async function api(path, input) {
     if (!response.ok) throw new Error(result.error || `Artifacts request failed (${response.status}).`);
     return result;
 }
+function downloadNotice(message, saved = null) {
+    lastDownload = saved;
+    $("download-status").textContent = message;
+    $("download-notice").hidden = false;
+    $("open-download-folder").hidden = !saved?.downloadId;
+}
+async function downloadArtifact(record) {
+    if (!record || downloading) return;
+    const input = { id: record.id, ...(state.view.revision ? { version: state.view.revision } : {}) };
+    downloading = true;
+    for (const control of document.querySelectorAll('[data-action="download"]')) control.disabled = true;
+    downloadNotice(`Saving ${record.name}...`);
+    try {
+        const saved = await api("api/save-download", input);
+        downloadNotice(`Saved ${saved.name} to ${saved.path}`, saved);
+    } catch (error) { downloadNotice(`Download failed: ${error.message}`); }
+    finally {
+        downloading = false;
+        for (const control of document.querySelectorAll('[data-action="download"]')) control.disabled = false;
+    }
+}
+$("dismiss-download").addEventListener("click", () => {
+    $("download-notice").hidden = true;
+    (document.querySelector('[data-action="download"]:not(:disabled)') ?? $("refresh")).focus();
+});
+$("open-download-folder").addEventListener("click", async () => {
+    const saved = lastDownload;
+    if (!saved?.downloadId) return;
+    $("open-download-folder").disabled = true;
+    try {
+        const result = await api("api/open-download-folder", { downloadId: saved.downloadId });
+        if (lastDownload?.downloadId === saved.downloadId) {
+            $("download-status").textContent = result.selected ? `Opened folder with ${saved.name} selected. Saved at ${saved.path}`
+                : `Opened the download folder. Saved at ${saved.path}`;
+        }
+    } catch (error) {
+        if (lastDownload?.downloadId === saved.downloadId) downloadNotice(`Could not open folder: ${error.message} Saved at ${saved.path}`, saved);
+    } finally { $("open-download-folder").disabled = false; }
+});
 function syncStatus() {
     const interval = Number($("auto-refresh").value);
     $("sync").textContent = state.phase === "loading" ? "Reading local artifacts..." :
@@ -257,7 +296,7 @@ function renderReaderHeader(record, metadata = record, ready = false) {
     $("reader-title").title = record?.name ?? "";
     $("reader-meta").textContent = record ? `${SOURCES[record.source] ?? record.source} · ${date(metadata.timestamp)}${metadata.version ? ` · Version ${metadata.version}` : ""}` : "";
     $("reader-actions").innerHTML = !ready ? "" : `${pinButton(record)}
-        ${record.availability === "available" ? `<a class="control-button icon-button download-link" href="${esc(fileUrl(record, true))}" download aria-label="Download artifact" title="Download artifact">${glyph("download")}</a>
+        ${record.availability === "available" ? `${iconButton("download", "Download artifact", "download", downloading ? "disabled" : "")}
         ${button("request", `${glyph("message")}<span>Request a change</span>`)}` : ""}
         ${record.source === "published" && !state.view.revision ? iconButton("edit", "Edit note", "edit") : ""}`;
 }
@@ -440,6 +479,7 @@ document.addEventListener("click", async event => {
     }
     if (target.dataset.tab) { state.tab = target.dataset.tab; void loadSelected(); return; }
     const action = target.dataset.action, record = selected();
+    if (action === "download") { await downloadArtifact(record); return; }
     if (action === "select") { chooseArtifact(target.dataset.id); return; }
     if (action === "refresh") { void refresh(); return; }
     if (action === "retry-preview") { void loadSelected(); return; }

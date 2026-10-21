@@ -4,6 +4,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { createBrowserPopout } from "./browser.mjs";
 import { inlineWordmark } from "./branding.mjs";
+import { saveFile, revealDownload } from "./download-files.mjs";
 
 const assets = new Map([
     ["", ["index.html", "text/html; charset=utf-8"]],
@@ -46,9 +47,11 @@ async function body(req, allowed, maximum = 2 * 1024 * 1024) {
 }
 const disposition = name => `attachment; filename="artifact"; filename*=UTF-8''${encodeURIComponent(name).replace(/['()*]/g, character => `%${character.charCodeAt(0).toString(16)}`)}`;
 
-export async function startServer(catalog, { sessionId, launchBrowser } = {}) {
+export async function startServer(catalog, { sessionId, launchBrowser, downloadDirectory, revealFile = revealDownload } = {}) {
     const prefix = `/${randomBytes(32).toString("hex")}/`;
     let scanning = false;
+    let saving = false;
+    const savedDownloads = new Map();
     const popout = createBrowserPopout(() => `http://127.0.0.1:${server.address().port}${prefix}`, launchBrowser);
     const server = createServer(async (req, res) => {
         const origin = `http://127.0.0.1:${server.address().port}`;
@@ -68,6 +71,31 @@ export async function startServer(catalog, { sessionId, launchBrowser } = {}) {
             const route = url.pathname.slice(prefix.length);
             if (req.method === "POST") {
                 if (route === "api/open-browser") { json(await popout.open(req)); return; }
+                if (route === "api/save-download") {
+                    const input = await body(req, ["id", "version"], 2048);
+                    if (typeof input.id !== "string" || !/^[a-f0-9]{64}$/.test(input.id) ||
+                        (input.version !== undefined && (!Number.isSafeInteger(input.version) || input.version < 1 || input.version > 999999999))) {
+                        fail("Choose an indexed artifact and a valid captured revision.");
+                    }
+                    if (saving) fail("An artifact is still being saved. Retry when it finishes.", "download_busy");
+                    saving = true;
+                    try {
+                        const result = await catalog.read(input.id, { version: input.version });
+                        const saved = await saveFile(result.bytes ?? Buffer.from(result.content, "utf8"), result.filename, downloadDirectory);
+                        const downloadId = randomBytes(16).toString("hex");
+                        savedDownloads.set(downloadId, saved.path);
+                        if (savedDownloads.size > 1000) savedDownloads.delete(savedDownloads.keys().next().value);
+                        json({ ...saved, downloadId });
+                    } finally { saving = false; }
+                    return;
+                }
+                if (route === "api/open-download-folder") {
+                    const input = await body(req, ["downloadId"], 1024);
+                    if (typeof input.downloadId !== "string" || !/^[a-f0-9]{32}$/.test(input.downloadId)) fail("Choose a completed download.");
+                    const path = savedDownloads.get(input.downloadId);
+                    if (!path) fail("This download is no longer tracked. Download the file again to reveal it.", "download_missing");
+                    json(await revealFile(path)); return;
+                }
                 if (route === "api/publish") {
                     const input = await body(req, ["sessionId", "title", "content", "id", "expectedVersion"]);
                     json(await catalog.publish(input)); return;

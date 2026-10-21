@@ -61,3 +61,41 @@ test("artifact navigation and reader controls have distinct scopes", async () =>
     assert.doesNotMatch(html, /data-tab="activity"|class="session-sidebar"/);
     assert.ok(html.indexOf('id="reader-actions"') < html.indexOf('id="reader-content"'));
 });
+
+test("canvas downloads use the saved-file API, retain the chosen revision, and report failures", async () => {
+    const source = await readFile(new URL("app.js", import.meta.url), "utf8");
+    const start = source.indexOf("function downloadNotice("), end = source.indexOf('$("dismiss-download")');
+    assert.ok(start >= 0 && end > start);
+    const controls = [{ disabled: false }], elements = new Map(), calls = [];
+    const state = { view: { revision: 1 } };
+    let resolve;
+    const pending = new Promise(done => { resolve = done; });
+    const context = {
+        state, document: { querySelectorAll: () => controls },
+        $: id => { if (!elements.has(id)) elements.set(id, {}); return elements.get(id); },
+        api: async (path, input) => { calls.push([path, input]); return pending; },
+    };
+    const download = runInNewContext(`let downloading = false, lastDownload = null;\n${source.slice(start, end)}\ndownloadArtifact`, context);
+    const first = download({ id: "a".repeat(64), name: "note.md" });
+    state.view.revision = 2;
+    await download({ id: "b".repeat(64), name: "other.md" });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][0], "api/save-download");
+    assert.equal(calls[0][1].version, 1);
+    assert.equal(controls[0].disabled, true);
+    resolve({ name: "note.md", path: "Downloads/note.md", downloadId: "saved" });
+    await first;
+    assert.equal(elements.get("download-status").textContent, "Saved note.md to Downloads/note.md");
+    assert.equal(elements.get("open-download-folder").hidden, false);
+    assert.equal(controls[0].disabled, false);
+    context.api = async () => { throw new Error("Permission denied"); };
+    await download({ id: "a".repeat(64), name: "note.md" });
+    assert.match(elements.get("download-status").textContent, /Download failed: Permission denied/);
+    assert.equal(elements.get("open-download-folder").hidden, true);
+    assert.equal(controls[0].disabled, false);
+});
+
+test("download file helpers are identical in both independently installable apps", async () => {
+    assert.equal(await readFile(new URL("download-files.mjs", import.meta.url), "utf8"),
+        await readFile(new URL("../screenshots/download-files.mjs", import.meta.url), "utf8"));
+});

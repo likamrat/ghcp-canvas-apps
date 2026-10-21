@@ -26,6 +26,8 @@ Markdown opens as a formatted document, including tables and local images. Code 
 
 Create notes, revisit their saved versions, or download a file. **Request a change** prepares text to copy into Copilot chat; it does not send a message.
 
+Downloads go to your Downloads folder without replacing existing files. Use **Open in folder** to find the saved copy.
+
 Your files stay local and unchanged. Version history covers notes saved through Artifacts, not earlier versions of discovered files.
 
 <a href="screenshot-dark.png"><img src="screenshot-dark.png" alt="Artifacts in dark mode" width="960"></a>

@@ -71,6 +71,13 @@
     <p id="sync" class="muted" role="status"></p>
     <div id="error" class="notice error-text" role="alert" hidden></div>
     <details id="warnings" class="notice" hidden><summary>Discovery notes</summary><ul id="warning-list"></ul></details>
+    <div id="download-notice" class="notice download-notice" hidden>
+        <p id="download-status" role="status"></p>
+        <div class="download-notice-actions">
+            <button id="open-download-folder" class="control-button" type="button" hidden>Open in folder</button>
+            <button id="dismiss-download" class="control-button" type="button" aria-label="Dismiss download notification">Dismiss</button>
+        </div>
+    </div>
     <div class="browse">
         <section class="artifact-area">
             <div id="surface" data-layout="workspace">
