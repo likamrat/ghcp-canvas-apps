@@ -24,17 +24,19 @@ If you cannot inspect that list, say so. Then open Artifacts.
 
 ## Use
 
-Opens with the current session selected. Choose another session in the navigator or include its child sessions.
+Opens with the current session selected. Choose another session at the top or include its child sessions.
 
-In narrow views, choose a session above the filters and view buttons. The picker has search, its own scrollbar, **Back to top**, and **Show selected**. These controls stay visible while the list scrolls. Use arrow keys and Enter to choose a session, or Escape to close.
+The session picker stays above the filters at every width. It has search, its own scrollbar, **Back to top**, and **Show selected**. These controls stay visible while the list scrolls. Use arrow keys and Enter to choose a session, or Escape to close.
 
 [Session picker with example sessions](screenshot-sessions.png)
 
-- **Workspace** puts the artifact list beside a reader. **Library** shows file cards and image previews. **Activity** lists artifact references by date. All three use the same filters.
-- **Filters and refresh** starts collapsed. Expand it to filter by filename or title, type, source, date, or pinned status. Type and Source accept multiple selections. Selections within a filter are combined; different filters narrow the results together.
-- Sort by date, filename, or size. Activity switches to date sorting. Browse 8, 16, or 32 artifacts per page.
+- The default workspace has an artifact navigator on the left and a preview on the right. **All artifacts** and **Pinned** change the collection. Search stays beside the list. Each row has a pin button that works without opening the file.
+- The **List** menu offers **Gallery** for visual browsing and **Timeline** for dated artifact references. These are alternate views of the same collection, not steps in a workflow.
+- **Filters and refresh** starts collapsed. Expand it to filter by type, source, or date. Type and Source accept multiple selections. Selections within a filter are combined; different filters narrow the results together.
+- Sort by date, filename, or size. Timeline switches to date sorting. Browse 8, 16, or 32 artifacts per page.
 - **Refresh** reads the selected scope again. Session changes show a loading indicator until discovery finishes. Refreshing the same session keeps its last results visible. **Auto-refresh** starts off and supports 5, 10, or 30 seconds, 1 minute, or 5 minutes. It pauses while hidden and preserves filters, selection, and page when they still apply.
-- Select an artifact to preview it, inspect its source, pin it, or download it. Images and SVG diagrams have zoom controls. CSV and TSV files open as tables.
+- Select an artifact to open **Preview**, **Versions**, or **File info**. The reader toolbar has pin and download icons, a change-request action, and an edit icon for published notes. Images and SVG diagrams have zoom controls beside the preview. CSV and TSV files open as tables.
+- Hash-like filenames use a short label in the navigator and reader. The original filename remains in **File info**, the title tooltip, and downloads.
 - **New note** saves Markdown in Artifacts. **Edit note** saves another revision. Earlier captured revisions remain readable; original session files are unchanged.
 - **Request a change** prepares a request to copy into Copilot chat. Selected document text is included. The canvas does not send messages to an agent.
 

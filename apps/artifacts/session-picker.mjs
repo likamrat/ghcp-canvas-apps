@@ -24,7 +24,7 @@ export function createSessionPicker({ onSelect }) {
         if (!bounds.width) {
             const focused = popup.contains(document.activeElement);
             close();
-            if (focused) get("session-search").focus({ preventScroll: true });
+            if (focused) get("refresh").focus({ preventScroll: true });
             return;
         }
         const offsetX = window.visualViewport?.offsetLeft ?? 0, offsetY = window.visualViewport?.offsetTop ?? 0;

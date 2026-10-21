@@ -1,6 +1,25 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { queryArtifacts, reconcileView, createRequestGate, sessionTree, catalogPresentation } from "./model.mjs";
+import { queryArtifacts, reconcileView, createRequestGate, sessionTree, catalogPresentation, applyPinResult, artifactLabel } from "./model.mjs";
+
+test("pin results update the requested artifact without changing other records", () => {
+    const records = [{ id: "selected", pinned: false }, { id: "other", pinned: false }];
+    const updated = applyPinResult(records, { id: "other", pinned: true }, "session", "session");
+    assert.deepEqual(updated, [{ id: "selected", pinned: false }, { id: "other", pinned: true }]);
+    assert.equal(records[1].pinned, false);
+});
+
+test("a pin response from a previous session cannot change the current scope", () => {
+    const records = [{ id: "shared-artifact", pinned: false }];
+    assert.equal(applyPinResult(records, { id: "shared-artifact", pinned: true }, "old", "current"), records);
+});
+
+test("artifact labels shorten opaque filenames without inventing document titles", () => {
+    const name = `${"ecc27405".repeat(8)}.png`;
+    assert.equal(artifactLabel({ name, title: name, kind: "image" }), "Image ecc27405");
+    assert.equal(artifactLabel({ name, title: "Capture flow", kind: "image" }), "Capture flow");
+    assert.equal(artifactLabel({ name: "implementation.md", kind: "document" }), "implementation.md");
+});
 
 test("filters combine across fields and accept multiple kinds and sources", () => {
     const records = [

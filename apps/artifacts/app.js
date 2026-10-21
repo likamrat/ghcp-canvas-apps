@@ -1,4 +1,4 @@
-import { KINDS, SOURCES, defaultFilters, queryArtifacts, reconcileView, sessionTree, createRequestGate, catalogPresentation } from "./model.mjs";
+import { SOURCES, defaultFilters, queryArtifacts, reconcileView, createRequestGate, catalogPresentation, applyPinResult, artifactLabel } from "./model.mjs";
 import { renderMarkdown, parseDelimited, escapeHtml as esc } from "./render.mjs";
 import { createRefreshCycle } from "./refresh.mjs";
 import { createSessionPicker } from "./session-picker.mjs";
@@ -6,7 +6,7 @@ import { createSessionPicker } from "./session-picker.mjs";
 const $ = id => document.getElementById(id);
 const state = {
     sessions: [], records: [], sessionId: new URL(location.href).searchParams.get("session"),
-    sessionSearch: "", includeChildren: false, includeArchived: false, collapsed: new Set(),
+    includeChildren: false, includeArchived: false, pendingPins: new Set(),
     filters: defaultFilters(), view: { selectedId: null, revision: null, page: 1, pageSize: 16, layout: "workspace" },
     tab: "preview", content: null, busy: false, queued: false, updatedAt: null, zoom: 1, selection: "",
     phase: "loading", hasSnapshot: false,
@@ -23,13 +23,33 @@ const paths = {
     diagram: '<rect x="8" y="2" width="8" height="5" rx="1"/><rect x="2" y="17" width="7" height="5" rx="1"/><rect x="15" y="17" width="7" height="5" rx="1"/><path d="M12 7v5H5.5v5M12 12h6.5v5"/>',
     table: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M3 15h18"/>',
     pin: '<path d="m16 3 5 5-3 1-4 5v4l-3-3-6 6M4 10h4l5-4 1-3"/>',
+    folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+    list: '<path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    history: '<path d="M3 11a9 9 0 1 1 3 8M3 4v7h7M12 7v5l3 2"/>',
+    chevron: '<path d="m6 9 6 6 6-6"/>',
+    back: '<path d="m12 5-7 7 7 7M5 12h14"/>',
+    forward: '<path d="m12 5 7 7-7 7M19 12H5"/>',
+    eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+    download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/>',
+    message: '<path d="M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z"/>',
+    edit: '<path d="m15 4 5 5M4 20l4-1L21 6a2 2 0 0 0-4-4L4 15Z"/>',
+    minus: '<path d="M5 12h14"/>',
+    plus: '<path d="M5 12h14M12 5v14"/>',
+    reset: '<path d="M3 10a9 9 0 1 1 2 8M3 3v7h7"/>',
 };
 const glyph = kind => `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">${paths[kind] ?? paths.document}</svg>`;
+for (const element of document.querySelectorAll("[data-icon]")) element.innerHTML = glyph(element.dataset.icon);
 const selected = () => state.records.find(record => record.id === state.view.selectedId);
 const session = () => state.sessions.find(row => row.id === state.sessionId);
 const date = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Unknown date";
 const size = value => value == null ? "Size unavailable" : value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KiB` : `${(value / 1048576).toFixed(1)} MiB`;
 const button = (action, text, attributes = "", className = "control-button") => `<button type="button" class="${className}" data-action="${action}" ${attributes}>${text}</button>`;
+const iconButton = (action, label, icon, attributes = "") => button(action, glyph(icon),
+    `aria-label="${esc(label)}" title="${esc(label)}" ${attributes}`, "control-button icon-button");
+const pinButton = record => iconButton("pin", `${record.pinned ? "Unpin" : "Pin"} ${artifactLabel(record)}`, "pin",
+    `data-id="${esc(record.id)}" aria-pressed="${record.pinned}" ${state.pendingPins.has(record.id) ? "disabled" : ""}`);
 const fileUrl = (record, download = false) => {
     const url = new URL(`file/${record.id}`, location.href);
     if (download) url.searchParams.set("download", "true");
@@ -137,12 +157,6 @@ function showWarnings(warnings = []) {
     }));
 }
 function renderSessions() {
-    const rows = sessionTree(state.sessions, { search: state.sessionSearch, includeArchived: state.includeArchived }, state.collapsed);
-    $("session-count").textContent = `(${rows.length})`;
-    $("session-tree").innerHTML = rows.length ? rows.map(row => `<div class="session-row" style="--depth:${row.depth}">
-        ${row.childCount ? button("fold", state.collapsed.has(row.id) ? "›" : "⌄", `data-id="${esc(row.id)}" aria-label="Toggle ${esc(row.name)} children" aria-expanded="${!state.collapsed.has(row.id)}"`, "fold") : '<span class="fold-spacer"></span>'}
-        <button type="button" class="session-button" data-action="session" data-id="${esc(row.id)}" aria-current="${row.id === state.sessionId}">
-        <span class="session-name">${esc(row.name)}</span><span class="session-meta">${esc([row.project, row.location !== "local" ? row.location : null, row.archived ? "Archived" : null].filter(Boolean).join(" · "))}</span></button></div>`).join("") : '<p class="empty">No matching sessions.</p>';
     sessionPicker.update({ sessions: state.sessions, selectedId: state.sessionId, includeArchived: state.includeArchived });
 }
 function applyFilters() {
@@ -151,25 +165,32 @@ function applyFilters() {
     if (state.view.selectedId !== old) { state.zoom = 1; state.selection = ""; }
     void loadSelected();
 }
-function row(record) {
+function row(record, showDate = true) {
     const source = SOURCES[record.source] ?? record.source;
-    return `<button type="button" class="artifact-row" data-action="select" data-id="${esc(record.id)}" aria-current="${record.id === state.view.selectedId}">
-        ${glyph(record.kind)}<span class="row-text"><span class="artifact-title">${esc(record.title || record.name)}</span>
-        <span class="artifact-meta">${esc(record.name)}${record.version ? ` · v${record.version}` : ""}</span>
-        <span class="artifact-source">${record.availability !== "available" ? esc(record.reason || "Unavailable") : esc(source)} · ${esc(date(record.timestamp))}</span></span>${record.pinned ? glyph("pin") : ""}</button>`;
+    return `<article class="artifact-item" data-selected="${record.id === state.view.selectedId}">
+        <button type="button" class="artifact-row" data-action="select" data-id="${esc(record.id)}" title="${esc(record.name)}" aria-current="${record.id === state.view.selectedId}">
+        ${glyph(record.kind)}<span class="row-text"><span class="artifact-title">${esc(artifactLabel(record))}</span>
+        <span class="artifact-meta">${esc(record.availability !== "available" ? record.reason || "Unavailable" : source)}${record.version ? ` · v${record.version}` : ""}</span>
+        ${showDate ? `<span class="artifact-source">${esc(date(record.timestamp))}</span>` : ""}</span></button>${pinButton(record)}</article>`;
 }
 function card(record) {
     const image = ["image", "diagram"].includes(record.kind) && record.availability === "available";
     const excerpt = state.content?.metadata?.id === record.id ? state.content.content?.slice(0, 180) : null;
-    return `<button type="button" class="library-card" data-action="select" data-id="${esc(record.id)}">
-        <span class="card-preview">${image ? `<img src="${esc(fileUrl(record))}" alt="${esc(record.title || record.name)}" loading="lazy">` :
-            `<strong>${esc(record.title || record.name)}</strong><small>${esc(record.availability !== "available" ? record.reason || "Unavailable" : excerpt || `${kindLabels[record.kind] ?? "File"} · ${size(record.size)}`)}</small>`}</span>
-        <span class="card-footer"><span class="artifact-title">${esc(record.name)}</span><span class="artifact-meta">${esc(SOURCES[record.source] ?? record.source)}${record.version ? ` · v${record.version}` : ""}</span></span></button>`;
+    return `<article class="library-card">
+        <button type="button" class="card-open" data-action="select" data-id="${esc(record.id)}" title="${esc(record.name)}">
+        <span class="card-preview">${image ? `<img src="${esc(fileUrl(record))}" alt="${esc(artifactLabel(record))}" loading="lazy">` :
+            `<strong>${esc(artifactLabel(record))}</strong><small>${esc(record.availability !== "available" ? record.reason || "Unavailable" : excerpt || `${kindLabels[record.kind] ?? "File"} · ${size(record.size)}`)}</small>`}</span>
+        <span class="card-title artifact-title">${esc(artifactLabel(record))}</span></button>
+        <div class="card-footer"><span class="artifact-meta">${esc(SOURCES[record.source] ?? record.source)}${record.version ? ` · v${record.version}` : ""}</span>${pinButton(record)}</div></article>`;
 }
 function renderList() {
     $("surface").dataset.layout = state.view.layout;
     $("artifact-list").setAttribute("aria-busy", String(state.phase === "loading"));
     for (const control of document.querySelectorAll("button[data-layout]")) control.setAttribute("aria-pressed", String(control.dataset.layout === state.view.layout));
+    $("view-label").textContent = { workspace: "List", library: "Gallery", activity: "Timeline" }[state.view.layout];
+    $("view-icon").innerHTML = glyph({ workspace: "list", library: "grid", activity: "history" }[state.view.layout]);
+    $("collection-all").setAttribute("aria-pressed", String(!state.filters.pinned));
+    $("collection-pinned").setAttribute("aria-pressed", String(state.filters.pinned));
     const display = presentation();
     if (["loading", "error", "idle"].includes(display)) {
         $("artifact-list").innerHTML = display === "loading" ? loadingMarkup() :
@@ -198,10 +219,11 @@ function renderList() {
     if (previousSelection !== state.view.selectedId) { state.selection = ""; state.zoom = 1; }
     const start = (state.view.page - 1) * state.view.pageSize;
     const page = records.slice(start, start + state.view.pageSize);
-    $("scope-summary").textContent = `${session()?.name ?? "No session selected"} · ${records.length} of ${state.records.length} artifacts${state.includeChildren ? " including children" : ""}`;
-    $("artifact-list").innerHTML = !page.length ? `<div class="empty"><h2>${state.records.length ? "No matching artifacts" : "No artifacts found"}</h2><p>${state.records.length ? "Change or clear the filters." : session()?.location !== "local" && session() ? "Remote files are not available through the local adapter." : "Publish a note or refresh after the session creates a supported file."}</p></div>` :
+    const noPins = state.filters.pinned && state.records.length > 0 && !state.records.some(record => record.pinned);
+    $("scope-summary").textContent = `${records.length} of ${state.records.length} artifacts${state.filters.pinned ? " · Pinned" : ""}${state.includeChildren ? " · Including child sessions" : ""}`;
+    $("artifact-list").innerHTML = !page.length ? `<div class="empty"><h2>${noPins ? "No pinned artifacts" : state.records.length ? "No matching artifacts" : "No artifacts found"}</h2><p>${noPins ? "Choose All artifacts and use the pin beside a file to keep it here." : state.records.length ? "Change or clear the filters." : session()?.location !== "local" && session() ? "Remote files are not available through the local adapter." : "Publish a note or refresh after the session creates a supported file."}</p></div>` :
         state.view.layout === "library" ? page.map(card).join("") :
-        state.view.layout === "activity" ? page.map(record => `<article class="activity-entry"><p>${esc(date(record.timestamp))} · ${esc(record.source === "published" ? `Published version ${record.version}` : record.timestampBasis || "File reference")}</p>${row(record)}</article>`).join("") : page.map(row).join("");
+        state.view.layout === "activity" ? page.map(record => `<article class="activity-entry"><p>${esc(date(record.timestamp))} · ${esc(record.source === "published" ? `Published version ${record.version}` : record.timestampBasis || "File reference")}</p>${row(record, false)}</article>`).join("") : page.map(record => row(record)).join("");
     for (const image of $("artifact-list").querySelectorAll("img")) image.addEventListener("error", () => {
         const text = document.createElement("small"); text.textContent = "Preview unavailable. Open the artifact for details."; image.replaceWith(text);
     }, { once: true });
@@ -222,12 +244,22 @@ function revisions(record, list) {
             `data-version="${item.version}" aria-pressed="${item.version === (state.view.revision ?? record.version)}"`, "revision")).join("")}</div>` :
         '<p class="captured-note">This is a discovered file reference. Earlier file contents were not captured.</p>';
 }
+function renderReaderHeader(record, metadata = record, ready = false) {
+    $("reader-title").textContent = record ? artifactLabel(metadata) : "Selected artifact";
+    $("reader-title").title = record?.name ?? "";
+    $("reader-meta").textContent = record ? `${SOURCES[record.source] ?? record.source} · ${date(metadata.timestamp)}${metadata.version ? ` · Version ${metadata.version}` : ""}` : "";
+    $("reader-actions").innerHTML = !ready ? "" : `${pinButton(record)}
+        ${record.availability === "available" ? `<a class="control-button icon-button download-link" href="${esc(fileUrl(record, true))}" download aria-label="Download artifact" title="Download artifact">${glyph("download")}</a>
+        ${button("request", `${glyph("message")}<span>Request a change</span>`)}` : ""}
+        ${record.source === "published" && !state.view.revision ? iconButton("edit", "Edit note", "edit") : ""}`;
+}
 async function loadSelected(preserveScroll = false) {
     const request = readGate.next(), record = selected(), container = $("reader-content");
     const scroll = preserveScroll ? container.scrollTop : 0;
     for (const control of document.querySelectorAll("[data-tab]")) control.setAttribute("aria-pressed", String(control.dataset.tab === state.tab));
     if (!record) {
         state.content = null;
+        renderReaderHeader(null);
         const display = presentation();
         $("reader").setAttribute("aria-busy", String(display === "loading"));
         container.innerHTML = display === "loading" ? loadingMarkup(true) :
@@ -236,7 +268,10 @@ async function loadSelected(preserveScroll = false) {
         return;
     }
     $("reader").setAttribute("aria-busy", "true");
-    if (!preserveScroll || state.content?.metadata?.id !== record.id) container.innerHTML = '<p class="empty" role="status">Loading artifact...</p>';
+    if (!preserveScroll || state.content?.metadata?.id !== record.id) {
+        renderReaderHeader(record);
+        container.innerHTML = '<p class="empty" role="status">Loading artifact...</p>';
+    }
     let result;
     try {
         const query = state.view.revision ? `?version=${state.view.revision}` : "";
@@ -245,15 +280,13 @@ async function loadSelected(preserveScroll = false) {
         if (!readGate.current(request)) return;
         state.content = result;
         const metadata = result.metadata;
-        const actions = `<div class="reader-actions">${button("pin", record.pinned ? "Unpin" : "Pin", `aria-pressed="${record.pinned}"`)}
-            ${record.availability === "available" ? `<a class="control-button download-link" href="${esc(fileUrl(record, true))}" download>Download</a>${button("request", "Request a change")}` : ""}
-            ${record.source === "published" && !state.view.revision ? button("edit", "Edit note") : ""}</div>`;
+        renderReaderHeader(selected(), metadata, true);
         const historyNotice = state.view.revision ? `<p class="notice">Captured version ${state.view.revision}. ${button("latest", "Back to latest")}</p>` : "";
         let body;
         if (state.tab === "details") body = detailList(record);
-        else if (state.tab === "activity") body = `${revisions(record, result.revisions)}<p class="captured-note">Source: ${esc(record.sessionName)}${record.tool ? ` · ${esc(record.tool)}` : ""}. Dates describe the recorded source, not a complete edit history.</p>`;
+        else if (state.tab === "versions") body = `${revisions(record, result.revisions)}<p class="captured-note">Source: ${esc(record.sessionName)}${record.tool ? ` · ${esc(record.tool)}` : ""}. Only captured note versions are available; file references do not contain a complete edit history.</p>`;
         else if (record.availability !== "available") body = `<div class="notice">${esc(record.reason || "The original file is unavailable.")}</div>${detailList(record)}`;
-        else if (["image", "diagram"].includes(record.kind)) body = `<div class="image-tools">${button("zoom-out", "−", 'aria-label="Zoom out"')}<span id="zoom-label">${Math.round(state.zoom * 100)}%</span>${button("zoom-in", "+", 'aria-label="Zoom in"')}${button("zoom-reset", "Reset zoom")}</div><p id="image-error" class="error-text" role="alert" hidden></p><div class="image-frame"><img id="preview-image" src="${esc(fileUrl(record))}" alt="${esc(record.title || record.name)}"></div>`;
+        else if (["image", "diagram"].includes(record.kind)) body = `<div class="image-tools" role="group" aria-label="Image zoom">${iconButton("zoom-out", "Zoom out", "minus")}<span id="zoom-label">${Math.round(state.zoom * 100)}%</span>${iconButton("zoom-in", "Zoom in", "plus")}${iconButton("zoom-reset", "Reset zoom", "reset")}</div><p id="image-error" class="error-text" role="alert" hidden></p><div class="image-frame"><img id="preview-image" src="${esc(fileUrl(record))}" alt="${esc(artifactLabel(record))}"></div>`;
         else if (record.kind === "table" && result.content !== null) {
             const table = parseDelimited(result.content, record.name.toLowerCase().endsWith(".tsv") ? "\t" : ",");
             const wide = table.rows.some(row => row.length > 32);
@@ -261,7 +294,7 @@ async function loadSelected(preserveScroll = false) {
         } else if (result.content !== null) body = /\.(?:md|markdown)$/i.test(record.name) || record.source === "published"
             ? `<div class="prose" id="artifact-prose">${renderMarkdown(result.content, { title: metadata.title })}</div>` : `<pre id="artifact-prose"><code>${esc(result.content)}</code></pre>`;
         else body = `<p class="notice">${esc(kindLabels[record.kind] ?? "File")} preview is not available here. Download it to open in its usual application.</p>${detailList(record)}`;
-        container.innerHTML = `<h2 class="document-title">${esc(metadata.title || metadata.name)}</h2><p class="document-file">${esc(metadata.name)} · ${esc(date(metadata.timestamp))}${metadata.version ? ` · Version ${metadata.version}` : ""}</p>${historyNotice}${actions}${body}`;
+        container.innerHTML = `${historyNotice}${body}`;
         container.scrollTop = scroll;
         const image = $("preview-image");
         if (image) {
@@ -272,7 +305,8 @@ async function loadSelected(preserveScroll = false) {
     } catch (error) {
         if (!readGate.current(request)) return;
         state.content = null;
-        container.innerHTML = `<h2 class="document-title">${esc(record.title || record.name)}</h2><p class="notice error-text" role="alert">${esc(error.message)}</p>${button("retry-preview", "Retry preview")} ${button("refresh", "Refresh artifacts")}`;
+        renderReaderHeader(record);
+        container.innerHTML = `<p class="notice error-text" role="alert">${esc(error.message)}</p>${button("retry-preview", "Retry preview")} ${button("refresh", "Refresh artifacts")}`;
     } finally { if (readGate.current(request)) $("reader").setAttribute("aria-busy", "false"); }
 }
 function applyZoom() {
@@ -294,12 +328,12 @@ function chooseArtifact(id) {
 }
 function filtersChanged() {
     state.filters = { search: $("search").value, kinds: [...$("kinds").selectedOptions].map(option => option.value),
-        sources: [...$("sources").selectedOptions].map(option => option.value), pinned: $("pinned").checked,
+        sources: [...$("sources").selectedOptions].map(option => option.value), pinned: state.filters.pinned,
         from: $("from").value, to: $("to").value, sort: $("sort").value, order: $("order").value };
     state.view.page = 1; applyFilters();
 }
 function clearFilters() {
-    $("search").value = ""; $("from").value = ""; $("to").value = ""; $("pinned").checked = false;
+    $("search").value = ""; $("from").value = ""; $("to").value = ""; state.filters.pinned = false;
     for (const name of ["kinds", "sources"]) {
         for (const option of $(name).options) option.selected = false;
         $(name).dispatchEvent(new Event("multiselect-sync"));
@@ -334,9 +368,8 @@ $("note-dialog").addEventListener("cancel", () => { editing = null; });
 $("new-note").addEventListener("click", () => openNote());
 $("refresh").addEventListener("click", () => refresh());
 $("clear-filters").addEventListener("click", clearFilters);
-$("session-search").addEventListener("input", () => { state.sessionSearch = $("session-search").value; renderSessions(); });
 for (const id of ["search", "from", "to"]) $(id).addEventListener("input", filtersChanged);
-for (const id of ["kinds", "sources", "sort", "order", "pinned"]) $(id).addEventListener("change", filtersChanged);
+for (const id of ["kinds", "sources", "sort", "order"]) $(id).addEventListener("change", filtersChanged);
 for (const [id, key] of [["include-children", "includeChildren"], ["include-archived", "includeArchived"]]) $(id).addEventListener("change", () => {
     state[key] = $(id).checked; beginScopeLoad(); renderSessions(); renderList(); void loadSelected(); void refresh();
 });
@@ -352,6 +385,14 @@ document.addEventListener("mouseup", () => {
     if (selection?.toString().trim() && selection.anchorNode?.parentElement?.closest("#artifact-prose")) state.selection = selection.toString().trim();
 });
 $("back").addEventListener("click", () => $("surface").classList.remove("show-detail"));
+document.addEventListener("click", event => {
+    if (!$("view-menu").contains(event.target)) $("view-menu").open = false;
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && $("view-menu").open) {
+        $("view-menu").open = false; $("view-menu").querySelector("summary").focus();
+    }
+});
 document.addEventListener("click", async event => {
     const target = event.target.closest("button");
     if (!target) return;
@@ -359,14 +400,15 @@ document.addEventListener("click", async event => {
         state.view.layout = target.dataset.layout; $("surface").classList.remove("show-detail");
         if (state.view.layout === "activity") { $("sort").value = "timestamp"; state.filters.sort = "timestamp"; }
         const url = new URL(location.href); url.searchParams.set("layout", state.view.layout); window.history.replaceState(null, "", url);
+        $("view-menu").open = false; $("view-menu").querySelector("summary").focus();
         renderList(); return;
+    }
+    if (target.dataset.collection) {
+        state.filters.pinned = target.dataset.collection === "pinned";
+        state.view.page = 1; applyFilters(); return;
     }
     if (target.dataset.tab) { state.tab = target.dataset.tab; void loadSelected(); return; }
     const action = target.dataset.action, record = selected();
-    if (action === "session") { changeSession(target.dataset.id); return; }
-    if (action === "fold") {
-        const id = target.dataset.id; state.collapsed.has(id) ? state.collapsed.delete(id) : state.collapsed.add(id); renderSessions(); return;
-    }
     if (action === "select") { chooseArtifact(target.dataset.id); return; }
     if (action === "refresh") { void refresh(); return; }
     if (action === "retry-preview") { void loadSelected(); return; }
@@ -375,13 +417,37 @@ document.addEventListener("click", async event => {
     if (action?.startsWith("zoom-")) {
         state.zoom = action === "zoom-reset" ? 1 : Math.max(.25, Math.min(4, state.zoom + (action === "zoom-in" ? .25 : -.25))); applyZoom(); return;
     }
-    if (action === "pin" && record) {
-        target.disabled = true;
+    if (action === "pin") {
+        const item = state.records.find(item => item.id === target.dataset.id);
+        if (!item || state.pendingPins.has(item.id)) return;
+        const scope = state.sessionId;
+        const hadFocus = document.activeElement === target, inList = $("artifact-list").contains(target);
+        let restoreFocus = hadFocus;
+        state.pendingPins.add(item.id);
+        const pinControls = () => [...document.querySelectorAll('button[data-action="pin"]')].filter(control => control.dataset.id === item.id);
+        for (const control of pinControls()) control.disabled = true;
         try {
-            const updated = await api("api/pin", { id: record.id, pinned: !record.pinned });
-            state.records = state.records.map(item => item.id === record.id ? { ...item, pinned: updated.pinned } : item);
-            renderList(); await loadSelected(true); setError("");
-        } catch (error) { setError(error.message); target.disabled = false; }
+            const updated = await api("api/pin", { id: item.id, pinned: !item.pinned });
+            state.records = applyPinResult(state.records, updated, scope, state.sessionId);
+            if (scope !== state.sessionId) return;
+            state.pendingPins.delete(item.id);
+            if (state.busy) { state.queued = true; scanGate.next(); }
+            restoreFocus = hadFocus && (document.activeElement === target || document.activeElement === document.body);
+            const previous = state.view.selectedId;
+            renderList();
+            if (previous !== state.view.selectedId || item.id === state.view.selectedId) await loadSelected(true);
+            setError("");
+        } catch (error) { if (scope === state.sessionId) setError(error.message); }
+        finally {
+            state.pendingPins.delete(item.id);
+            for (const control of pinControls()) control.disabled = false;
+            if (scope === state.sessionId && restoreFocus && (document.activeElement === target || document.activeElement === document.body)) {
+                const container = inList ? $("artifact-list") : $("reader-actions");
+                const replacement = [...container.querySelectorAll('button[data-action="pin"]')].find(control => control.dataset.id === item.id);
+                (replacement ?? $("collection-pinned")).focus({ preventScroll: true });
+            }
+        }
+        return;
     }
     if (action === "edit" && record && state.content) openNote(true);
     if (action === "request" && record) {

@@ -54,6 +54,20 @@ export function createRequestGate() {
     return { next: () => ++revision, current: request => request === revision };
 }
 
+export function applyPinResult(records, result, requestSessionId, currentSessionId) {
+    if (requestSessionId !== currentSessionId) return records;
+    return records.map(record => record.id === result.id ? { ...record, pinned: result.pinned } : record);
+}
+
+export function artifactLabel(record) {
+    if (record.title && record.title !== record.name) return record.title;
+    if (/^[a-f\d]{24,}\.[a-z\d]+$/i.test(record.name)) {
+        const kind = Object.hasOwn(KINDS, record.kind) ? record.kind : "file";
+        return `${kind[0].toUpperCase()}${kind.slice(1)} ${record.name.slice(0, 8)}`;
+    }
+    return record.name;
+}
+
 export function catalogPresentation({ phase, hasSnapshot, hasSession, total, matching }) {
     if (phase === "loading" && (!hasSnapshot || total === 0)) return "loading";
     if (phase === "error" && !hasSnapshot) return "error";

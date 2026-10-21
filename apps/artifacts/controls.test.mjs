@@ -16,7 +16,7 @@ test("actions and view switches use one control class instead of per-button sizi
     const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map(match => match[0]);
     for (const id of ["new-note", "refresh", "open-browser", "clear-filters", "previous-page", "next-page",
         "session-picker", "session-picker-close", "session-picker-current", "session-picker-top",
-        "close-note", "cancel-note", "save-note", "close-request", "copy-request"]) {
+        "close-note", "cancel-note", "save-note", "close-request", "copy-request", "collection-all", "collection-pinned"]) {
         const button = buttons.find(tag => tag.includes(`id="${id}"`));
         assert.ok(button && /class="[^"]*\bcontrol-button\b/.test(button), `${id} uses the standard control`);
     }
@@ -31,4 +31,14 @@ test("actions and view switches use one control class instead of per-button sizi
     assert.doesNotMatch(css, /\.view-switch button\s*\{/);
     assert.doesNotMatch(css, /\.pagination button\s*\{/);
     assert.doesNotMatch(css, /\.reader-actions button/);
+});
+
+test("artifact navigation and reader controls have distinct scopes", async () => {
+    const html = await readFile(new URL("index.html", import.meta.url), "utf8");
+    assert.match(html, /<aside class="artifact-nav" aria-label="Artifact navigator">/);
+    assert.match(html, /<details id="view-menu"/);
+    assert.match(html, /data-tab="versions"[^>]*>[\s\S]*?Versions<\/button>/);
+    assert.match(html, /data-tab="details"[^>]*>[\s\S]*?File info<\/button>/);
+    assert.doesNotMatch(html, /data-tab="activity"|class="session-sidebar"/);
+    assert.ok(html.indexOf('id="reader-actions"') < html.indexOf('id="reader-content"'));
 });

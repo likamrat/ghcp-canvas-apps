@@ -7,6 +7,6 @@ Personal canvas extensions for the GitHub Copilot app. Each opens in a panel alo
 | [Thoughts](apps/thoughts/README.md) | Keep ideas for later without losing focus on your current task. |
 | [Context Monitor](apps/context-monitor/README.md) | See which sessions have room to continue and which are nearing their context limit. |
 | [Screenshots](apps/screenshots/README.md) | Find the screenshot you need without digging through old chats. |
-| [Artifacts](apps/artifacts/README.md) | Browse session files and published notes, with previews, filters, and captured note revisions. |
+| [Artifacts](apps/artifacts/README.md) | Browse and pin session artifacts, preview files, and revisit captured note versions. |
 
 In Artifacts, Screenshots, and Context Monitor, **Filters and refresh** starts collapsed. Expand it to adjust the controls. Filter headings and refresh buttons use matching icons across the apps.
