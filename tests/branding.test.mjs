@@ -20,13 +20,15 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
         assert.match(html, /class="word-prefix" fill="currentColor"/);
         assert.match(html, /class="icon-halo"/);
         assert.match(html, /class="[^"]*\brefresh-control\b[^"]*"/);
+        const browserButton = [...html.matchAll(/<button\b[^>]*>/g)].map(match => match[0]).find(tag => tag.includes('id="open-browser"'));
+        assert.match(browserButton, /class="[^"]*\bcontrol-button\b/, `${app} uses the shared action control`);
         if (app !== "thoughts") {
             const panel = html.match(/<details\b[^>]*class="control-panel"[^>]*>/)?.[0];
             assert.ok(panel, `${app} has a collapsible filter panel`);
             assert.doesNotMatch(panel, /\sopen(?:\s|=|>)/, `${app} starts collapsed`);
             assert.match(html, /<summary class="filter-heading">Filters and refresh<\/summary>/);
         }
-        for (const file of ["branding.css", "filter.svg", "refresh.svg"]) {
+        for (const file of ["branding.css", "filter.svg", "refresh.svg", "ui-icons.svg"]) {
             const response = await fetch(new URL(file, server.url));
             assert.equal(response.status, 200, `${app} serves ${file}`);
             if (file === "branding.css") assert.equal(await response.text(), canonical);
@@ -42,4 +44,15 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
     assert.match(canonical, /color:\s*var\(--surface/);
     assert.match(canonical, /\.filter-heading::before\s*\{[^}]*mask-image:\s*url\("\.\/filter\.svg"\)/);
     assert.match(canonical, /mask:\s*url\("\.\/refresh\.svg"\)/);
+    assert.match(canonical, /--control-height:\s*36px/);
+    assert.match(canonical, /--control-height:\s*44px/);
+    assert.match(canonical, /--control-radius:\s*6px/);
+    const icons = await readFile(new URL("../apps/artifacts/ui-icons.svg", import.meta.url), "utf8");
+    const symbols = new Set([...icons.matchAll(/<symbol id="([^"]+)"/g)].map(match => match[1]));
+    for (const app of apps) {
+        const html = await readFile(new URL(`../apps/${app}/index.html`, import.meta.url), "utf8");
+        for (const [, symbol] of html.matchAll(/ui-icons\.svg#([^"]+)/g)) {
+            assert.ok(symbols.has(symbol), `${app} references the bundled ${symbol} icon`);
+        }
+    }
 });

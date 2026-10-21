@@ -17,29 +17,8 @@ const scanGate = createRequestGate(), readGate = createRequestGate();
 let editing = null;
 const sessionPicker = createSessionPicker({ onSelect: changeSession });
 const kindLabels = { document: "Document", image: "Image", diagram: "Diagram", table: "Table", file: "File" };
-const paths = {
-    document: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
-    image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m21 15-5-5L5 21"/>',
-    diagram: '<rect x="8" y="2" width="8" height="5" rx="1"/><rect x="2" y="17" width="7" height="5" rx="1"/><rect x="15" y="17" width="7" height="5" rx="1"/><path d="M12 7v5H5.5v5M12 12h6.5v5"/>',
-    table: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M3 15h18"/>',
-    pin: '<path d="m16 3 5 5-3 1-4 5v4l-3-3-6 6M4 10h4l5-4 1-3"/>',
-    folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
-    list: '<path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1"/>',
-    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-    history: '<path d="M3 11a9 9 0 1 1 3 8M3 4v7h7M12 7v5l3 2"/>',
-    chevron: '<path d="m6 9 6 6 6-6"/>',
-    back: '<path d="m12 5-7 7 7 7M5 12h14"/>',
-    forward: '<path d="m12 5 7 7-7 7M19 12H5"/>',
-    eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
-    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
-    download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/>',
-    message: '<path d="M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z"/>',
-    edit: '<path d="m15 4 5 5M4 20l4-1L21 6a2 2 0 0 0-4-4L4 15Z"/>',
-    minus: '<path d="M5 12h14"/>',
-    plus: '<path d="M5 12h14M12 5v14"/>',
-    reset: '<path d="M3 10a9 9 0 1 1 2 8M3 3v7h7"/>',
-};
-const glyph = kind => `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">${paths[kind] ?? paths.document}</svg>`;
+const glyphNames = new Set(["document", "image", "diagram", "table", "pin", "folder", "list", "grid", "history", "chevron", "back", "forward", "eye", "info", "download", "message", "edit", "minus", "plus", "reset"]);
+const glyph = kind => `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="ui-icons.svg#${glyphNames.has(kind) ? kind : "document"}"/></svg>`;
 for (const element of document.querySelectorAll("[data-icon]")) element.innerHTML = glyph(element.dataset.icon);
 const selected = () => state.records.find(record => record.id === state.view.selectedId);
 const session = () => state.sessions.find(row => row.id === state.sessionId);

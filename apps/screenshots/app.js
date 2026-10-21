@@ -106,7 +106,7 @@ function renderSessions() {
         $("sessions").append(row);
     }
     if (rows.length > sessionLimit) {
-        const more = node("button", "Show more sessions");
+        const more = node("button", "Show more sessions", "control-button");
         more.onclick = () => { sessionLimit += 300; renderSessions(); };
         $("sessions").append(more);
     }
@@ -243,7 +243,7 @@ function renderGallery() {
             if (image.storage === "session") caption.append(node("span", "Retained session image", "image-meta"));
             button.append(thumbnail, caption);
             button.onclick = () => openPreview(image.id, button);
-            const download = node("button", null, "download-button");
+            const download = node("button", null, "control-button icon-button download-button");
             download.type = "button";
             download.title = `Download ${image.name}`;
             download.setAttribute("aria-label", `Download ${image.name}`);

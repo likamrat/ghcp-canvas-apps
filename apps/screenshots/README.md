@@ -36,7 +36,7 @@ Opens with the current Copilot session selected. You can choose another session 
 
 **Filters and refresh** starts collapsed. Expand it to adjust filters, display options, or refresh settings.
 
-The header wordmark follows the app theme. Its circular mark inverts in dark mode. Filter and refresh controls use matching icons; image discovery shows a labeled loading indicator.
+Controls, typography, surfaces, and outlined icons match Artifacts. Preview navigation and zoom use compact, labeled icon buttons. The header wordmark follows the app theme, including its inverted circular mark in dark mode. Image discovery shows a labeled loading indicator.
 
 ## Data
 

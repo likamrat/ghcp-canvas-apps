@@ -60,6 +60,8 @@ The canvas exposes `list_sessions`, `query_artifacts`, `get_artifact`, `read_art
 
 ## Develop
 
+The shared controls and icons are also used by Thoughts, Screenshots, and Context Monitor. Keep `branding.css` and `ui-icons.svg` identical across the four standalone app folders.
+
 Node 24+. No build step or package installation. From this folder:
 
 ```sh

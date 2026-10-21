@@ -11,6 +11,7 @@ const assets = new Map([
     ["/branding.css", ["branding.css", "text/css; charset=utf-8"]],
     ["/filter.svg", ["filter.svg", "image/svg+xml"]],
     ["/refresh.svg", ["refresh.svg", "image/svg+xml"]],
+    ["/ui-icons.svg", ["ui-icons.svg", "image/svg+xml"]],
     ["/browser.js", ["browser.js", "text/javascript; charset=utf-8"]],
     ["/icon.png", ["icon.png", "image/png"]],
     ["/icon.svg", ["icon.svg", "image/svg+xml"]],

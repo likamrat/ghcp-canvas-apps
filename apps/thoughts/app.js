@@ -132,10 +132,10 @@ function render() {
             textarea.value = editing.text;
             textarea.addEventListener("input", () => { editing.text = textarea.value; });
             const actions = node("div", undefined, "edit-actions");
-            const save = node("button", "Save");
+            const save = node("button", "Save", "control-button");
             save.type = "submit";
             save.disabled = busy;
-            const cancel = node("button", "Cancel");
+            const cancel = node("button", "Cancel", "control-button");
             cancel.type = "button";
             cancel.disabled = busy;
             cancel.addEventListener("click", () => { editing = null; render(); });
@@ -176,7 +176,7 @@ function render() {
             time.dateTime = item.createdAt;
             content.append(time);
         }
-        const edit = node("button", undefined, "icon-button edit-button");
+        const edit = node("button", undefined, "control-button icon-button edit-button");
         edit.type = "button";
         edit.disabled = busy || editing !== null;
         edit.title = "Edit thought";
@@ -187,7 +187,7 @@ function render() {
             render();
             $("#edit-text").focus();
         });
-        const copy = node("button", undefined, "icon-button copy-button");
+        const copy = node("button", undefined, "control-button icon-button copy-button");
         copy.type = "button";
         copy.disabled = busy || editing !== null;
         const setCopyState = (copied) => {
@@ -220,7 +220,7 @@ function render() {
                 copy.removeAttribute("aria-busy");
             }
         });
-        const remove = node("button", undefined, "icon-button delete-button");
+        const remove = node("button", undefined, "control-button icon-button delete-button");
         remove.type = "button";
         remove.disabled = busy || editing !== null;
         remove.title = "Delete thought";
@@ -289,7 +289,7 @@ async function refresh() {
     } catch (error) {
         showError(error);
         if (!loaded) {
-            $("#list").replaceChildren(node("p", "Could not load your thoughts. Use Reload to retry.", "empty"));
+            $("#list").replaceChildren(node("p", "Could not load your thoughts. Use Refresh to retry.", "empty"));
             $("#list").setAttribute("aria-busy", "false");
         }
     } finally {

@@ -25,8 +25,9 @@ test("actions and view switches use one control class instead of per-button sizi
         assert.ok(button && /class="[^"]*\bcontrol-button\b/.test(button), `${layout} uses the standard control`);
     }
     const css = await readFile(new URL("style.css", import.meta.url), "utf8");
-    assert.match(css, /--control-height:\s*36px/);
-    assert.match(css, /--control-height:\s*44px/);
+    const shared = await readFile(new URL("branding.css", import.meta.url), "utf8");
+    assert.match(shared, /--control-height:\s*36px/);
+    assert.match(shared, /--control-height:\s*44px/);
     assert.doesNotMatch(css, /#open-browser\s*\{/);
     assert.doesNotMatch(css, /\.view-switch button\s*\{/);
     assert.doesNotMatch(css, /\.pagination button\s*\{/);

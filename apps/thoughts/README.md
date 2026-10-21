@@ -25,7 +25,7 @@ Choose **Add thought** or press **Ctrl/Cmd + Enter** to save an idea. You can al
 
 **Open in browser** uses your normal system-default browser, with the Thoughts favicon. Both views share saved thoughts; unsaved drafts are independent. Closing the canvas leaves the browser view running, but ending its Copilot session or reloading extensions in the GitHub Copilot app stops the old URL.
 
-The header wordmark follows the app theme. Its circular mark inverts in dark mode.
+Thoughts uses the same controls, outlined action icons, typography, and light/dark surfaces as Artifacts. Edit, copy, and delete stay beside each thought. The header wordmark follows the app theme; its circular mark inverts in dark mode.
 
 ## Data
 
@@ -43,4 +43,4 @@ node --test store.test.mjs
 
 After updating an installed copy, reload or restart the extension in **Customize** in the GitHub Copilot app. Alternatively, ask Copilot to "reload extensions". Reopen existing browser tabs to load the current code and favicon. Cross-app browser and favicon checks are in `tests/`.
 
-Icons use [Phosphor Icons](https://github.com/phosphor-icons/core) under MIT ([license](PHOSPHOR-LICENSE.txt)).
+Bundled icon licenses: [Lucide](LUCIDE-LICENSE.txt) and [Phosphor](PHOSPHOR-LICENSE.txt).

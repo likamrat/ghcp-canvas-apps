@@ -4,7 +4,7 @@
 
 With several Copilot sessions running, it's hard to tell which ones are nearing their context limit. Context Monitor shows where each session stands, so you can decide where to keep working and where to start fresh.
 
-<img src="screenshot.png?v=d14737e9fe6e" alt="Context Monitor with a 600-session mock heat map, filters, pagination, and GPT and Claude sessions" width="640">
+<img src="screenshot.png" alt="Context Monitor with example sessions, a context heat map, collapsed filters, and pagination" width="640">
 
 ## Use in the GitHub Copilot app
 
@@ -35,7 +35,7 @@ Sessions without context data are hidden by default. Check Include sessions with
 
 **Open in browser** uses your normal system-default browser, with a local favicon. Closing the canvas leaves that view running; keep the owning Copilot session active. Reloading extensions in the GitHub Copilot app ends the old browser URL. Saved thresholds are shared; filters are independent between views.
 
-The header wordmark follows the app theme. Its circular mark inverts in dark mode. Filter and refresh controls use matching icons.
+Controls, typography, surfaces, and outlined icons match Artifacts. Context colors still represent usage; they do not change with the control styling. The header wordmark follows the app theme, including its inverted circular mark in dark mode.
 
 ## Data
 
@@ -55,4 +55,4 @@ node --test monitor.test.mjs
 
 After updating an installed copy, reload or restart the extension in **Customize** in the GitHub Copilot app. Alternatively, ask Copilot to "reload extensions". Reopen existing browser tabs to load the current code and favicon. Cross-app browser and favicon checks are in `tests/`.
 
-Fonts use [Geist](https://github.com/vercel/geist-font) ([license](fonts/LICENSE.txt)). Icons use [Phosphor Icons](https://github.com/phosphor-icons/core) ([license](icons/LICENSE)).
+UI typography follows the Copilot app. Bundled asset licenses: [Geist](fonts/LICENSE.txt), [Lucide](LUCIDE-LICENSE.txt), and [Phosphor](icons/LICENSE).
