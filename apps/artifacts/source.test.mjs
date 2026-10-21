@@ -167,6 +167,8 @@ test("approved trees reject symlink escapes, secrets and network paths while bou
     await writeFile(join(root, ".env"), "PRIVATE");
     await mkdir(join(root, "credentials"));
     await writeFile(join(root, "credentials", "private.json"), "PRIVATE");
+    await mkdir(join(root, ".github"));
+    await writeFile(join(root, ".github", "instructions.md"), "Hidden metadata");
     const outside = join(home, "outside");
     await mkdir(outside);
     await writeFile(join(outside, "escape.md"), "Outside");
@@ -174,6 +176,7 @@ test("approved trees reject symlink escapes, secrets and network paths while bou
     await events("current", [{ type: "user.message", data: { attachments: [
         { type: "file", path: join(root, "escaped", "escape.md") },
         { type: "file", path: join(root, "credentials", "private.json") },
+        { type: "file", path: join(root, ".github", "instructions.md") },
         { type: "file", path: "https://example.com/secret.md" },
         { type: "file", path: "\\\\server\\secret.md" },
     ] } }]);
@@ -181,6 +184,8 @@ test("approved trees reject symlink escapes, secrets and network paths while bou
     const result = await catalog.artifacts("current");
     assert.ok(result.artifacts.some((row) => row.name === "data.json"));
     assert.ok(!result.artifacts.some((row) => row.name === "private.json"));
+    assert.ok(!result.artifacts.some((row) => row.name === "instructions.md"));
+    assert.ok(!result.warnings.some((warning) => /sensitive artifact reference/i.test(warning)));
     const escaped = result.artifacts.find((row) => row.name === "escape.md");
     assert.equal(escaped.availability, "unavailable");
     await assert.rejects(catalog.read(escaped.id), { code: "artifact_unavailable" });

@@ -52,10 +52,7 @@ function eventCollector(home, session, warnings) {
             return;
         }
         const path = isAbsolute(value) ? resolve(value) : resolve(cwd, value);
-        if (secret(relative(home, path))) {
-            warnings.push(`${session.name}: a sensitive artifact reference was excluded.`);
-            return;
-        }
+        if (secret(relative(home, path))) return;
         if (refs.size >= 5000) {
             warnings.push(`${session.name}: the 5,000-reference discovery limit was reached.`);
             return;
