@@ -1,6 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { runInNewContext } from "node:vm";
+import { artifactLabel } from "./model.mjs";
+import { escapeHtml } from "./render.mjs";
+
+test("pin tooltips name only the action while accessible labels retain file context", async () => {
+    const source = await readFile(new URL("app.js", import.meta.url), "utf8");
+    const start = source.indexOf("const button ="), end = source.indexOf("const fileUrl =");
+    assert.ok(start >= 0 && end > start);
+    const render = runInNewContext(`${source.slice(start, end)}\npinButton`, {
+        glyph: () => "<svg></svg>", esc: escapeHtml, artifactLabel, state: { pendingPins: new Set() },
+    });
+    for (const pinned of [false, true]) {
+        const action = pinned ? "Unpin" : "Pin";
+        const html = render({ id: "example", name: "notes & decisions.md", pinned });
+        assert.equal(html.match(/title="([^"]+)"/)?.[1], action);
+        assert.ok(html.includes(`aria-label="${action} notes &amp; decisions.md"`));
+    }
+});
 
 test("session selection precedes filters and views in reading and keyboard order", async () => {
     const html = await readFile(new URL("index.html", import.meta.url), "utf8");

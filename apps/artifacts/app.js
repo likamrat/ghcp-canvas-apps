@@ -25,10 +25,13 @@ const session = () => state.sessions.find(row => row.id === state.sessionId);
 const date = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Unknown date";
 const size = value => value == null ? "Size unavailable" : value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KiB` : `${(value / 1048576).toFixed(1)} MiB`;
 const button = (action, text, attributes = "", className = "control-button") => `<button type="button" class="${className}" data-action="${action}" ${attributes}>${text}</button>`;
-const iconButton = (action, label, icon, attributes = "") => button(action, glyph(icon),
-    `aria-label="${esc(label)}" title="${esc(label)}" ${attributes}`, "control-button icon-button");
-const pinButton = record => iconButton("pin", `${record.pinned ? "Unpin" : "Pin"} ${artifactLabel(record)}`, "pin",
-    `data-id="${esc(record.id)}" aria-pressed="${record.pinned}" ${state.pendingPins.has(record.id) ? "disabled" : ""}`);
+const iconButton = (action, label, icon, attributes = "", tooltip = label) => button(action, glyph(icon),
+    `aria-label="${esc(label)}" title="${esc(tooltip)}" ${attributes}`, "control-button icon-button");
+const pinButton = record => {
+    const label = record.pinned ? "Unpin" : "Pin";
+    return iconButton("pin", `${label} ${artifactLabel(record)}`, "pin",
+        `data-id="${esc(record.id)}" aria-pressed="${record.pinned}" ${state.pendingPins.has(record.id) ? "disabled" : ""}`, label);
+};
 const fileUrl = (record, download = false) => {
     const url = new URL(`file/${record.id}`, location.href);
     if (download) url.searchParams.set("download", "true");
