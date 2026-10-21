@@ -1,8 +1,7 @@
 body { --text: var(--ink); --border: var(--edge); --danger: var(--error); }
 main { max-width: 720px; padding: 28px 22px; margin: auto; }
 h1 { margin: 0 0 6px; font-size: var(--text-title-large, 26px); line-height: var(--leading-title-large, 32px); font-weight: var(--font-weight-semibold, 600); letter-spacing: -.025em; }
-header p { margin: 0 0 24px; color: var(--muted); }
-.title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+#capture { margin-top: 24px; }
 .browser-status { color: var(--muted); font-size: 12px; margin: -12px 0 16px; overflow-wrap: anywhere; }
 label { display: block; font-weight: 600; margin-bottom: 8px; }
 textarea { width: 100%; padding: 12px; resize: vertical; min-height: 82px; max-height: 320px; border: 1px solid var(--border); border-radius: 8px; font: inherit; line-height: 1.5; color: var(--text); background: var(--surface); }

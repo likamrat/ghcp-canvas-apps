@@ -16,6 +16,8 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
         const server = servers[index];
         const html = await (await fetch(server.url)).text();
         assert.ok(html.includes(`class="app-wordmark" aria-label="${names[index]}"`), `${app} has an accessible wordmark`);
+        assert.match(html, /<div class="app-brand">\s*<h1 class="app-wordmark"[\s\S]*?<\/h1>\s*<p class="app-tagline">[^<]+<\/p>/, `${app} places its tagline below the wordmark`);
+        assert.doesNotMatch(html, /class="local-label"/);
         assert.doesNotMatch(html, /__APP_WORDMARK__/);
         assert.match(html, /class="word-prefix" fill="currentColor"/);
         assert.match(html, /class="icon-halo"/);

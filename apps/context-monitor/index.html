@@ -15,7 +15,13 @@
 </head>
 <body>
     <main>
-        <header><h1 class="app-wordmark" aria-label="Context Monitor"><span class="visually-hidden">Context Monitor</span>__APP_WORDMARK__</h1><button id="open-browser" class="control-button" type="button">Open in browser</button></header>
+        <header class="app-header">
+            <div class="app-brand">
+                <h1 class="app-wordmark" aria-label="Context Monitor"><span class="visually-hidden">Context Monitor</span>__APP_WORDMARK__</h1>
+                <p class="app-tagline">See which chats are running out of room.</p>
+            </div>
+            <button id="open-browser" class="control-button" type="button">Open in browser</button>
+        </header>
         <p id="browser-status" class="browser-status" role="status" hidden></p>
         <details class="control-panel">
             <summary class="filter-heading">Filters and refresh</summary>

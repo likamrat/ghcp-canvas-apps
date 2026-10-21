@@ -13,6 +13,8 @@ In Artifacts, Screenshots, and Context Monitor, **Filters and refresh** starts c
 
 All four apps use the same theme-aware typography, surfaces, outlined icons, focus states, and control sizes: 36px on desktop and 44px in narrow views. Each keeps its own layout and workflow.
 
+A short line beneath each wordmark describes the problem the app helps with. These lines share an italic serif style; controls and data keep the app's UI font.
+
 For contributors: `branding.css` and `ui-icons.svg` are identical in every app folder so each extension remains independently installable. Update the copies together; `tests/branding.test.mjs` checks parity and asset delivery. Use `control-button` for boxed actions and add `icon-button` for icon-only actions with an accessible label. Content rows, tree expanders, and heat-map cells keep their own sizing.
 
 Filter headers use the same text metrics and collapsed height as action controls. Native dropdowns stay native, with a `select-field` wrapper for the shared arrow. Filter grids adapt to the available width and text size instead of using fixed field widths; `control-grid-three` keeps three- and six-field groups balanced. Context Monitor's bars, heat map, and usage colors remain app-specific.

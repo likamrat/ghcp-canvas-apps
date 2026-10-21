@@ -77,7 +77,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 @media (max-width: 680px) {
     :root { --control-height: 44px; --control-padding-x: 10px; }
     main { padding: 18px 16px; }
-    header, .title-row { flex-wrap: wrap; }
+    header { flex-wrap: wrap; }
     .header-actions { justify-content: start; }
 }
 @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
@@ -87,6 +87,10 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
     .check-filter input { appearance: auto; background: revert; border: revert; }
     .check-filter input::before { display: none; }
 }
+.app-header { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.app-brand { flex: 1 1 250px; min-width: 0; }
+.app-brand .app-wordmark { width: max-content; max-width: 100%; }
+.app-tagline { margin: 6px 0 0; color: var(--muted); font: italic 400 16px/24px Georgia, "Times New Roman", serif; }
 .app-wordmark { margin: 0; flex: 0 1 auto; min-width: 0; color: var(--ink, var(--text, inherit)); }
 .app-wordmark svg { display: block; width: 100%; height: auto; max-height: 34px; }
 .app-wordmark .icon-halo { fill: #000000; }

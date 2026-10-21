@@ -15,10 +15,12 @@
 </head>
 <body>
 <main>
-    <header>
-        <h1 class="app-wordmark" aria-label="Artifacts"><span class="visually-hidden">Artifacts</span>__APP_WORDMARK__</h1>
+    <header class="app-header">
+        <div class="app-brand">
+            <h1 class="app-wordmark" aria-label="Artifacts"><span class="visually-hidden">Artifacts</span>__APP_WORDMARK__</h1>
+            <p class="app-tagline">Your work shouldn't get lost in the chat.</p>
+        </div>
         <div class="header-actions">
-            <span class="local-label">Local / session artifacts</span>
             <button id="new-note" class="control-button" type="button" disabled><span data-icon="plus"></span>New note</button>
             <button id="refresh" class="control-button refresh-control" type="button">Refresh</button>
             <button id="open-browser" class="control-button" type="button">Open in browser</button>
