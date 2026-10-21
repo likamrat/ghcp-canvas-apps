@@ -150,7 +150,7 @@ test("HTTP serves exactly the indexed image bytes without changing source metada
 test("history and image size limits produce explicit warnings and unavailable records", async (t) => {
     const { home, events, image, catalog } = await fixture(t);
     await events("current", []);
-    await truncate(join(home, "session-state", "current", "events.jsonl"), 64 * 1024 * 1024 + 1);
+    await truncate(join(home, "session-state", "current", "events.jsonl"), 64 * 1024 * 1024 + 2);
     const largeHistory = await catalog.images("current");
     assert.equal(largeHistory.images.length, 0);
     assert.ok(largeHistory.warnings.some((warning) => /64 MiB/.test(warning)));

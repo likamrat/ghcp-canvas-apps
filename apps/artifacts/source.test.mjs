@@ -324,7 +324,7 @@ test("file, journal, depth and directory-entry limits report partial discovery e
     const binary = await file("current", "large.pdf", "");
     await truncate(binary, 32 * 1024 * 1024 + 1);
     await events("current", []);
-    await truncate(join(home, "session-state", "current", "events.jsonl"), 64 * 1024 * 1024 + 1);
+    await truncate(join(home, "session-state", "current", "events.jsonl"), 64 * 1024 * 1024 + 2);
     const root = join(home, "session-state", "current", "files");
     const deep = join(root, "one", "two", "three", "four", "five");
     await mkdir(deep, { recursive: true });
