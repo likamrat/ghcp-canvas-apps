@@ -19,7 +19,7 @@
         <p id="browser-status" class="browser-status" role="status" hidden></p>
         <details class="control-panel">
             <summary class="filter-heading">Filters and refresh</summary>
-            <div class="control-filters">
+            <div class="control-filters control-grid-three">
                 <div class="search"><label for="search">Search sessions</label><input id="search" type="search" placeholder="Name, project, or model" autocomplete="off"></div>
                 <div class="model-choice">
                     <label for="model-filter">Model</label>
@@ -35,8 +35,8 @@
                     </select>
                 </div>
             </div>
-            <div class="control-options">
-                <div class="sort-choice">
+            <div class="control-options control-grid-three">
+                <div class="sort-choice select-field">
                     <label for="sort-by">Sort by</label>
                     <select id="sort-by" aria-describedby="sort-help">
                         <option value="recent" selected>Recent activity (default)</option>
@@ -49,7 +49,7 @@
                         <option value="name-za">Name: Z to A</option>
                     </select>
                 </div>
-                <div class="refresh-choice">
+                <div class="refresh-choice select-field">
                     <label for="auto-refresh">Auto-refresh</label>
                     <select id="auto-refresh">
                         <option value="0">Off</option>
@@ -60,17 +60,17 @@
                         <option value="300000">Every 5 minutes</option>
                     </select>
                 </div>
-                <div class="page-size-choice">
+                <div class="page-size-choice select-field">
                     <label for="page-size">List sessions per page</label>
                     <select id="page-size"><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option></select>
                 </div>
-                <div class="scope-filters">
-                    <label class="check-filter"><input id="pinned-only" type="checkbox" disabled> Only pinned sessions</label>
-                    <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
-                    <label class="check-filter"><input id="include-missing" type="checkbox"> Include sessions without context data</label>
-                </div>
-                <button id="refresh" class="control-button refresh-control" type="button">Refresh</button>
             </div>
+            <div class="scope-filters">
+                <label class="check-filter"><input id="pinned-only" type="checkbox" disabled> Only pinned sessions</label>
+                <label class="check-filter"><input id="archived" type="checkbox"> Include archived sessions</label>
+                <label class="check-filter"><input id="include-missing" type="checkbox"> Include sessions without context data</label>
+            </div>
+            <div class="control-actions"><button id="refresh" class="control-button refresh-control" type="button">Refresh</button></div>
             <div class="control-settings">
                 <details class="threshold-settings">
                     <summary>Usage settings</summary>

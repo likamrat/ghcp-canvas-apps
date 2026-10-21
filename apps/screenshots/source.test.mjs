@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
+import { crc32 } from "node:zlib";
 import { createCatalog } from "./source.mjs";
 import { startServer } from "./server.mjs";
 
@@ -194,8 +195,16 @@ test("retained binary assets recover removed captures without indexing Markdown 
 });
 
 test("uploaded assets survive missing files across UTF-8, CRLF, and stream chunks, and reject changed asset records", async (t) => {
-    const { home, events, catalog } = await fixture(t);
-    const bytes = await readFile(new URL("./screenshot.png", import.meta.url));
+    const { home, events, catalog, image } = await fixture(t);
+    // Keep the stream-boundary fixture independent of documentation screenshot size.
+    const png = await readFile(image);
+    const payload = Buffer.from(`Comment\0${"a".repeat(70 * 1024)}`);
+    const chunk = Buffer.alloc(payload.length + 12);
+    chunk.writeUInt32BE(payload.length);
+    chunk.write("tEXt", 4);
+    payload.copy(chunk, 8);
+    chunk.writeUInt32BE(crc32(chunk.subarray(4, -4)), chunk.length - 4);
+    const bytes = Buffer.concat([png.subarray(0, -12), chunk, png.subarray(-12)]);
     assert.ok(bytes.length > 64 * 1024);
     const assetId = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
     await events("current", [

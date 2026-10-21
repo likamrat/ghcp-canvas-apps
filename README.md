@@ -14,3 +14,7 @@ In Artifacts, Screenshots, and Context Monitor, **Filters and refresh** starts c
 All four apps use the same theme-aware typography, surfaces, outlined icons, focus states, and control sizes: 36px on desktop and 44px in narrow views. Each keeps its own layout and workflow.
 
 For contributors: `branding.css` and `ui-icons.svg` are identical in every app folder so each extension remains independently installable. Update the copies together; `tests/branding.test.mjs` checks parity and asset delivery. Use `control-button` for boxed actions and add `icon-button` for icon-only actions with an accessible label. Content rows, tree expanders, and heat-map cells keep their own sizing.
+
+Filter headers use the same text metrics and collapsed height as action controls. Native dropdowns stay native, with a `select-field` wrapper for the shared arrow. Filter grids adapt to the available width and text size instead of using fixed field widths; `control-grid-three` keeps three- and six-field groups balanced. Context Monitor's bars, heat map, and usage colors remain app-specific.
+
+Run `node --test` for the automated regressions, including saved-file and ZIP-content checks. For rendered layout checks, open each local app fixture in Playwright and run `tests/canvas-ui.browser.mjs` with the run-code tool. It checks 11 widths, both themes, and 14px/16px host text, including the longest dropdown options.

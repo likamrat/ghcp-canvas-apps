@@ -45,12 +45,12 @@
             <div class="field"><label for="to">To date</label><input id="to" type="date"></div>
         </div>
         <div class="control-row display-controls">
-            <div class="field"><label for="sort">Sort by</label><select id="sort"><option value="timestamp">Date</option><option value="name">Filename</option><option value="size">File size</option></select></div>
-            <div class="field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
-            <div class="field"><label for="page-size">Artifacts per page</label><select id="page-size"><option>8</option><option selected>16</option><option>32</option></select></div>
-            <div class="field"><label for="auto-refresh">Auto-refresh</label><select id="auto-refresh"><option value="0">Off</option><option value="5000">5 seconds</option><option value="10000">10 seconds</option><option value="30000">30 seconds</option><option value="60000">1 minute</option><option value="300000">5 minutes</option></select></div>
-            <div class="control-actions"><button id="clear-filters" class="control-button" type="button">Clear filters</button></div>
+            <div class="field select-field"><label for="sort">Sort by</label><select id="sort"><option value="timestamp">Date</option><option value="name">Filename</option><option value="size">File size</option></select></div>
+            <div class="field select-field"><label for="order">Order</label><select id="order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
+            <div class="field select-field"><label for="page-size">Artifacts per page</label><select id="page-size"><option>8</option><option selected>16</option><option>32</option></select></div>
+            <div class="field select-field"><label for="auto-refresh">Auto-refresh</label><select id="auto-refresh"><option value="0">Off</option><option value="5000">5 seconds</option><option value="10000">10 seconds</option><option value="30000">30 seconds</option><option value="60000">1 minute</option><option value="300000">5 minutes</option></select></div>
         </div>
+        <div class="control-actions"><button id="clear-filters" class="control-button" type="button">Clear filters</button></div>
         <p id="filter-error" class="error-text" role="alert" hidden></p>
     </details>
     <div class="overview">

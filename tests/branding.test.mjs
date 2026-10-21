@@ -47,6 +47,10 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
     assert.match(canonical, /--control-height:\s*36px/);
     assert.match(canonical, /--control-height:\s*44px/);
     assert.match(canonical, /--control-radius:\s*6px/);
+    assert.match(canonical, /select:not\(\[multiple\]\)\s*\{[^}]*appearance:\s*none/);
+    assert.match(canonical, /repeat\(auto-fit,\s*minmax\(min\(100%,\s*max\(14em,/);
+    assert.match(canonical, /\.control-grid-three\s*\{/);
+    assert.doesNotMatch(canonical, /--usage-|\.heat-cell|\.heatmap-grid|\.scale-key|\.marker\b/);
     const icons = await readFile(new URL("../apps/artifacts/ui-icons.svg", import.meta.url), "utf8");
     const symbols = new Set([...icons.matchAll(/<symbol id="([^"]+)"/g)].map(match => match[1]));
     for (const app of apps) {

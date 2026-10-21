@@ -18,11 +18,8 @@ button[aria-pressed="true"] { background: var(--selected); border-color: var(--a
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .field { min-width: 0; }
 .field > label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
-.control-panel { margin-top: 16px; border: 1px solid var(--edge); border-radius: 8px; padding: 12px; }
 .control-row { display: grid; align-items: end; gap: 10px; }
 .control-row + .control-row { margin-top: 10px; }
-.artifact-controls { grid-template-columns: repeat(4, minmax(125px, 1fr)); }
-.display-controls { grid-template-columns: repeat(4, minmax(105px, 1fr)) auto; }
 .session-controls { display: flex; flex-wrap: wrap; gap: 8px 20px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--edge); }
 .control-actions { justify-self: end; }
 .overview { flex-wrap: wrap; margin: 18px 0 6px; color: var(--muted); font-size: 13px; }
@@ -41,7 +38,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .error-text { color: var(--error); font-size: 12px; }
 [aria-invalid="true"] { border-color: var(--error) !important; }
 .artifact-area { min-width: 0; }
-.session-context { margin-top: 16px; max-width: 560px; }
+.session-context { margin-top: 16px; }
 #session-picker { width: 100%; min-width: 0; text-align: left; }
 #session-picker-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #session-picker::after { content: ""; flex: 0 0 6px; width: 6px; height: 6px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
@@ -165,15 +162,12 @@ dialog textarea { padding: 10px; resize: vertical; }
 @media (max-width: 1180px) {
     #surface { grid-template-columns: 280px minmax(0, 1fr); }
     #surface[data-layout="library"] #artifact-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .artifact-controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
     main { padding: 22px 20px 18px; }
     #surface { grid-template-columns: 250px minmax(0, 1fr); gap: 16px; }
     .artifact-nav { padding-right: 12px; }
     .collection-nav { flex-wrap: wrap; }
-    .display-controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .control-actions { grid-column: 1 / -1; }
     .reader-toolbar { padding: 0 12px; }
     #reader-content { padding: 20px; }
 }
@@ -183,8 +177,6 @@ dialog textarea { padding: 10px; resize: vertical; }
     header { align-items: start; flex-wrap: wrap; }
     .header-actions { justify-content: start; }
     .header-actions .local-label { flex-basis: 100%; }
-    .artifact-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .display-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .overview { align-items: start; gap: 12px; }
     #surface, #surface[data-layout="activity"] { display: block; }
     #surface #reader { display: none; }

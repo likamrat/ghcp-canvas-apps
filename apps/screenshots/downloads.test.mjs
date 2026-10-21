@@ -99,6 +99,19 @@ test("download clicks save verified files and exactly one ZIP without overwritin
     assert.equal(archive.count, 2);
     assert.equal(zip.readUInt32LE(0), 0x04034b50);
     assert.equal(zip.readUInt16LE(zip.length - 12), 2);
+    let offset = 0;
+    const entries = [];
+    while (zip.readUInt32LE(offset) === 0x04034b50) {
+        assert.equal(zip.readUInt16LE(offset + 8), 0, "Stored entries preserve screenshot bytes without recompression");
+        const length = zip.readUInt32LE(offset + 18);
+        const nameLength = zip.readUInt16LE(offset + 26), extraLength = zip.readUInt16LE(offset + 28);
+        const name = zip.subarray(offset + 30, offset + 30 + nameLength).toString("utf8");
+        const start = offset + 30 + nameLength + extraLength;
+        assert.deepEqual(zip.subarray(start, start + length), bytes, `${name} contains the complete image`);
+        entries.push(name);
+        offset = start + length;
+    }
+    assert.deepEqual(entries, ["0001-capture.png", "0002-capture.png"]);
     assert.deepEqual((await readdir(directory)).sort(), ["capture (1).png", "capture.png", "screenshots.zip"]);
     const foreign = await fetch(new URL("api/save-download", server.url), {
         method: "POST", headers: { "Content-Type": "application/json", Origin: "https://example.com" },

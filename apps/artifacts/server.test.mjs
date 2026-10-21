@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { startServer } from "./server.mjs";
+import { createCatalog } from "./source.mjs";
+import { DatabaseSync } from "node:sqlite";
+import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 test("the server scopes reads, publishes only JSON, and exposes no arbitrary file path", async t => {
     const id = "a".repeat(64), calls = [];
@@ -56,4 +61,47 @@ test("the app header embeds a transparent wordmark with theme-aware lettering", 
     assert.match(header, /<path d="M2 11h20"/);
     const css = await (await fetch(new URL("branding.css", server.url))).text();
     assert.match(css, /\.app-wordmark[^}]*color:\s*var\(--ink,/);
+});
+
+test("downloads save exact binary, UTF-8, and captured-revision bytes with original filenames", async t => {
+    const home = await mkdtemp(join(tmpdir(), "artifacts-download-"));
+    const db = new DatabaseSync(join(home, "data.db"));
+    db.exec("CREATE TABLE sessions (id TEXT, title TEXT, execution_location TEXT); INSERT INTO sessions VALUES ('example','Downloads','local');");
+    db.close();
+    const source = join(home, "session-state", "example", "files");
+    const destination = join(home, "downloads");
+    await mkdir(source, { recursive: true });
+    await mkdir(destination);
+    const samples = [
+        ["capture.png", Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=", "base64")],
+        ["r\u00e9sultats.csv", Buffer.from("Name,Result\nCaf\u00e9,Ready\n", "utf8")],
+        ["flow.svg", Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="5"/></svg>')],
+    ];
+    for (const [name, bytes] of samples) await writeFile(join(source, name), bytes);
+    const catalog = createCatalog({ home });
+    const first = await catalog.publish({ sessionId: "example", title: "Release notes", content: "# Release\n\nFirst \u00e9dition.\n" });
+    await catalog.publish({ sessionId: "example", id: first.id, expectedVersion: first.version, title: "Release notes", content: "# Release\n\nSecond edition.\n" });
+    const snapshot = await catalog.artifacts("example");
+    const server = await startServer(catalog, { sessionId: "example" });
+    t.after(async () => { await server.close(); catalog.close(); await rm(home, { recursive: true, force: true }); });
+    for (const [name, bytes] of [...samples, ["Release notes.md", Buffer.from("# Release\n\nFirst \u00e9dition.\n", "utf8")]]) {
+        const item = snapshot.artifacts.find(record => record.name === name);
+        assert.ok(item, `Discover ${name}`);
+        const revision = item.source === "published" ? "&version=1" : "";
+        const response = await fetch(new URL(`file/${item.id}?download=true${revision}`, server.url));
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get("content-disposition"), /^attachment;/);
+        const filename = response.headers.get("content-disposition").match(/filename\*=UTF-8''(.+)$/)?.[1];
+        assert.equal(decodeURIComponent(filename), name, `Keep ${name}`);
+        const saved = join(destination, name);
+        await writeFile(saved, Buffer.from(await response.arrayBuffer()));
+        assert.deepEqual(await readFile(saved), bytes, `Save exact ${name} bytes`);
+        assert.equal(Number(response.headers.get("content-length")), bytes.length);
+    }
+    const missing = snapshot.artifacts.find(record => record.name === "capture.png");
+    await rm(join(source, missing.name));
+    const response = await fetch(new URL(`file/${missing.id}?download=true`, server.url));
+    assert.notEqual(response.status, 200);
+    assert.equal(response.headers.get("content-disposition"), null);
+    assert.ok((await response.json()).error);
 });

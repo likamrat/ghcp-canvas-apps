@@ -15,13 +15,9 @@ button[aria-pressed="true"] { background: var(--selected); border-color: var(--a
 input::placeholder { color: var(--muted); opacity: 1; }
 .field { min-width: 0; }
 .field > label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-.control-panel { margin-top: 16px; border: 1px solid var(--edge); border-radius: 8px; padding: 12px; }
 .control-row { display: grid; align-items: end; gap: 10px; }
 .control-row + .control-row { margin-top: 10px; }
 .session-controls { display: flex; flex-wrap: wrap; gap: 8px 20px; padding-bottom: 10px; border-bottom: 1px solid var(--edge); margin-bottom: 10px; }
-.image-controls { grid-template-columns: minmax(160px, 1fr) minmax(120px, 180px) repeat(2, minmax(120px, 150px)); }
-.display-controls { grid-template-columns: repeat(6, minmax(96px, 1fr)); }
-.display-controls .control-actions { grid-column: 1 / -1; }
 .control-panel > .display-controls { margin-top: 10px; }
 .control-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-self: end; }
 .download-icon { display: inline-block; flex: 0 0 17px; width: 17px; height: 17px; background: currentColor; mask: url("./icons/download.svg") center / contain no-repeat; }
@@ -113,17 +109,9 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
 #details dt { color: var(--muted); font-size: 11px; }
 #details dd { font-size: 12px; margin: 3px 0 0; overflow-wrap: anywhere; }
 #details .path-detail { grid-column: 1 / -1; }
-@media (max-width: 1000px) {
-    .image-controls { grid-template-columns: minmax(140px, 1fr) repeat(3, minmax(100px, 1fr)); }
-    .display-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .control-actions { grid-column: 1 / -1; justify-content: end; }
-}
 @media (max-width: 680px) {
     main { padding: 20px 16px 16px; }
-    .control-panel { padding: 12px; }
     .control-row { gap: 10px; }
-    .image-controls, .display-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .image-controls .field:first-child { grid-column: auto; }
     .browse { grid-template-columns: minmax(0, 1fr); gap: 18px; }
     aside { border: 0; padding: 0; }
     aside h2, #sessions { display: none; }
@@ -132,11 +120,6 @@ dialog::backdrop { background: rgb(15 18 24 / .72); }
     #details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .preview-controls { gap: 6px; }
     .preview-stage { height: 45dvh; }
-}
-@media (max-width: 320px) {
-    .image-controls, .display-controls { grid-template-columns: minmax(0, 1fr); }
-    .image-controls .field:first-child { grid-column: auto; }
-    .control-actions { justify-content: start; }
 }
 @media (forced-colors: active) {
     .check-filter input { appearance: auto; background: revert; border: revert; }
