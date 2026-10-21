@@ -2,6 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
+test("session selection precedes filters and views in reading and keyboard order", async () => {
+    const html = await readFile(new URL("index.html", import.meta.url), "utf8");
+    const picker = html.indexOf('id="session-picker"');
+    const filters = html.indexOf('id="filters"');
+    const views = html.indexOf('class="view-switch"');
+    assert.ok(picker > -1 && picker < filters && filters < views);
+    assert.equal([...html.matchAll(/id="session-picker"/g)].length, 1);
+});
+
 test("actions and view switches use one control class instead of per-button sizing", async () => {
     const html = await readFile(new URL("index.html", import.meta.url), "utf8");
     const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map(match => match[0]);

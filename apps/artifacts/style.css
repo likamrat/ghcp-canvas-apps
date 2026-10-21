@@ -89,7 +89,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .session-name { display: block; font-size: 13px; overflow-wrap: anywhere; }
 .session-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
 .artifact-area { min-width: 0; }
-.compact-picker { display: none; margin-bottom: 14px; }
+.compact-picker { display: none; margin-top: 16px; }
 #session-picker { width: 100%; min-width: 0; text-align: left; }
 #session-picker-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #session-picker::after { content: ""; flex: 0 0 6px; width: 6px; height: 6px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: translateY(-2px) rotate(45deg); }

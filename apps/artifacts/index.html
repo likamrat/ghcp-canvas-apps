@@ -25,6 +25,9 @@
         </div>
     </header>
     <p id="browser-status" class="browser-status" role="status" hidden></p>
+    <div class="field compact-picker"><label id="session-picker-label" for="session-picker">Session</label>
+        <button id="session-picker" class="control-button" type="button" aria-labelledby="session-picker-label session-picker-value" aria-haspopup="dialog" aria-expanded="false" aria-controls="session-menu" disabled><span id="session-picker-value">Choose a session</span></button>
+    </div>
     <details id="filters" class="control-panel" open>
         <summary class="filter-heading">Filters and refresh</summary>
         <div class="session-controls">
@@ -67,9 +70,6 @@
             <nav id="session-tree" aria-label="Sessions"></nav>
         </aside>
         <section class="artifact-area">
-            <div class="field compact-picker"><label id="session-picker-label" for="session-picker">Session</label>
-                <button id="session-picker" class="control-button" type="button" aria-labelledby="session-picker-label session-picker-value" aria-haspopup="dialog" aria-expanded="false" aria-controls="session-menu" disabled><span id="session-picker-value">Choose a session</span></button>
-            </div>
             <div id="surface" data-layout="workspace">
                 <section id="artifact-list" aria-label="Artifacts" aria-busy="true"><div class="load-state" role="status"><span class="loading-spinner" aria-hidden="true"></span><h2>Loading artifacts...</h2><p>Reading local session data.</p></div></section>
                 <section id="reader" aria-label="Selected artifact" aria-busy="true">

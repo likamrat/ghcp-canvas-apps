@@ -26,7 +26,7 @@ If you cannot inspect that list, say so. Then open Artifacts.
 
 Opens with the current session selected. Choose another session in the navigator or include its child sessions.
 
-In narrow views, the session picker has search, its own scrollbar, **Back to top**, and **Show selected**. These controls stay visible while the list scrolls. Use arrow keys and Enter to choose a session, or Escape to close.
+In narrow views, choose a session above the filters and view buttons. The picker has search, its own scrollbar, **Back to top**, and **Show selected**. These controls stay visible while the list scrolls. Use arrow keys and Enter to choose a session, or Escape to close.
 
 [Session picker with example sessions](screenshot-sessions.png)
 
