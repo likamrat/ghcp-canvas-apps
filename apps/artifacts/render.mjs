@@ -1,64 +1,118 @@
+import { marked, parseDocument } from "./vendor/markdown.mjs";
+
 export const escapeHtml = value => String(value).replace(/[&<>"']/g, character =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
 
-function inline(text) {
-    const pattern = /`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
-    let html = "", offset = 0;
-    for (const match of text.matchAll(pattern)) {
-        html += escapeHtml(text.slice(offset, match.index));
-        if (match[1]) html += `<code>${escapeHtml(match[1])}</code>`;
-        else if (match[4]) html += `<strong>${escapeHtml(match[4])}</strong>`;
-        else {
-            let url;
-            try { url = new URL(match[3]); } catch { url = null; }
-            html += url && ["http:", "https:"].includes(url.protocol)
-                ? `<a href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(match[2])}</a>`
-                : escapeHtml(match[0]);
-        }
-        offset = match.index + match[0].length;
-    }
-    return html + escapeHtml(text.slice(offset));
+const tags = new Set(["p", "div", "span", "a", "img", "br", "hr", "h1", "h2", "h3", "h4", "h5", "h6",
+    "strong", "b", "em", "i", "del", "s", "code", "pre", "kbd", "samp", "sub", "sup",
+    "blockquote", "ul", "ol", "li", "input", "table", "thead", "tbody", "tfoot", "tr", "th", "td",
+    "details", "summary", "figure", "figcaption"]);
+const blocked = new Set(["script", "style", "iframe", "object", "embed", "svg", "math", "template",
+    "noscript", "form", "button", "select", "textarea", "link", "meta", "base"]);
+const imagePath = path => /\.(?:png|jpe?g|gif|webp|svg)$/i.test(path);
+const slug = value => value.toLocaleLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, "").trim().replace(/\s+/g, "-").slice(0, 200) || "section";
+
+export function localReference(value) {
+    if (typeof value !== "string" || value.length > 4096 || /[\x00-\x1f\x7f]/.test(value) ||
+        /^(?:[a-z][a-z\d+.-]*:|[\\/])/i.test(value.trim())) return null;
+    try {
+        const path = decodeURIComponent(value.trim().split(/[?#]/)[0]).replaceAll("\\", "/");
+        const device = path.split("/").some(part => /^(?:con(?:in\$|out\$)?|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3])(?:\.|$)/i.test(part.trim()));
+        return !path || device || /^[\\/]/.test(path) || /[<>:"|?*\x00-\x1f\x7f]/.test(path) ? null : path;
+    } catch { return null; }
 }
 
-export function renderMarkdown(text, { title } = {}) {
+function webLink(value) {
+    try {
+        const url = new URL(value);
+        return ["https:", "http:"].includes(url.protocol) ? url.href : null;
+    } catch { return null; }
+}
+
+function tree(text) {
+    return parseDocument(marked.parse(text, { gfm: true, async: false }), { decodeEntities: true });
+}
+
+export function markdownReferences(text) {
+    const refs = new Set(), pending = [...tree(text).children];
+    let count = 0;
+    while (pending.length) {
+        if (++count > 50000) throw new Error("This Markdown document is too complex to preview.");
+        const node = pending.pop();
+        if (blocked.has(node.name)) continue;
+        const ref = node.name === "img" ? node.attribs.src : node.name === "a" ? node.attribs.href : null;
+        const path = localReference(ref);
+        if (path && imagePath(path)) refs.add(ref);
+        if (node.children) pending.push(...node.children);
+    }
+    return refs;
+}
+
+export function renderMarkdown(text, { title, resolveImage, resolveLink } = {}) {
     const lines = text.replaceAll("\r\n", "\n").split("\n");
     if (title && lines[0] === `# ${title}`) lines.shift();
-    const output = [];
-    let paragraph = [], list = null, fence = null, code = [];
-    const flush = () => {
-        if (paragraph.length) { output.push(`<p>${inline(paragraph.join(" "))}</p>`); paragraph = []; }
-        if (list) { output.push(`</${list}>`); list = null; }
+    const headings = new Map();
+    let count = 0;
+    const attribute = (name, value) => ` ${name}="${escapeHtml(value)}"`;
+    const plainText = (node, depth = 0) => {
+        if (depth > 64) throw new Error("Markdown nesting is too deep to preview.");
+        if (blocked.has(node.name)) return "";
+        return node.type === "text" ? node.data : (node.children ?? []).map(child => plainText(child, depth + 1)).join("");
     };
-    for (const line of lines) {
-        const boundary = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
-        if (fence) {
-            if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length) {
-                output.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`);
-                fence = null; code = [];
-            } else code.push(line);
-            continue;
+    function render(node, depth = 0) {
+        if (++count > 50000 || depth > 64) throw new Error("This Markdown document is too complex to preview.");
+        if (node.type === "text") return escapeHtml(node.data);
+        if (node.type === "comment" || blocked.has(node.name)) return "";
+        const children = () => (node.children ?? []).map(child => render(child, depth + 1)).join("");
+        if (!tags.has(node.name)) return children();
+        const attrs = node.attribs ?? {};
+        let tag = node.name, attributes = "";
+        if (tag === "img") {
+            const path = localReference(attrs.src);
+            const url = path && imagePath(path) ? (resolveImage ? resolveImage(attrs.src) : attrs.src) : null;
+            if (!url) return `<span class="markdown-image-unavailable">${webLink(attrs.src) ? "Remote image not loaded" : "Image not loaded"}${attrs.alt ? `: ${escapeHtml(attrs.alt)}` : ""}.</span>`;
+            attributes = attribute("src", url) + attribute("alt", attrs.alt ?? "") + ' loading="lazy" decoding="async"';
+            for (const dimension of ["width", "height"]) {
+                if (/^[1-9]\d{0,3}$/.test(attrs[dimension] ?? "")) attributes += attribute(dimension, attrs[dimension]);
+            }
+            return `<img${attributes}>`;
         }
-
-        if (boundary) { flush(); fence = boundary[1]; continue; }
-        if (!line.trim()) { flush(); continue; }
-        const heading = line.match(/^(#{1,6})\s+(.+)$/);
-        if (heading) { flush(); const level = Math.min(6, heading[1].length + 1); output.push(`<h${level}>${inline(heading[2])}</h${level}>`); continue; }
-        const item = line.match(/^\s*(?:[-*+]|\d+\.)\s+(.+)$/);
-        if (item) {
-            const kind = /^\s*\d/.test(line) ? "ol" : "ul";
-            if (paragraph.length || (list && list !== kind)) flush();
-            if (!list) { output.push(`<${kind}>`); list = kind; }
-            const task = item[1].match(/^\[([ xX])\]\s+(.+)$/);
-            output.push(task ? `<li class="task"><label><input type="checkbox" ${task[1] !== " " ? "checked " : ""}disabled> ${inline(task[2])}</label></li>` : `<li>${inline(item[1])}</li>`);
-            continue;
+        if (tag === "a") {
+            const href = attrs.href ?? "";
+            let url = webLink(href);
+            if (href.startsWith("#")) {
+                try { url = `#md-${slug(decodeURIComponent(href.slice(1)))}`; } catch { url = null; }
+            } else if (!url && localReference(href)) {
+                url = resolveLink ? resolveLink(href) : href;
+            }
+            if (!url) return `<span class="markdown-link-unavailable" title="This link is not available in the preview.">${children()}</span>`;
+            attributes += attribute("href", url);
+            if (!url.startsWith("#")) attributes += ' target="_blank" rel="noopener noreferrer"';
         }
-        if (list) flush();
-        if (line.startsWith("> ")) { flush(); output.push(`<blockquote>${inline(line.slice(2))}</blockquote>`); }
-        else paragraph.push(line);
+        if (/^h[1-6]$/.test(tag)) {
+            const name = slug(plainText(node)), previous = headings.get(name) ?? 0;
+            headings.set(name, previous + 1);
+            attributes += attribute("id", `md-${name}${previous ? `-${previous}` : ""}`);
+            tag = `h${Math.min(6, Number(tag[1]) + 1)}`;
+        }
+        if (tag === "input") return attrs.type?.toLowerCase() === "checkbox"
+            ? `<input type="checkbox" ${Object.hasOwn(attrs, "checked") ? "checked " : ""}disabled>` : "";
+        if (tag === "li" && node.children?.some(child => child.name === "input" && child.attribs.type === "checkbox")) attributes += ' class="task"';
+        if (tag === "code" && /^language-[\w-]{1,40}$/.test(attrs.class ?? "")) attributes += attribute("class", attrs.class);
+        if (["p", "div", "th", "td"].includes(tag) && /^(?:left|center|right)$/i.test(attrs.align ?? "")) {
+            attributes += attribute("class", `markdown-align-${attrs.align.toLowerCase()}`);
+        }
+        if (["th", "td"].includes(tag)) for (const span of ["colspan", "rowspan"]) {
+            if (/^[1-9]\d?$/.test(attrs[span] ?? "")) attributes += attribute(span, attrs[span]);
+        }
+        if (tag === "ol" && /^\d{1,6}$/.test(attrs.start ?? "")) attributes += attribute("start", attrs.start);
+        if (tag === "details" && Object.hasOwn(attrs, "open")) attributes += " open";
+        if (attrs.title) attributes += attribute("title", attrs.title);
+        if (["hr", "br"].includes(tag)) return `<${tag}>`;
+        const result = `<${tag}${attributes}>${children()}</${tag}>`;
+        return tag === "table" ? `<div class="table-scroll">${result}</div>` : result;
     }
-    flush();
-    if (fence) output.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`);
-    return output.join("\n");
+    return tree(lines.join("\n")).children.map(node => render(node)).join("");
 }
 
 export function parseDelimited(text, delimiter = ",", limit = 200) {

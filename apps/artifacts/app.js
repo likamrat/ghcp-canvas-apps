@@ -1,5 +1,5 @@
 import { SOURCES, defaultFilters, queryArtifacts, reconcileView, createRequestGate, catalogPresentation, applyPinResult, artifactLabel } from "./model.mjs";
-import { renderMarkdown, parseDelimited, escapeHtml as esc } from "./render.mjs";
+import { renderMarkdown, parseDelimited, localReference, escapeHtml as esc } from "./render.mjs";
 import { createRefreshCycle } from "./refresh.mjs";
 import { createSessionPicker } from "./session-picker.mjs";
 
@@ -38,6 +38,32 @@ const fileUrl = (record, download = false) => {
     if (state.view.selectedId === record.id && state.view.revision) url.searchParams.set("version", state.view.revision);
     return url.href;
 };
+function markdownResourceUrl(record, ref) {
+    const url = new URL(`resource/${record.id}`, location.href);
+    url.searchParams.set("ref", ref);
+    if (state.view.revision) url.searchParams.set("version", state.view.revision);
+    url.hash = new URL(ref, "https://markdown.invalid/").hash;
+    return url.href;
+}
+function markdownLink(record, ref) {
+    const path = localReference(ref);
+    if (!path) return null;
+    if (/\.(?:png|jpe?g|gif|webp|svg)$/i.test(path)) return markdownResourceUrl(record, ref);
+    const normalize = value => {
+        const normalized = value.replaceAll("\\", "/").replace(/^\/(?=[a-z]:)/i, "");
+        return /^[a-z]:/i.test(normalized) ? normalized.toLowerCase() : normalized;
+    };
+    let candidates;
+    if (record.path) {
+        const base = new URL("file:///");
+        base.pathname = record.path.replaceAll("\\", "/").split("/").map(encodeURIComponent).join("/");
+        const target = normalize(decodeURIComponent(new URL(path.split("/").map(encodeURIComponent).join("/"), base).pathname));
+        candidates = state.records.filter(item => item.path && normalize(item.path) === target);
+    } else candidates = state.records.filter(item => item.sessionId === record.sessionId && item.name === path);
+    const sameSession = candidates.filter(item => item.sessionId === record.sessionId);
+    if (sameSession.length === 1) candidates = sameSession;
+    return candidates.length === 1 ? `#artifact-${candidates[0].id}` : null;
+}
 function setError(message) { $("error").textContent = message; $("error").hidden = !message; }
 async function api(path, input) {
     const response = await fetch(new URL(path, location.href), input === undefined ? {} : {
@@ -274,10 +300,20 @@ async function loadSelected(preserveScroll = false) {
             const wide = table.rows.some(row => row.length > 32);
             body = `${table.truncated || wide ? '<p class="notice">Preview limited to 200 rows and 32 columns. Download the file for the full table.</p>' : ""}<div class="table-scroll"><table>${table.rows.map((row, index) => `<tr>${row.slice(0, 32).map(cell => `<${index ? "td" : "th"}>${esc(cell)}</${index ? "td" : "th"}>`).join("")}</tr>`).join("")}</table></div>`;
         } else if (result.content !== null) body = /\.(?:md|markdown)$/i.test(record.name) || record.source === "published"
-            ? `<div class="prose" id="artifact-prose">${renderMarkdown(result.content, { title: metadata.title })}</div>` : `<pre id="artifact-prose"><code>${esc(result.content)}</code></pre>`;
+            ? `<div class="prose" id="artifact-prose">${renderMarkdown(result.content, {
+                title: metadata.title, resolveImage: ref => markdownResourceUrl(record, ref),
+                resolveLink: ref => markdownLink(record, ref),
+            })}</div>` : `<pre id="artifact-prose"><code>${esc(result.content)}</code></pre>`;
         else body = `<p class="notice">${esc(kindLabels[record.kind] ?? "File")} preview is not available here. Download it to open in its usual application.</p>${detailList(record)}`;
         container.innerHTML = `${historyNotice}${body}`;
         container.scrollTop = scroll;
+        for (const image of container.querySelectorAll(".prose img")) image.addEventListener("error", () => {
+            const notice = document.createElement("p");
+            notice.className = "markdown-image-unavailable";
+            notice.setAttribute("role", "status");
+            notice.textContent = `Image could not be loaded${image.alt ? `: ${image.alt}` : ""}. It may be missing, blocked, or changed. Refresh to retry.`;
+            image.replaceWith(notice);
+        }, { once: true });
         const image = $("preview-image");
         if (image) {
             image.addEventListener("load", applyZoom, { once: true });
@@ -376,6 +412,19 @@ document.addEventListener("keydown", event => {
     }
 });
 document.addEventListener("click", async event => {
+    const link = event.target.closest("#artifact-prose a");
+    const linkedId = link?.getAttribute("href")?.match(/^#artifact-([a-f0-9]{64})$/)?.[1];
+    if (linkedId) {
+        event.preventDefault();
+        if (!$("filter-error").hidden) clearFilters();
+        let records = queryArtifacts(state.records, state.filters);
+        if (!records.some(item => item.id === linkedId)) { clearFilters(); records = queryArtifacts(state.records, state.filters); }
+        const index = records.findIndex(item => item.id === linkedId);
+        if (index < 0) { setError("This linked artifact is no longer available. Refresh to retry."); return; }
+        state.view.page = Math.floor(index / state.view.pageSize) + 1;
+        chooseArtifact(linkedId);
+        return;
+    }
     const target = event.target.closest("button");
     if (!target) return;
     if (target.dataset.layout) {

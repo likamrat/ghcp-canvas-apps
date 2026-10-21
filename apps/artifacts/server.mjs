@@ -8,6 +8,7 @@ import { inlineWordmark } from "./branding.mjs";
 const assets = new Map([
     ["", ["index.html", "text/html; charset=utf-8"]],
     ...["app.js", "model.mjs", "render.mjs", "refresh.mjs", "browser.js", "multiselect.js", "session-picker.mjs", "session-picker-model.mjs"].map(name => [name, [name, "text/javascript; charset=utf-8"]]),
+    ["vendor/markdown.mjs", ["vendor/markdown.mjs", "text/javascript; charset=utf-8"]],
     ...["style.css", "multiselect.css", "branding.css"].map(name => [name, [name, "text/css; charset=utf-8"]]),
     ...["logo.svg", "icon.svg", "filter.svg", "refresh.svg", "ui-icons.svg"].map(name => [name, [name, "image/svg+xml"]]),
     ["icon.png", ["icon.png", "image/png"]],
@@ -102,6 +103,17 @@ export async function startServer(catalog, { sessionId, launchBrowser } = {}) {
                 if (scanning) fail("Artifact discovery is still running. Retry when it finishes.", "source_busy");
                 scanning = true;
                 try { json(await catalog.artifacts(selected, scope)); } finally { scanning = false; }
+                return;
+            }
+            const resource = route.match(/^resource\/([a-f0-9]{64})$/);
+            if (resource) {
+                const params = parameters(url, ["ref", "version"]);
+                const result = await catalog.readResource(resource[1], params.get("ref"), { version: version(params) });
+                res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
+                res.writeHead(200, {
+                    "Content-Type": result.mime, "Content-Length": result.bytes.length,
+                    "Content-Disposition": "inline",
+                }).end(result.bytes);
                 return;
             }
             const match = route.match(/^(api\/content|api\/revisions|file)\/([a-f0-9]{64})$/);

@@ -1,9 +1,10 @@
 import { open, realpath, opendir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { homedir } from "node:os";
-import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { readSessions, sourceError, discover, retainedImage, inspectReference, fileFingerprint, hashFile } from "./image-source.mjs";
 import { createStore } from "./store.mjs";
+import { localReference, markdownReferences } from "./render.mjs";
 
 export { sourceError };
 const TEXT_LIMIT = 1024 * 1024;
@@ -103,13 +104,16 @@ function eventCollector(home, session, warnings) {
     };
 }
 
-async function inspect(record, root, budget) {
+async function inspect(record, root, budget, { rejectSymlinks = false } = {}) {
     const item = { ...record, root, realPath: null, fingerprint: null };
     let file;
     try {
         item.realPath = await realpath(record.path);
         if (/^(?:\\\\|\/\/)/.test(item.realPath) || (root && !within(root, item.realPath))) {
             throw sourceError("unsafe_path", "The artifact resolves outside its approved files directory.");
+        }
+        if (rejectSymlinks && keyPath(item.realPath) !== keyPath(resolve(record.path))) {
+            throw sourceError("unsafe_path", "Symbolic links are not loaded as document images.");
         }
         file = await open(item.realPath, "r");
         const info = await file.stat();
@@ -142,6 +146,34 @@ async function inspect(record, root, budget) {
         item.reason = error.code === "ENOENT" ? "The referenced file is no longer present." : error.message;
     } finally { await file?.close(); }
     return item;
+}
+
+async function readInspected(item, record = publicRecord(item)) {
+    let file;
+    try {
+        if (await realpath(item.path) !== item.realPath) throw sourceError("artifact_changed", "Artifact path changed; refresh first.");
+        file = await open(item.realPath, "r");
+        const info = await file.stat();
+        if (!info.isFile() || fileFingerprint(info) !== item.fingerprint) throw sourceError("artifact_changed", "Artifact changed; refresh first.");
+        if (info.size > (isText(item) ? TEXT_LIMIT : FILE_LIMIT)) throw sourceError("too_large", "Artifact exceeds the read limit.");
+        const bytes = Buffer.alloc(info.size);
+        let offset = 0;
+        while (offset < bytes.length) {
+            const { bytesRead } = await file.read(bytes, offset, bytes.length - offset, offset);
+            if (!bytesRead) throw sourceError("artifact_changed", "Artifact changed during reading; refresh first.");
+            offset += bytesRead;
+        }
+        // Windows metadata-only updates can advance ctime; compare captured bytes, not ctime.
+        if (fileFingerprint(await file.stat()) !== item.fingerprint || digest(bytes) !== item.contentHash) {
+            throw sourceError("artifact_changed", "Artifact content changed; refresh first.");
+        }
+        return { metadata: record, content: isText(item) ? bytes.toString("utf8") : null,
+            bytes: isText(item) ? null : bytes, mime: item.mime, filename: item.name };
+    } catch (error) {
+        if (["ENOENT", "ENOTDIR"].includes(error.code)) throw sourceError("artifact_changed", "The artifact moved or was removed. Refresh first.");
+        if (["EACCES", "EPERM"].includes(error.code)) throw sourceError("artifact_unavailable", "Permission to read this artifact was denied.");
+        throw error;
+    } finally { await file?.close(); }
 }
 
 async function scanFiles(session, directory, warnings, indexed, budget, count, depth = 0, root = directory) {
@@ -192,6 +224,7 @@ export function createCatalog({
 } = {}) {
     const store = createStore(storePath);
     const indexed = new Map();
+    const resources = new Map();
     let snapshot;
     const sessions = (preferredSessionId) => {
         try { snapshot = readSessions(database); }
@@ -225,7 +258,7 @@ export function createCatalog({
             version: note.version, pinned: store.pinned(note.id), tool: null, eventId: null,
         };
     };
-    return {
+    const catalog = {
         sessions, metadata,
         async artifacts(sessionId, options = {}) {
             if (!options || typeof options !== "object" || Array.isArray(options) ||
@@ -292,6 +325,7 @@ export function createCatalog({
                 }
             }
             for (const [id, record] of indexed) if (scope.has(record.sessionId)) indexed.delete(id);
+            for (const [key, entry] of resources) if (scope.has(entry.sessionId)) resources.delete(key);
             for (const record of loaded.values()) {
                 record.pinned = store.pinned(record.id);
                 indexed.set(record.id, record);
@@ -323,31 +357,57 @@ export function createCatalog({
                 const retained = await retainedImage(item.retainedAsset);
                 return { metadata: record, content: null, bytes: retained.data, mime: retained.mime, filename: item.name };
             }
-            let file;
-            try {
-                if (await realpath(item.path) !== item.realPath) throw sourceError("artifact_changed", "Artifact path changed; refresh first.");
-                file = await open(item.realPath, "r");
-                const info = await file.stat();
-                if (!info.isFile() || fileFingerprint(info) !== item.fingerprint) throw sourceError("artifact_changed", "Artifact changed; refresh first.");
-                if (info.size > (isText(item) ? TEXT_LIMIT : FILE_LIMIT)) throw sourceError("too_large", "Artifact exceeds the read limit.");
-                const bytes = Buffer.alloc(info.size);
-                let offset = 0;
-                while (offset < bytes.length) {
-                    const { bytesRead } = await file.read(bytes, offset, bytes.length - offset, offset);
-                    if (!bytesRead) throw sourceError("artifact_changed", "Artifact changed during reading; refresh first.");
-                    offset += bytesRead;
+            return readInspected(item, record);
+        },
+        async readResource(id, ref, options = {}) {
+            const path = localReference(ref);
+            if (!path || !["image", "diagram"].includes(formats.get(extname(path).toLowerCase())?.[0])) {
+                throw sourceError("invalid_input", "Choose a relative local image referenced by this document.");
+            }
+            if (metadata(id).mime !== "text/markdown") {
+                throw sourceError("invalid_input", "Linked images require an indexed Markdown document.");
+            }
+            const anchor = indexed.get(id);
+            const document = await catalog.read(id, options);
+            if (document.mime !== "text/markdown" || document.content === null) {
+                throw sourceError("invalid_input", "Linked images require an indexed Markdown document.");
+            }
+            const signature = digest(document.content);
+            const key = `${id}:${document.metadata.sessionId}:${document.metadata.version ?? 0}`;
+            let entry = resources.get(key);
+            if (!entry || entry.signature !== signature) {
+                const refs = markdownReferences(document.content);
+                if (refs.size > 128) throw sourceError("resource_too_large", "A Markdown preview supports up to 128 local image references.");
+                entry = { signature, sessionId: document.metadata.sessionId, refs, items: new Map(), budget: { bytes: 128 * TEXT_LIMIT, files: new Set() } };
+                resources.set(key, entry);
+                while (resources.size > 64) resources.delete(resources.keys().next().value);
+            }
+            if (!entry.refs.has(ref)) throw sourceError("resource_missing", "This image is not referenced by the Markdown document.");
+            const parts = path.split("/").filter(part => part !== ".");
+            if (parts.some(part => part.startsWith(".") || secret(part))) {
+                throw sourceError("unsafe_path", "Hidden, sensitive, or parent-directory images are not loaded.");
+            }
+            if (document.metadata.source === "published") {
+                const matches = [...indexed.values()].filter(item => item.sessionId === document.metadata.sessionId &&
+                    item.name === parts.join("/") && ["image", "diagram"].includes(item.kind));
+                if (matches.length !== 1) throw sourceError("resource_missing", "A saved note must reference one indexed image in its session by filename.");
+                const image = matches[0];
+                if (!entry.budget.files.has(image.id)) {
+                    if (image.size > entry.budget.bytes) throw sourceError("resource_too_large", "Linked images exceed the 128 MiB document budget.");
+                    entry.budget.bytes -= image.size; entry.budget.files.add(image.id);
                 }
-                // Windows metadata-only updates can advance ctime; compare captured bytes, not ctime.
-                if (fileFingerprint(await file.stat()) !== item.fingerprint || digest(bytes) !== item.contentHash) {
-                    throw sourceError("artifact_changed", "Artifact content changed; refresh first.");
-                }
-                return { metadata: record, content: isText(item) ? bytes.toString("utf8") : null,
-                    bytes: isText(item) ? null : bytes, mime: item.mime, filename: item.name };
-            } catch (error) {
-                if (["ENOENT", "ENOTDIR"].includes(error.code)) throw sourceError("artifact_changed", "The artifact moved or was removed. Refresh first.");
-                if (["EACCES", "EPERM"].includes(error.code)) throw sourceError("artifact_unavailable", "Permission to read this artifact was denied.");
-                throw error;
-            } finally { await file?.close(); }
+                return catalog.read(image.id);
+            }
+            const root = dirname(anchor.realPath);
+            const target = resolve(root, ...parts);
+            if (!within(root, target)) throw sourceError("unsafe_path", "Images outside this document's folder are not loaded.");
+            if (!entry.items.has(target)) {
+                const item = reference({ id: document.metadata.sessionId, name: document.metadata.sessionName }, target);
+                entry.items.set(target, inspect(item, root, entry.budget, { rejectSymlinks: true }));
+            }
+            const image = await entry.items.get(target);
+            if (image.availability !== "available") throw sourceError("resource_unavailable", image.reason);
+            return readInspected(image);
         },
         revisions(id) { return metadata(id).source === "published" ? store.revisions(id) : []; },
         pin(id, pinned) {
@@ -379,4 +439,5 @@ export function createCatalog({
         },
         close() { store.close(); },
     };
+    return catalog;
 }

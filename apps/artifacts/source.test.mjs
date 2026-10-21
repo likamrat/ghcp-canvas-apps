@@ -63,6 +63,77 @@ test("aliases select one canonical session and discover only its deliverable fil
     assert.equal((await catalog.read(item.id)).content, "# A real brief");
 });
 
+test("Markdown images resolve relative to the indexed document without adding unrelated artifacts", async t => {
+    const { home, open, events } = await fixture(t);
+    const folder = join(home, "documents");
+    await mkdir(join(folder, "images"), { recursive: true });
+    const bytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=", "base64");
+    await writeFile(join(folder, "images", "preview image.png"), bytes);
+    const path = join(folder, "README.md");
+    await writeFile(path, '<a href="images/preview%20image.png"><img src="images/preview%20image.png" alt="Preview"></a>');
+    await events("current", [{ type: "user.message", data: { attachments: [{ type: "file", path }] } }]);
+    const catalog = open(), snapshot = await catalog.artifacts("current");
+    assert.equal(snapshot.artifacts.length, 1);
+    const result = await catalog.readResource(snapshot.artifacts[0].id, "images/preview%20image.png");
+    assert.deepEqual(result.bytes, bytes);
+    assert.equal(result.mime, "image/png");
+    assert.equal(result.filename, "preview image.png");
+    assert.equal((await catalog.artifacts("current")).artifacts.length, 1);
+});
+
+test("Markdown image reads reject undeclared files, traversal, hidden paths, network paths, and symlinks", async t => {
+    const { home, open, events } = await fixture(t);
+    const folder = join(home, "documents"), outside = join(home, "outside");
+    await mkdir(join(folder, ".hidden"), { recursive: true });
+    await mkdir(join(folder, "secrets"));
+    await mkdir(outside);
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"/>';
+    for (const path of [join(folder, "unlisted.svg"), join(folder, ".hidden", "image.svg"),
+        join(folder, "secrets", "image.svg"), join(outside, "image.svg")]) await writeFile(path, svg);
+    await symlink(outside, join(folder, "linked"), "junction");
+    await symlink(join(folder, ".hidden"), join(folder, "alias"), "junction");
+    const refs = ["../outside/image.svg", "%2e%2e/outside/image.svg", ".hidden/image.svg",
+        "secrets/image.svg", "linked/image.svg", "alias/image.svg", "https://example.com/image.svg", "\\\\server\\image.svg"];
+    const path = join(folder, "README.md");
+    await writeFile(path, refs.map(ref => `<img src="${ref}">`).join("\n"));
+    await events("current", [{ type: "user.message", data: { attachments: [{ type: "file", path }] } }]);
+    const catalog = open(), snapshot = await catalog.artifacts("current"), id = snapshot.artifacts[0].id;
+    for (const ref of [...refs, "unlisted.svg"]) {
+        await assert.rejects(catalog.readResource(id, ref), error =>
+            ["invalid_input", "unsafe_path", "resource_missing", "resource_unavailable"].includes(error.code), ref);
+    }
+});
+
+test("linked image changes require refresh and Markdown revisions authorize their own references", async t => {
+    const { home, open, events, file } = await fixture(t);
+    const folder = join(home, "documents");
+    await mkdir(folder);
+    const path = join(folder, "README.md"), image = join(folder, "flow.svg");
+    await writeFile(path, "![Flow](flow.svg)");
+    await writeFile(image, '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    await events("current", [{ type: "user.message", data: { attachments: [{ type: "file", path }] } }]);
+    const catalog = open(), snapshot = await catalog.artifacts("current"), id = snapshot.artifacts[0].id;
+    await catalog.readResource(id, "flow.svg");
+    const changed = '<svg xmlns="http://www.w3.org/2000/svg"><title>Updated</title></svg>';
+    await writeFile(image, changed);
+    await assert.rejects(catalog.readResource(id, "flow.svg"), { code: "artifact_changed" });
+    await catalog.artifacts("current");
+    assert.equal((await catalog.readResource(id, "flow.svg")).bytes.toString(), changed);
+    await file("current", "note-image.svg", changed);
+    const note = await catalog.publish({ sessionId: "current", title: "Note", content: "![Image](note-image.svg)" });
+    await catalog.publish({ sessionId: "current", id: note.id, expectedVersion: 1, title: "Note", content: "No image in this version." });
+    await catalog.artifacts("current");
+    assert.equal((await catalog.readResource(note.id, "note-image.svg", { version: 1 })).bytes.toString(), changed);
+    await assert.rejects(catalog.readResource(note.id, "note-image.svg"), { code: "resource_missing" });
+});
+
+test("Markdown previews bound their image reference count", async t => {
+    const { open, file } = await fixture(t);
+    await file("current", "README.md", Array.from({ length: 129 }, (_, index) => `![Image](image-${index}.png)`).join("\n"));
+    const catalog = open(), snapshot = await catalog.artifacts("current");
+    await assert.rejects(catalog.readResource(snapshot.artifacts[0].id, "image-0.png"), { code: "resource_too_large" });
+});
+
 test("scope reloads current hierarchy, excludes archives, and warns rather than scanning remote files", async (t) => {
     const { home, open, file } = await fixture(t);
     const catalog = open();

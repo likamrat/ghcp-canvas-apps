@@ -78,12 +78,25 @@ test("downloads save exact binary, UTF-8, and captured-revision bytes with origi
         ["flow.svg", Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="5"/></svg>')],
     ];
     for (const [name, bytes] of samples) await writeFile(join(source, name), bytes);
+    await writeFile(join(source, "README.md"), '<p align="center"><img src="capture.png" width="640"></p>');
     const catalog = createCatalog({ home });
     const first = await catalog.publish({ sessionId: "example", title: "Release notes", content: "# Release\n\nFirst \u00e9dition.\n" });
     await catalog.publish({ sessionId: "example", id: first.id, expectedVersion: first.version, title: "Release notes", content: "# Release\n\nSecond edition.\n" });
     const snapshot = await catalog.artifacts("example");
     const server = await startServer(catalog, { sessionId: "example" });
     t.after(async () => { await server.close(); catalog.close(); await rm(home, { recursive: true, force: true }); });
+    const document = snapshot.artifacts.find(record => record.name === "README.md");
+    const imageUrl = new URL(`resource/${document.id}?ref=capture.png`, server.url);
+    const inline = await fetch(imageUrl);
+    assert.equal(inline.status, 200);
+    assert.equal(inline.headers.get("content-type"), "image/png");
+    assert.equal(inline.headers.get("content-disposition"), "inline");
+    assert.match(inline.headers.get("content-security-policy"), /^sandbox;/);
+    assert.deepEqual(Buffer.from(await inline.arrayBuffer()), samples[0][1]);
+    assert.equal((await fetch(imageUrl, { headers: { Origin: "https://example.com" } })).status, 403);
+    assert.equal((await fetch(new URL(`resource/${document.id}?ref=capture.png&path=elsewhere`, server.url))).status, 400);
+    assert.equal((await fetch(new URL(`resource/${document.id}?ref=flow.svg`, server.url))).status, 404);
+    assert.equal((await fetch(new URL("vendor/markdown.mjs", server.url))).status, 200);
     for (const [name, bytes] of [...samples, ["Release notes.md", Buffer.from("# Release\n\nFirst \u00e9dition.\n", "utf8")]]) {
         const item = snapshot.artifacts.find(record => record.name === name);
         assert.ok(item, `Discover ${name}`);
