@@ -34,6 +34,8 @@ Opens with the current Copilot session selected. You can choose another session 
 
 **Open in browser** uses your system browser. Keep the Copilot session running; reloading extensions in the GitHub Copilot app ends the old browser connection.
 
+**Filters and refresh** starts collapsed. Expand it to adjust filters, display options, or refresh settings.
+
 The header wordmark follows the app theme. Its circular mark inverts in dark mode. Filter and refresh controls use matching icons; image discovery shows a labeled loading indicator.
 
 ## Data

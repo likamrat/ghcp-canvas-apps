@@ -395,5 +395,4 @@ $("copy-request").addEventListener("click", async () => {
     catch { $("copy-status").textContent = "Clipboard access failed. Select and copy the request text manually."; $("request-content").select(); }
 });
 refreshCycle.setHidden(document.hidden);
-if (matchMedia("(max-width: 680px)").matches) $("filters").open = false;
 void refresh();

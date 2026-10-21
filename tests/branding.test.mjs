@@ -20,7 +20,12 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
         assert.match(html, /class="word-prefix" fill="currentColor"/);
         assert.match(html, /class="icon-halo"/);
         assert.match(html, /class="[^"]*\brefresh-control\b[^"]*"/);
-        if (app !== "thoughts") assert.match(html, /class="filter-heading"/);
+        if (app !== "thoughts") {
+            const panel = html.match(/<details\b[^>]*class="control-panel"[^>]*>/)?.[0];
+            assert.ok(panel, `${app} has a collapsible filter panel`);
+            assert.doesNotMatch(panel, /\sopen(?:\s|=|>)/, `${app} starts collapsed`);
+            assert.match(html, /<summary class="filter-heading">Filters and refresh<\/summary>/);
+        }
         for (const file of ["branding.css", "filter.svg", "refresh.svg"]) {
             const response = await fetch(new URL(file, server.url));
             assert.equal(response.status, 200, `${app} serves ${file}`);
@@ -35,4 +40,6 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
     assert.match(canonical, /prefers-color-scheme: dark/);
     assert.match(canonical, /fill:\s*currentColor/);
     assert.match(canonical, /color:\s*var\(--surface/);
+    assert.match(canonical, /\.filter-heading::before\s*\{[^}]*mask-image:\s*url\("\.\/filter\.svg"\)/);
+    assert.match(canonical, /mask:\s*url\("\.\/refresh\.svg"\)/);
 });

@@ -23,6 +23,8 @@ If you cannot inspect that list, say so. Then open Context Monitor.
 
 Filter by model, pinned sessions, or context usage. Arrows beside parent names expand one level at a time. Search reveals matching branches; context-usage sorting reveals nested sessions for comparison.
 
+**Filters and refresh** starts collapsed. Expand it to adjust filters, refresh intervals, or usage settings.
+
 Model and Context usage accept multiple selections. Selections within a filter are combined; different filters narrow the results together. Clear a selection to include all.
 
 Choose an auto-refresh interval or refresh manually. **Usage settings** changes the warning levels, initially 65% and 85%. Select a session name for exact token counts.

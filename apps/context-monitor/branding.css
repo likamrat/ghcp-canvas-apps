@@ -18,6 +18,8 @@
 }
 .filter-heading { font-size: 13px; font-weight: 500; margin: 0 0 12px; }
 .filter-heading::before { mask-image: url("./filter.svg"); vertical-align: -3px; margin-right: 7px; }
+.control-panel > summary.filter-heading { cursor: pointer; margin: 0; }
+.control-panel[open] > summary.filter-heading { margin-bottom: 12px; }
 .refresh-control:disabled::before, .loading-spinner { animation: canvas-refresh-spin 1.1s linear infinite; }
 .loading-spinner { color: var(--color-focus-outline, var(--accent, #0969da)); width: 20px; height: 20px; }
 @keyframes canvas-refresh-spin { to { transform: rotate(360deg); } }

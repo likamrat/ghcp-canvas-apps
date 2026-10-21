@@ -18,8 +18,8 @@
     <main>
         <header><h1 class="app-wordmark" aria-label="Context Monitor"><span class="visually-hidden">Context Monitor</span>__APP_WORDMARK__</h1><button id="open-browser" type="button">Open in browser</button></header>
         <p id="browser-status" class="browser-status" role="status" hidden></p>
-        <section class="control-panel" aria-label="Session controls">
-            <h2 class="filter-heading">Filters and refresh</h2>
+        <details class="control-panel">
+            <summary class="filter-heading">Filters and refresh</summary>
             <div class="control-filters">
                 <div class="search"><label for="search">Search sessions</label><input id="search" type="search" placeholder="Name, project, or model" autocomplete="off"></div>
                 <div class="model-choice">
@@ -95,7 +95,7 @@
             <p id="filter-help" class="sr-only">Select any combination. No selection includes all. Models are from your open sessions. Usage levels follow your saved thresholds. Parents stay visible for matching nested sessions.</p>
             <p id="filter-status" class="filter-notice" role="status" hidden></p>
             <p id="sort-help" class="sr-only">Recent activity first. Parents and nested sessions stay together.</p>
-        </section>
+        </details>
         <div class="overview">
             <p id="count" role="status">Reading local sessions...</p>
             <div class="legend" aria-label="Context usage levels">

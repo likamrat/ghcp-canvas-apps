@@ -53,8 +53,6 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .field { min-width: 0; }
 .field > label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
 .control-panel { margin-top: 16px; border: 1px solid var(--edge); border-radius: 8px; padding: 12px; }
-.control-panel > summary { cursor: pointer; font-size: 13px; margin: 0; }
-.control-panel[open] > summary { margin-bottom: 12px; }
 .control-row { display: grid; align-items: end; gap: 10px; }
 .control-row + .control-row { margin-top: 10px; }
 .artifact-controls { grid-template-columns: minmax(180px, 1.5fr) repeat(2, minmax(125px, 1fr)) repeat(2, minmax(125px, .8fr)); }

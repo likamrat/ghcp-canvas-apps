@@ -31,7 +31,7 @@ In narrow views, choose a session above the filters and view buttons. The picker
 [Session picker with example sessions](screenshot-sessions.png)
 
 - **Workspace** puts the artifact list beside a reader. **Library** shows file cards and image previews. **Activity** lists artifact references by date. All three use the same filters.
-- Filter by filename or title, type, source, date, or pinned status. Type and Source accept multiple selections. Selections within a filter are combined; different filters narrow the results together.
+- **Filters and refresh** starts collapsed. Expand it to filter by filename or title, type, source, date, or pinned status. Type and Source accept multiple selections. Selections within a filter are combined; different filters narrow the results together.
 - Sort by date, filename, or size. Activity switches to date sorting. Browse 8, 16, or 32 artifacts per page.
 - **Refresh** reads the selected scope again. Session changes show a loading indicator until discovery finishes. Refreshing the same session keeps its last results visible. **Auto-refresh** starts off and supports 5, 10, or 30 seconds, 1 minute, or 5 minutes. It pauses while hidden and preserves filters, selection, and page when they still apply.
 - Select an artifact to preview it, inspect its source, pin it, or download it. Images and SVG diagrams have zoom controls. CSV and TSV files open as tables.
