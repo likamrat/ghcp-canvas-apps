@@ -19,6 +19,7 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
         assert.match(html, /<div class="app-brand">\s*<h1 class="app-wordmark"[\s\S]*?<\/h1>\s*<p class="app-tagline">[^<]+<\/p>/, `${app} places its tagline below the wordmark`);
         assert.doesNotMatch(html, /class="local-label"/);
         assert.doesNotMatch(html, /__APP_WORDMARK__/);
+        assert.doesNotMatch(html, /class="wordmark-background"/, `${app} keeps the documentation background out of its live header`);
         assert.match(html, /class="word-prefix" fill="currentColor"/);
         assert.match(html, /class="icon-halo"/);
         assert.match(html, /class="[^"]*\brefresh-control\b[^"]*"/);

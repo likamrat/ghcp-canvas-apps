@@ -9,6 +9,6 @@ export function inlineWordmark(svg) {
     return svg
         .replace(/<svg\b[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="34" viewBox="${viewBox}" style="--wordmark-accent:${accent}" aria-hidden="true" focusable="false">`)
         .replace(/<title>[^<]*<\/title>\s*/, "")
-        .replace(/<rect width="920" height="220"[^>]*\/>\s*/, "")
+        .replace(/<rect class="wordmark-background"[^>]*\/>\s*/, "")
         .replace(/class="(word-prefix|word-suffix)" fill="#000000"/g, 'class="$1" fill="currentColor"');
 }

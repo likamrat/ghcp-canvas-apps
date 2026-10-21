@@ -83,8 +83,12 @@ test("each app has one complete background-backed logo and a matching Lucide app
         assert.doesNotMatch(readme, /<picture>|prefers-color-scheme|logo-(?:light|dark)/);
         const logo = await readFile(new URL("logo.svg", base), "utf8");
         assert.ok(logo.includes(`<title>${name}</title>`));
-        assert.match(logo, /viewBox="0 0 920 220"/);
-        assert.match(logo, /<rect width="920" height="220" rx="24" fill="#ffffff"/);
+        const canvas = logo.match(/\bviewBox="([\d. ]+)"/)?.[1].split(" ").map(Number);
+        const wordmarkBounds = logo.match(/data-header-view-box="([\d. ]+)"/)?.[1].split(" ").map(Number);
+        assert.ok(canvas && wordmarkBounds, "Document and header logo bounds must be explicit");
+        assert.deepEqual(canvas, [wordmarkBounds[0] - 24, wordmarkBounds[1] - 24,
+            wordmarkBounds[2] + 48, wordmarkBounds[3] + 48], `${app} uses equal padding around its wordmark, not a fixed-width banner`);
+        assert.match(logo, /<rect class="wordmark-background"[^>]*rx="24" fill="#ffffff"/);
         assert.match(logo, /class="word-prefix" fill="#000000"/);
         assert.match(logo, /class="word-suffix" fill="#000000"/);
         assert.match(logo, /<g[^>]+aria-label=/, "The logo must contain the outlined wordmark");

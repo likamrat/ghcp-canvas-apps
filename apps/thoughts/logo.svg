@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="920" height="220" viewBox="0 0 920 220" role="img" aria-label="Thoughts" data-typeface="Bricolage Grotesque" data-replaced-letter="o" data-letter-prefix="th" data-header-view-box="52 43 570 134" data-optical-gaps="6.2500 6.2500">
+<svg xmlns="http://www.w3.org/2000/svg" width="618" height="182" viewBox="28 19 618 182" role="img" aria-label="Thoughts" data-typeface="Bricolage Grotesque" data-replaced-letter="o" data-letter-prefix="th" data-header-view-box="52 43 570 134" data-optical-gaps="6.2500 6.2500">
   <title>Thoughts</title>
-  <rect width="920" height="220" rx="24" fill="#ffffff"/>
+  <rect class="wordmark-background" x="28" y="19" width="618" height="182" rx="24" fill="#ffffff"/>
   <g aria-label="Thoughts">
     <g class="word-prefix" fill="#000000" transform="translate(59.175 147.19375) scale(0.1375 -0.1375)"><path transform="translate(0 0)" d="M244 -12Q153 -12 109 34.5Q65 81 65 178L65 407L6 407L6 504L12 504Q70 512 94.5 543.5Q119 575 125 639L126 646L216 646L216 527L339 527L339 403L216 403L216 192Q216 154 234.5 137.5Q253 121 280 121Q295 121 310.5 125.5Q326 130 339 137L339 3Q309 -6 285.5 -9Q262 -12 244 -12Z"/><path transform="translate(355.81060606060606 0)" d="M37 0L37 272L37 698L191 698L191 565Q191 544 188.5 510Q186 476 181.5 437Q177 398 172.5 362Q168 326 165 300L174 300Q183 384 205 437.5Q227 491 265.5 516Q304 541 358 541Q443 541 484 480Q525 419 525 297L525 0L372 0L372 290Q372 350 356 378Q340 406 304 406Q271 406 245.5 382Q220 358 205.5 307Q191 256 191 176L191 0Z"/></g>
     <circle class="icon-halo" cx="228.50833333333333" cy="110.96249999999999" r="41.971875" fill="#000000" stroke="#7c858e" stroke-width="1.25"/>
