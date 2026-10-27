@@ -72,7 +72,13 @@ async function api(path, input, headers = {}) {
     });
     const content = await response.text();
     let result;
-    try { result = JSON.parse(content); } catch { throw new Error(`Artifacts could not read the server response (${response.status}). Reopen the canvas if its session ended.`); }
+    try { result = JSON.parse(content); }
+    catch {
+        if (response.status === 404 && path === "api/open-image") {
+            throw new Error("This Artifacts server does not support image windows yet. Reload extensions in Copilot, then close and reopen Artifacts. Refreshing this page does not update the server.");
+        }
+        throw new Error(`Artifacts could not read the server response (${response.status}). Reopen the canvas if its session ended.`);
+    }
     if (!response.ok) throw new Error(result.error || `Artifacts request failed (${response.status}).`);
     return result;
 }

@@ -22,7 +22,7 @@ Artifacts appears in Canvas apps, and open it.
 
 Choose a session, then open an artifact. Pin files you want to keep handy, search the list, or switch to Gallery or Timeline. Filters start collapsed.
 
-Click a preview image to open it in a separate, image-only window, from either the canvas or browser view. Close it to return without losing your place. Requires Edge, Chrome, or Chromium.
+Click a preview image to open it in a separate, image-only window, from either the canvas or browser view. Close it to return without losing your place. Requires Edge, Chrome, or Chromium. After updating, reload extensions and reopen Artifacts; refreshing an existing page does not restart its server.
 
 Markdown opens as a formatted document, including tables and local images. Code examples stay readable as code; scripts and remote images are not loaded.
 

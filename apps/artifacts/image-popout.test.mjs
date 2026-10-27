@@ -140,3 +140,18 @@ test("image click state preserves selection and reports launch failures without 
     assert.equal(status.hidden, false);
     assert.equal(attributes.has("aria-disabled"), false);
 });
+
+test("an older server gives image clicks extension-reload guidance, not a generic response error", async () => {
+    const source = await readFile(new URL("app.js", import.meta.url), "utf8");
+    const start = source.indexOf("async function api("), end = source.indexOf("async function openImageWindow(");
+    assert.ok(start >= 0 && end > start);
+    let response = { status: 404, ok: false, text: async () => "Not found" };
+    const call = runInNewContext(`${source.slice(start, end)}\napi`, {
+        URL, location: { href: "http://127.0.0.1:12345/local/" },
+        fetch: async () => response,
+    });
+    await assert.rejects(call("api/open-image", { id }), /Reload extensions.*close and reopen Artifacts.*Refreshing/i);
+    response = { status: 404, ok: false, text: async () => JSON.stringify({ error: "This artifact is no longer indexed." }) };
+    await assert.rejects(call("api/open-image", { id }), /no longer indexed/);
+    await assert.rejects(call("api/content/missing"), /no longer indexed/);
+});
