@@ -16,6 +16,7 @@ if (["workspace", "library", "activity"].includes(layout)) state.view.layout = l
 const scanGate = createRequestGate(), readGate = createRequestGate();
 let editing = null;
 let downloading = false, lastDownload = null;
+let openingImage = false;
 const sessionPicker = createSessionPicker({ onSelect: changeSession });
 const kindLabels = { document: "Document", image: "Image", diagram: "Diagram", table: "Table", file: "File" };
 const glyphNames = new Set(["document", "image", "diagram", "table", "pin", "folder", "list", "grid", "history", "chevron", "back", "forward", "eye", "info", "download", "message", "edit", "minus", "plus", "reset"]);
@@ -65,15 +66,34 @@ function markdownLink(record, ref) {
     return candidates.length === 1 ? `#artifact-${candidates[0].id}` : null;
 }
 function setError(message) { $("error").textContent = message; $("error").hidden = !message; }
-async function api(path, input) {
+async function api(path, input, headers = {}) {
     const response = await fetch(new URL(path, location.href), input === undefined ? {} : {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
+        method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(input),
     });
     const content = await response.text();
     let result;
     try { result = JSON.parse(content); } catch { throw new Error(`Artifacts could not read the server response (${response.status}). Reopen the canvas if its session ended.`); }
     if (!response.ok) throw new Error(result.error || `Artifacts request failed (${response.status}).`);
     return result;
+}
+async function openImageWindow(record) {
+    if (!record || openingImage) return;
+    const trigger = $("preview-image");
+    const status = $("image-error");
+    openingImage = true;
+    trigger?.setAttribute("aria-disabled", "true");
+    if (status) { status.hidden = false; status.textContent = "Opening image window..."; status.setAttribute("role", "status"); }
+    try {
+        await api("api/open-image", { id: record.id }, { "x-canvas-popout": "1" });
+        if (status?.isConnected) { status.textContent = ""; status.hidden = true; }
+    } catch (error) {
+        if (status?.isConnected) {
+            status.textContent = error.message; status.hidden = false; status.setAttribute("role", "alert");
+        } else setError(error.message);
+    } finally {
+        openingImage = false;
+        for (const image of document.querySelectorAll("#preview-image")) image.removeAttribute("aria-disabled");
+    }
 }
 function downloadNotice(message, saved = null) {
     lastDownload = saved;
@@ -333,7 +353,7 @@ async function loadSelected(preserveScroll = false) {
         if (state.tab === "details") body = detailList(record);
         else if (state.tab === "versions") body = `${revisions(record, result.revisions)}<p class="captured-note">Source: ${esc(record.sessionName)}${record.tool ? ` · ${esc(record.tool)}` : ""}. Only captured note versions are available; file references do not contain a complete edit history.</p>`;
         else if (record.availability !== "available") body = `<div class="notice">${esc(record.reason || "The original file is unavailable.")}</div>${detailList(record)}`;
-        else if (["image", "diagram"].includes(record.kind)) body = `<div class="image-tools" role="group" aria-label="Image zoom">${iconButton("zoom-out", "Zoom out", "minus")}<span id="zoom-label">${Math.round(state.zoom * 100)}%</span>${iconButton("zoom-in", "Zoom in", "plus")}${iconButton("zoom-reset", "Reset zoom", "reset")}</div><p id="image-error" class="error-text" role="alert" hidden></p><div class="image-frame"><img id="preview-image" src="${esc(fileUrl(record))}" alt="${esc(artifactLabel(record))}"></div>`;
+        else if (["image", "diagram"].includes(record.kind)) body = `<div class="image-tools" role="group" aria-label="Image zoom">${iconButton("zoom-out", "Zoom out", "minus")}<span id="zoom-label">${Math.round(state.zoom * 100)}%</span>${iconButton("zoom-in", "Zoom in", "plus")}${iconButton("zoom-reset", "Reset zoom", "reset")}</div><p id="image-error" class="error-text" role="alert" hidden></p><div class="image-frame"><img id="preview-image" src="${esc(fileUrl(record))}" alt="${esc(artifactLabel(record))}" role="button" tabindex="0" aria-label="Open ${esc(artifactLabel(record))} in a separate image window" title="Open image in a separate window"${openingImage ? ' aria-disabled="true"' : ""}></div>`;
         else if (record.kind === "table" && result.content !== null) {
             const table = parseDelimited(result.content, record.name.toLowerCase().endsWith(".tsv") ? "\t" : ",");
             const wide = table.rows.some(row => row.length > 32);
@@ -355,6 +375,12 @@ async function loadSelected(preserveScroll = false) {
         }, { once: true });
         const image = $("preview-image");
         if (image) {
+            image.addEventListener("click", () => { void openImageWindow(record); });
+            image.addEventListener("keydown", event => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault(); void openImageWindow(record);
+                }
+            });
             image.addEventListener("load", applyZoom, { once: true });
             image.addEventListener("error", () => { $("image-error").textContent = "The image could not be read. Refresh to retry."; $("image-error").hidden = false; }, { once: true });
             if (image.complete && image.naturalWidth) applyZoom();

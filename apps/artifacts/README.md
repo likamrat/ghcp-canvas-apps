@@ -22,6 +22,8 @@ Artifacts appears in Canvas apps, and open it.
 
 Choose a session, then open an artifact. Pin files you want to keep handy, search the list, or switch to Gallery or Timeline. Filters start collapsed.
 
+Click a preview image to open it in a separate, image-only window, from either the canvas or browser view. Close it to return without losing your place. Requires Edge, Chrome, or Chromium.
+
 Markdown opens as a formatted document, including tables and local images. Code examples stay readable as code; scripts and remote images are not loaded.
 
 Create notes, revisit their saved versions, or download a file. **Request a change** prepares text to copy into Copilot chat; it does not send a message.

@@ -5,9 +5,13 @@ import { pathToFileURL } from "node:url";
 import { createBrowserPopout } from "./browser.mjs";
 import { inlineWordmark } from "./branding.mjs";
 import { saveFile, revealDownload } from "./download-files.mjs";
+import { launchImageWindow } from "./image-window.mjs";
 
 const assets = new Map([
     ["", ["index.html", "text/html; charset=utf-8"]],
+    ["image-preview", ["image-preview.html", "text/html; charset=utf-8"]],
+    ["image-preview.js", ["image-preview.js", "text/javascript; charset=utf-8"]],
+    ["image-preview.css", ["image-preview.css", "text/css; charset=utf-8"]],
     ...["app.js", "model.mjs", "render.mjs", "refresh.mjs", "browser.js", "multiselect.js", "session-picker.mjs", "session-picker-model.mjs"].map(name => [name, [name, "text/javascript; charset=utf-8"]]),
     ["vendor/markdown.mjs", ["vendor/markdown.mjs", "text/javascript; charset=utf-8"]],
     ...["style.css", "multiselect.css", "branding.css"].map(name => [name, [name, "text/css; charset=utf-8"]]),
@@ -47,10 +51,11 @@ async function body(req, allowed, maximum = 2 * 1024 * 1024) {
 }
 const disposition = name => `attachment; filename="artifact"; filename*=UTF-8''${encodeURIComponent(name).replace(/['()*]/g, character => `%${character.charCodeAt(0).toString(16)}`)}`;
 
-export async function startServer(catalog, { sessionId, launchBrowser, downloadDirectory, revealFile = revealDownload } = {}) {
+export async function startServer(catalog, { sessionId, launchBrowser, launchImage = launchImageWindow, downloadDirectory, revealFile = revealDownload } = {}) {
     const prefix = `/${randomBytes(32).toString("hex")}/`;
     let scanning = false;
     let saving = false;
+    let openingImage = false, imageWindowOpened = false;
     const savedDownloads = new Map();
     const popout = createBrowserPopout(() => `http://127.0.0.1:${server.address().port}${prefix}`, launchBrowser);
     const server = createServer(async (req, res) => {
@@ -71,6 +76,27 @@ export async function startServer(catalog, { sessionId, launchBrowser, downloadD
             const route = url.pathname.slice(prefix.length);
             if (req.method === "POST") {
                 if (route === "api/open-browser") { json(await popout.open(req)); return; }
+                if (route === "api/open-image") {
+                    if (req.headers["x-canvas-popout"] !== "1") {
+                        res.writeHead(403).end("Image windows require an explicit preview click."); return;
+                    }
+                    const input = await body(req, ["id"], 1024);
+                    if (typeof input.id !== "string" || !/^[a-f0-9]{64}$/.test(input.id)) fail("Choose an indexed image.");
+                    if (openingImage) fail("An image window is already opening.", "image_window_busy");
+                    openingImage = true;
+                    try {
+                        const result = await catalog.read(input.id);
+                        if (!["image", "diagram"].includes(result.metadata.kind) || result.metadata.availability !== "available") {
+                            fail("Choose an available image or diagram.");
+                        }
+                        const imageUrl = new URL(`${prefix}image-preview`, origin);
+                        imageUrl.searchParams.set("id", input.id);
+                        await launchImage(imageUrl.href);
+                        imageWindowOpened = true;
+                        json({ opened: true });
+                    } finally { openingImage = false; }
+                    return;
+                }
                 if (route === "api/save-download") {
                     const input = await body(req, ["id", "version"], 2048);
                     if (typeof input.id !== "string" || !/^[a-f0-9]{64}$/.test(input.id) ||
@@ -176,7 +202,7 @@ export async function startServer(catalog, { sessionId, launchBrowser, downloadD
     await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
     return {
         url: `http://127.0.0.1:${server.address().port}${prefix}${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`,
-        hasBrowserWindow: popout.hasBrowserWindow,
+        hasBrowserWindow: () => popout.hasBrowserWindow() || openingImage || imageWindowOpened,
         close: () => new Promise((resolve, reject) => {
             server.close(error => error ? reject(error) : resolve());
             server.closeAllConnections();
