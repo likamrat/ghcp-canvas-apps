@@ -2,7 +2,7 @@
 
 Keep a work list for a release, a handoff, or your own projects. Update it in the canvas or ask Copilot to update it from a chat.
 
-![Tracker table with column dividers, release statuses, and two-line update previews](screenshot-table-view.png)
+![Tracker table with subtle resize dividers, colored status labels, and two-line update previews](screenshot-table-view.png)
 
 ## Use
 
@@ -12,7 +12,7 @@ In the GitHub Copilot app, open **Canvas apps** and choose **Tracker**. If it is
 
 Choose **Add item** or select an item's title to edit it. Items can have an owner, an update, and a source link.
 
-New items start at **To do** unless a status filter is active. Hover over a status or focus it with the keyboard to see the full label and what it means. **Awaiting deployment**, for example, means the change is merged but isn't live. Use **Add status** for a custom label and an optional tip. [See all statuses](actions.md#built-in-statuses).
+New items start at **To do** unless a status filter is active. Status colors are always visible: **Blocked** is red, **Awaiting deployment** is amber, and **Verified live** is green. Hover over a status or focus it with the keyboard to see the full label and what it means. Use **Add status** for a custom label and an optional tip. [See all statuses](actions.md#built-in-statuses).
 
 To add a subtask, pick a parent in **Add under**. Subtasks start collapsed. Use the count in the **Subtasks** column to open them. **Expand all** appears when more than one item has subtasks or when the **Subtasks** column is hidden. If a subtask matches a search or filter, its parent appears without expanding. Each subtask has its own status.
 
@@ -22,7 +22,7 @@ Link a Copilot session when you create a tracker or from the **Trackers** menu. 
 
 Search titles, owners, and updates, or use **Filter by status**. Use **Columns** to show or hide Status, Latest update, and Subtasks.
 
-Drag a divider between column headers to resize the two columns. You can also focus a divider and press the left or right arrow key, or click it and choose **Narrower** or **Wider**. Widths apply to the current view. To restore the defaults, choose **Columns** → **Reset column widths**.
+Drag the short mark between column headers to resize the two columns. You can also focus it and press the left or right arrow key, or click it and choose **Narrower** or **Wider**. Widths apply to the current view. To restore the defaults, choose **Columns** → **Reset column widths**.
 
 Long updates start at two lines. Choose **Show more** to read the full update and **Show less** to collapse it. Search still checks the full update.
 
