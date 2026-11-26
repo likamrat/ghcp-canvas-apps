@@ -41,7 +41,7 @@ export const actions = {
 };
 
 const defaults = [
-    ["todo", "To do", "neutral"], ["in-progress", "In progress", "blue"],
+    ["todo", "To do", "neutral"], ["in-progress", "In progress", "amber"],
     ["in-review", "In review", "purple"],
     ["packaged", "Packaged", "blue", "A package was built and checked. That does not mean it was merged or deployed."],
     ["ready-to-merge", "Ready to merge", "teal"],
@@ -108,6 +108,17 @@ const defaultStatuses = new Map(defaults.map(([, label, tone, tooltip], index) =
 
 function builtInStatus(status) {
     return defaultStatuses.get(nameKey(status.label));
+}
+
+function statusPresentation(status) {
+    const label = nameKey(status.label);
+    const builtin = defaultStatuses.get(label);
+    const waitingForAccessibility = label === "awaiting accessibility" || label === "awaiting accessibility sign-off";
+    return {
+        ...status,
+        tone: builtin?.tone ?? (waitingForAccessibility ? "amber" : status.tone),
+        tooltip: status.tooltip ?? builtin?.tooltip ?? null,
+    };
 }
 
 function validateUrl(url) {
@@ -274,10 +285,7 @@ export function createStore(path = join(
                         board: requireBoard(input.boardId),
                         statuses: db.prepare("SELECT id, label, tone, tooltip FROM statuses WHERE boardId = ? ORDER BY rowid").all(input.boardId)
                             .sort((a, b) => (builtInStatus(a)?.index ?? defaults.length) - (builtInStatus(b)?.index ?? defaults.length))
-                            .map(status => {
-                                const builtin = builtInStatus(status);
-                                return builtin ? { ...status, tone: builtin.tone, tooltip: status.tooltip ?? builtin.tooltip ?? null } : status;
-                            }),
+                            .map(statusPresentation),
                         items: db.prepare(input.includeDetails
                             ? "SELECT * FROM items WHERE boardId = ? ORDER BY rowid"
                             : "SELECT * FROM items WHERE boardId = ? AND parentId IS NULL ORDER BY rowid").all(input.boardId).map(formatItem),
@@ -290,7 +298,7 @@ export function createStore(path = join(
                         VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(boardId, labelKey) DO NOTHING`)
                         .run(boardId, id, label, nameKey(label), "neutral", tooltip || null);
                     if (!result.changes) throw new TrackerError("duplicate_status", "That status already exists on this tracker.", 409);
-                    return { id, label, tone: "neutral", tooltip: tooltip || null };
+                    return statusPresentation({ id, label, tone: "neutral", tooltip: tooltip || null });
                 }
                 case "add_items":
                     return transaction("BEGIN IMMEDIATE", () => {

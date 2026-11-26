@@ -51,6 +51,9 @@ test("batch creation is atomic and custom status IDs belong to one tracker", t =
     const { id: otherId } = store.run("create_board", { name: "Documentation" });
     const custom = store.run("add_status", { boardId: otherId, label: "In copyedit" });
     assert.equal(custom.tooltip, null);
+    assert.equal(custom.tone, "neutral");
+    const accessibility = store.run("add_status", { boardId: otherId, label: "Awaiting accessibility" });
+    assert.equal(accessibility.tone, "amber");
     assert.throws(() => store.run("add_status", { boardId, label: "Too long", tooltip: "a".repeat(201) }),
         { code: "invalid_input" });
     assert.throws(() => store.run("add_status", { boardId, label: "ready to merge" }), { code: "duplicate_status" });
@@ -171,8 +174,11 @@ test("release statuses backfill saved trackers and preserve an existing custom s
     original.close();
     const legacy = new DatabaseSync(path);
     legacy.prepare("DELETE FROM statuses WHERE boardId = ? AND id IN ('verified-live', 'packaged')").run(boardId);
+    legacy.prepare("UPDATE statuses SET tone = 'blue' WHERE boardId = ? AND id = 'in-progress'").run(boardId);
     legacy.prepare(`INSERT INTO statuses (boardId, id, label, labelKey, tone, tooltip)
         VALUES (?, 'custom-live', 'Verified Live', 'verified live', 'neutral', 'Checked the running service.')`).run(boardId);
+    legacy.prepare(`INSERT INTO statuses (boardId, id, label, labelKey, tone, tooltip)
+        VALUES (?, 'accessibility-review', 'Awaiting Accessibility Sign-off', 'awaiting accessibility sign-off', 'neutral', 'Waiting for the review.')`).run(boardId);
     legacy.prepare(`INSERT INTO items (id, boardId, statusId, title, owner, note, url, createdAt, updatedAt)
         VALUES ('release', ?, 'custom-live', 'Check the release', '', '', '', '2025-01-15', '2025-01-15')`).run(boardId);
     legacy.close();
@@ -186,6 +192,10 @@ test("release statuses backfill saved trackers and preserve an existing custom s
         ]);
         assert.equal(items[0].statusId, "custom-live");
         assert.equal(statuses.find(status => status.id === "packaged").tone, "blue");
+        assert.equal(statuses.find(status => status.id === "in-progress").tone, "amber");
+        assert.deepEqual(statuses.find(status => status.id === "accessibility-review"), {
+            id: "accessibility-review", label: "Awaiting Accessibility Sign-off", tone: "amber", tooltip: "Waiting for the review.",
+        });
         const { id: freshId } = upgraded.run("create_board", { name: "Next release" });
         assert.equal(upgraded.run("get_board", { boardId: freshId }).statuses.find(status => status.id === "verified-live").tone, "green");
     } finally { upgraded.close(); }

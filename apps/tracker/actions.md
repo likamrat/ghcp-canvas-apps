@@ -32,3 +32,5 @@ Open the `work-tracker` canvas with `boardName` or `boardId`. Omit both to open 
 | Done | `done` | Work is complete. |
 
 Use the IDs from `get_board`. A custom status that matches a built-in label keeps its ID and any custom tip, and its label uses the built-in color. Hover or keyboard focus reveals the tip without changing the color.
+
+Custom statuses named **Awaiting accessibility** or **Awaiting accessibility sign-off** use the same yellow as **In progress** and **Awaiting deployment**. Tracker does not add either accessibility status by default.

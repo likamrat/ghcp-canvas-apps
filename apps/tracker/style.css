@@ -121,15 +121,16 @@ button.subtask-toggle[aria-expanded="true"] { background: var(--selected); borde
 .status {
     display: inline-block; vertical-align: top; max-inline-size: 100%; padding: 2px 6px;
     overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-radius: 4px;
-    color: var(--status-color, var(--ink)); font-size: .8125rem; font-weight: 600; line-height: 1.4;
+    color: color-mix(in srgb, var(--ink) 62%, var(--status-hue, #6787a9));
+    font-size: .8125rem; font-weight: 600; line-height: 1.4;
 }
 :is(.status, .status-heading):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
-.status[data-tone="blue"] { --status-color: light-dark(#075bb7, #58a6ff); }
-.status[data-tone="purple"] { --status-color: light-dark(#7046b3, #bc8cff); }
-.status[data-tone="teal"] { --status-color: light-dark(#096b70, #56d4dd); }
-.status[data-tone="red"] { --status-color: light-dark(#b42332, #ff818b); }
-.status[data-tone="amber"] { --status-color: light-dark(#805400, #f1c34d); }
-.status[data-tone="green"] { --status-color: light-dark(#19753b, #57d98a); }
+.status[data-tone="blue"] { --status-hue: #2162ae; }
+.status[data-tone="purple"] { --status-hue: #7852a5; }
+.status[data-tone="teal"] { --status-hue: #127a78; }
+.status[data-tone="red"] { --status-hue: #b94342; }
+.status[data-tone="amber"] { --status-hue: #9b7208; }
+.status[data-tone="green"] { --status-hue: #228249; }
 .empty { padding: 23px 0; border-block-end: 1px solid var(--edge); color: var(--muted); }
 .empty h3 { color: var(--ink); margin-bottom: 4px; }
 .empty button { margin-top: 12px; }
