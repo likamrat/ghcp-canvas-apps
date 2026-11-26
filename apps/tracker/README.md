@@ -30,7 +30,7 @@ Search titles, owners, and updates, or use **Filter by status**. Use **Columns**
 
 Select a status tag above the table to filter by that status. Select it again to remove just the status filter, or choose **Clear filters** to reset both search and status. The summary counts don't change as you filter.
 
-![The selected Packaged tag matches the status dropdown, with Clear filters beside the table controls](screenshot-status-filter.png)
+![The selected Packaged tag matches the dropdown marked with a filter icon, with Clear filters beside the table controls](screenshot-status-filter.png)
 
 Drag the short mark between column headers to resize the two columns. You can also focus it and press the left or right arrow key, or click it and choose **Narrower** or **Wider**. Widths apply to the current view. To restore the defaults, choose **Columns** → **Reset column widths**.
 

@@ -58,7 +58,7 @@ footer { margin-top: 24px; }
     min-block-size: 24px; max-inline-size: 100%; border: 0;
     overflow-wrap: anywhere; cursor: pointer;
 }
-.status-filter-tag:hover { text-decoration: underline; text-underline-offset: .16em; }
+.status-filter-tag:hover { background: color-mix(in srgb, var(--status-hue) 36%, var(--surface)); }
 .status-filter-tag[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: -2px; }
 .status-filter-tag:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .status-filter-tag[aria-pressed="true"]:focus-visible { box-shadow: inset 0 0 0 2px currentColor; }
@@ -66,6 +66,9 @@ footer { margin-top: 24px; }
 .filters { margin-bottom: 16px; }
 .filters .field { flex: 1 1 10rem; }
 .filters .field:first-child { flex: 2 1 12rem; }
+.filters label[for="status-filter"] { display: flex; align-items: center; gap: 5px; }
+.status-filter-icon { display: inline-flex; }
+.status-filter-icon::before { width: 13px; height: 13px; flex-basis: 13px; forced-color-adjust: none; }
 #columns-menu, #resize-column-menu { min-inline-size: 0; width: min(12rem, calc(100vw - 24px)); }
 #columns-menu .check-filter { padding-inline: 8px; color: var(--ink); }
 #reset-column-widths { border-top: 1px solid var(--edge); border-radius: 0 0 4px 4px; }
