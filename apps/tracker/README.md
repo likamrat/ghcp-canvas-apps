@@ -22,6 +22,8 @@ Link a Copilot session when you create a tracker or from the **Trackers** menu. 
 
 Search titles, owners, and updates, or use **Filter by status**. Use **Columns** to show or hide Status, Latest update, and Subtasks.
 
+Drag a divider between column headers to resize the two columns. You can also focus a divider and press the left or right arrow key, or click it and choose **Narrower** or **Wider**. Widths apply to the current view. To restore the defaults, choose **Columns** → **Reset column widths**.
+
 Long updates start at two lines. Choose **Show more** to read the full update and **Show less** to collapse it. Search still checks the full update.
 
 #### Hide or delete work

@@ -7,6 +7,10 @@ const boardMenu = byId("board-menu");
 const boardMenuButton = byId("board-menu-button");
 const columnsMenu = byId("columns-menu");
 const tableWrap = byId("table-wrap");
+const columnHeaders = [...tableWrap.querySelectorAll("thead th")];
+const columnWidths = new Map();
+const resizeMenu = byId("resize-column-menu");
+const resetWidths = byId("reset-column-widths");
 const statusFilter = byId("status-filter");
 const showHidden = byId("show-hidden");
 const toggleSubtasks = byId("toggle-subtasks");
@@ -378,7 +382,7 @@ function renderRows({ all = false } = {}) {
     if (tipTarget && rows.contains(tipTarget)) hideTip();
     rows.replaceChildren(contents);
     tableWrap.hidden = !shown;
-    updateNoteControls();
+    syncColumnWidths();
     if (focused) {
         const control = [...rows.querySelectorAll("[data-focus]")].find(entry => entry.dataset.focus === focused);
         (control ?? byId("add-item")).focus({ preventScroll: true });
@@ -612,11 +616,136 @@ columnsMenu.addEventListener("change", ({ target }) => {
     else hiddenColumns.add(target.value);
     renderRows();
 });
+const columnLayout = () => {
+    const headers = columnHeaders.filter(header => header.getClientRects().length);
+    const total = tableWrap.getBoundingClientRect().width;
+    const minimums = headers.map(header => Math.min(
+        header.id === "subtasks-column" ? 64 : 80, Math.floor(total / headers.length),
+    ));
+    return { headers, total, minimums, key: headers.map(header => header.id).join(",") };
+};
+let noteMeasurement;
+function applyColumnWidths({ headers, total, minimums }, shares) {
+    const spare = total - minimums.reduce((sum, width) => sum + width, 0);
+    headers.forEach((header, index) => {
+        header.style.width = shares ? `${minimums[index] + shares[index] * spare}px` : "";
+    });
+    if (!noteMeasurement) noteMeasurement = requestAnimationFrame(() => {
+        noteMeasurement = null;
+        updateNoteControls();
+    });
+}
+function syncColumnWidths() {
+    const layout = columnLayout();
+    for (const header of columnHeaders) {
+        const index = layout.headers.indexOf(header);
+        header.querySelector(".column-resize").hidden = index < 0 || index === layout.headers.length - 1;
+    }
+    if (resizeMenu.matches(":popover-open") && !resizeHandle.getClientRects().length) resizeMenu.hidePopover();
+    applyColumnWidths(layout, columnWidths.get(layout.key));
+}
+function startColumnResize(header) {
+    const layout = columnLayout();
+    const index = layout.headers.indexOf(header);
+    const widths = layout.headers.map(cell => cell.getBoundingClientRect().width);
+    const direction = getComputedStyle(header).direction === "rtl" ? -1 : 1;
+    return { ...layout, index, widths, direction };
+}
+function resizeColumn(layout, delta) {
+    const { index, widths, minimums } = layout;
+    const left = widths[index], right = widths[index + 1];
+    const minDelta = Math.min(0, minimums[index] - left);
+    const maxDelta = Math.max(0, right - minimums[index + 1]);
+    const change = Math.max(minDelta, Math.min(maxDelta, delta));
+    if (!change && !columnWidths.has(layout.key)) return left;
+    const resized = widths.map((width, i) => width + (i === index ? change : i === index + 1 ? -change : 0));
+    // Store the share of space above the minimums so a smaller canvas still fits.
+    const extras = resized.map((width, i) => Math.max(0, width - minimums[i]));
+    const spare = extras.reduce((sum, width) => sum + width, 0);
+    if (!spare) return left;
+    const shares = extras.map(width => width / spare);
+    columnWidths.set(layout.key, shares);
+    applyColumnWidths(layout, shares);
+    resetWidths.hidden = false;
+    return resized[index];
+}
+function announceWidth(label, width) {
+    byId("resize-column-result").textContent = `${label}: ${Math.round(width)} pixels wide.`;
+}
+let resizeHandle;
+for (const header of columnHeaders) {
+    const label = header.textContent.trim();
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "column-resize";
+    handle.hidden = true;
+    handle.ariaLabel = `Resize ${label} column`;
+    handle.ariaExpanded = "false";
+    handle.setAttribute("aria-controls", resizeMenu.id);
+    handle.setAttribute("aria-describedby", "resize-column-help");
+    header.append(handle);
+    let drag, moved, width;
+    handle.addEventListener("pointerdown", event => {
+        if (event.button !== 0 || !event.isPrimary) return;
+        moved = false;
+        drag = { ...startColumnResize(header), x: event.clientX };
+        handle.setPointerCapture(event.pointerId);
+    });
+    handle.addEventListener("pointermove", event => {
+        if (!drag || !handle.hasPointerCapture(event.pointerId)) return;
+        const delta = (event.clientX - drag.x) * drag.direction;
+        if (!moved && Math.abs(delta) < 4) return;
+        moved = true;
+        handle.classList.add("dragging");
+        width = resizeColumn(drag, delta);
+    });
+    handle.addEventListener("lostpointercapture", () => {
+        if (moved) announceWidth(label, width);
+        drag = null;
+        handle.classList.remove("dragging");
+    });
+    handle.addEventListener("keydown", event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const layout = startColumnResize(header);
+        announceWidth(label, resizeColumn(layout, (event.key === "ArrowRight" ? 16 : -16) * layout.direction));
+    });
+    handle.addEventListener("click", event => {
+        if (moved && event.detail) return;
+        if (resizeMenu.matches(":popover-open")) {
+            resizeMenu.hidePopover();
+            if (resizeHandle === handle) return;
+        }
+        resizeHandle = handle;
+        byId("resize-column-name").textContent = label;
+        positionMenu(resizeMenu, handle, true);
+        resizeMenu.showPopover({ source: handle });
+        handle.ariaExpanded = "true";
+    });
+}
+resizeMenu.addEventListener("beforetoggle", event => {
+    if (event.newState === "closed") resizeHandle.ariaExpanded = "false";
+});
+resizeMenu.addEventListener("click", ({ target }) => {
+    if (!target.dataset.widthStep) return;
+    const width = resizeColumn(startColumnResize(resizeHandle.parentElement), Number(target.dataset.widthStep));
+    announceWidth(byId("resize-column-name").textContent, width);
+    positionMenu(resizeMenu, resizeHandle);
+});
+resetWidths.addEventListener("click", () => {
+    columnWidths.clear();
+    syncColumnWidths();
+    resetWidths.hidden = true;
+    columnsMenu.hidePopover();
+    byId("columns-button").focus();
+    byId("resize-column-result").textContent = "Default column widths restored.";
+});
 let tableWidth;
 new ResizeObserver(([entry]) => {
     if (entry.contentRect.width === tableWidth) return;
     tableWidth = entry.contentRect.width;
-    updateNoteControls();
+    syncColumnWidths();
+    if (resizeMenu.matches(":popover-open")) positionMenu(resizeMenu, resizeHandle);
 }).observe(tableWrap);
 sessionSearch.addEventListener("input", renderSessionOptions);
 sessionOptions.addEventListener("change", event => { naming.sessionId = event.target.value; });

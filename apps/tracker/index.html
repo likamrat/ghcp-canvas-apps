@@ -72,10 +72,11 @@
           <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#chevron"/></svg>
         </button>
         <fieldset id="columns-menu" class="board-menu" popover>
-          <legend class="visually-hidden">Visible columns</legend>
+          <legend class="visually-hidden">Table columns</legend>
           <label class="check-filter"><input type="checkbox" value="status" checked> Status</label>
           <label class="check-filter"><input type="checkbox" value="update" checked> Latest update</label>
           <label class="check-filter"><input type="checkbox" value="subtasks" checked> Subtasks</label>
+          <button type="button" id="reset-column-widths" hidden>Reset column widths</button>
         </fieldset>
         <button id="toggle-subtasks" class="control-button" type="button" aria-expanded="false" hidden>Expand all</button>
         <label id="hidden-filter" class="check-filter" hidden>
@@ -88,15 +89,22 @@
         <table aria-label="Work items">
           <thead>
             <tr>
-              <th scope="col">Work item</th>
-              <th scope="col" id="status-column"><span tabindex="0" class="status-heading" data-tip="The current stage of this work item. Select the item to change it." aria-describedby="status-heading-description">Status</span></th>
-              <th scope="col" id="update-column" class="wide-note">Latest update</th>
-              <th scope="col" class="subtasks-column" id="subtasks-column" hidden>Subtasks</th>
+              <th scope="col" id="work-column" aria-labelledby="work-column-label"><span id="work-column-label">Work item</span></th>
+              <th scope="col" id="status-column" aria-labelledby="status-column-label"><span id="status-column-label" tabindex="0" class="status-heading" data-tip="The current stage of this work item. Select the item to change it." aria-describedby="status-heading-description">Status</span></th>
+              <th scope="col" id="update-column" class="wide-note" aria-labelledby="update-column-label"><span id="update-column-label">Latest update</span></th>
+              <th scope="col" class="subtasks-column" id="subtasks-column" aria-labelledby="subtasks-column-label" hidden><span id="subtasks-column-label">Subtasks</span></th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
+      <div id="resize-column-menu" class="board-menu" popover role="group" aria-labelledby="resize-column-name">
+        <p id="resize-column-name" class="board-group"></p>
+        <button type="button" data-width-step="-16" autofocus>Narrower</button>
+        <button type="button" data-width-step="16">Wider</button>
+      </div>
+      <p class="visually-hidden" id="resize-column-help">Use the left and right arrow keys, or open width controls.</p>
+      <p class="visually-hidden" id="resize-column-result" role="status"></p>
       <div id="no-rows" class="empty" hidden>
         <h3 id="no-rows-title"></h3>
         <p id="no-rows-detail"></p>
