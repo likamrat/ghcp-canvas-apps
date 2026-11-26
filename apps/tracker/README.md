@@ -2,7 +2,7 @@
 
 Keep a work list for a release, a handoff, or your own projects. Update it in the canvas or ask Copilot to update it from a chat.
 
-![Tracker table with subtle resize dividers, colored status labels, and two-line update previews](screenshot-table-view.png)
+![Tracker with a status summary above the table, tinted status tags, and two-line update previews](screenshot-table-view.png)
 
 ## Use
 
@@ -12,7 +12,9 @@ In the GitHub Copilot app, open **Canvas apps** and choose **Tracker**. If it is
 
 Choose **Add item** or select an item's title to edit it. Items can have an owner, an update, and a source link.
 
-New items start at **To do** unless a status filter is active. Status labels use muted colors in both light and dark themes. **In progress** and **Awaiting deployment** are yellow, **Packaged** is blue, **Verified live** and **Done** are green, and **Blocked** is red. **To do** and custom statuses without an assigned color use slate. Hover over a status or focus it with the keyboard to see the full label and what it means. Use **Add status** for a custom label and an optional tip. [See all statuses](actions.md#built-in-statuses).
+The bar and counts above the table show how the tracker's items are split by status. They update as items change, including edits from other chats. The summary counts top-level items, not subtasks. Search and status filters only change the table. Hidden items count only while **Show hidden items** is on.
+
+New items start at **To do** unless a status filter is active. The table and summary use the same tinted tags with neutral text in light and dark themes. **In progress** and **Awaiting deployment** are yellow, **Packaged** is blue, **Verified live** and **Done** are green, and **Blocked** is red. **To do** and custom statuses without an assigned color use slate. Hover over a status in the table or focus it with the keyboard to see the full label and what it means. Use **Add status** for a custom label and an optional tip. [See all statuses](actions.md#built-in-statuses).
 
 To add a subtask, pick a parent in **Add under**. Subtasks start collapsed. Use the count in the **Subtasks** column to open them. **Expand all** appears when more than one item has subtasks or when the **Subtasks** column is hidden. If a subtask matches a search or filter, its parent appears without expanding. Each subtask has its own status.
 

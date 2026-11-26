@@ -278,7 +278,7 @@ function row(item, status, { parent, contextOnly = false, showSubtasksColumn, su
     const state = document.createElement("td");
     state.hidden = hiddenColumns.has("status");
     const badge = document.createElement("span");
-    badge.className = "status";
+    badge.className = "status status-tag status-tone";
     badge.dataset.tone = status.tone;
     badge.textContent = status.label;
     const tip = status.tooltip || statusTips.get(status.id) || "A custom status for this tracker.";
@@ -324,6 +324,34 @@ function row(item, status, { parent, contextOnly = false, showSubtasksColumn, su
     return tr;
 }
 
+function renderStatusSummary(items) {
+    const total = items.length;
+    byId("board-count").textContent = `${total} ${total === 1 ? "item" : "items"}`;
+    byId("status-summary").hidden = !total;
+    const counts = new Map();
+    for (const { statusId } of items) counts.set(statusId, (counts.get(statusId) ?? 0) + 1);
+    const segments = document.createDocumentFragment();
+    const labels = document.createDocumentFragment();
+    for (const { id, label, tone } of data.statuses) {
+        const count = counts.get(id);
+        if (!count) continue;
+        const segment = document.createElement("span");
+        segment.className = "status-tone";
+        segment.dataset.tone = tone;
+        segment.style.flexGrow = String(count);
+        segments.append(segment);
+        const entry = document.createElement("li");
+        entry.className = "status-tag status-tone";
+        entry.dataset.tone = tone;
+        const number = document.createElement("strong");
+        number.textContent = String(count);
+        entry.append(number, ` ${label}`);
+        labels.append(entry);
+    }
+    byId("status-distribution").replaceChildren(segments);
+    byId("status-counts").replaceChildren(labels);
+}
+
 function renderRows({ all = false } = {}) {
     if (!data) return;
     const hiddenIds = new Set(data.items.filter(item => item.hidden).map(item => item.id));
@@ -334,8 +362,7 @@ function renderRows({ all = false } = {}) {
     const visibleItems = showHidden.checked ? data.items
         : data.items.filter(item => !hiddenIds.has(item.id) && !hiddenIds.has(item.parentId));
     const summary = visibleItems.filter(item => !item.parentId);
-    const done = summary.filter(item => item.statusId === "done").length;
-    byId("board-count").textContent = `${summary.length} ${summary.length === 1 ? "item" : "items"} \u00b7 ${done} done`;
+    renderStatusSummary(summary);
     const query = search.value.trim().toLowerCase();
     const filter = statusFilter.value;
     const statuses = new Map(data.statuses.map(status => [status.id, status]));

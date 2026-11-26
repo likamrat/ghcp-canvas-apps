@@ -12,11 +12,11 @@ People can use Tracker to follow their own work or ask Copilot to update a share
 
 ## Capabilities and constraints
 
-Named trackers are shared across local Copilot chats. A tracker presents work items, filterable statuses, and progress notes. Built-in statuses distinguish review, merge readiness, and deployment. Each tracker can also have custom statuses.
+Named trackers are shared across local Copilot chats. A tracker presents work items, filterable statuses, and progress notes. A live summary shows how top-level items are split by status, independently of search and status filters. Built-in statuses distinguish review, merge readiness, and deployment. Each tracker can also have custom statuses.
 
 The table opens with subtasks collapsed. Each work item can have one level of subtasks. Tracker does not import session plans.
 
-Users can hide or resize columns in the current view without changing the saved tracker. Status labels stay on one line and show their colors without hover. Long updates can be expanded from a two-line preview.
+Users can hide or resize columns in the current view without changing the saved tracker. Table status tags stay on one line. The table and summary use the same status tints with neutral text. Long updates can be expanded from a two-line preview.
 
 Users can hide items without losing them, restore hidden items, or delete an item or tracker after confirmation.
 
