@@ -12,7 +12,7 @@ People can use Tracker to follow their own work or ask Copilot to update a share
 
 ## Capabilities and constraints
 
-Named trackers are shared across local Copilot chats. A tracker presents work items, filterable statuses, and progress notes. Agent workflows distinguish In review from Ready to merge, and boards can add their own status labels.
+Named trackers are shared across local Copilot chats. A tracker presents work items, filterable statuses, and progress notes. Built-in statuses distinguish review, merge readiness, and deployment. Each tracker can also have custom statuses.
 
 The table opens with subtasks collapsed. Each work item can have one level of subtasks. Tracker does not import session plans.
 

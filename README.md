@@ -17,3 +17,5 @@ Each app's README has screenshots, a copy-ready install prompt, and instructions
 Use Node 24 or later. Run `node --test` from the repository root.
 
 Keep `branding.css` and `ui-icons.svg` identical across app folders. The tests check both files. To check controls in the browser for Artifacts, Context Monitor, Screenshots, or Thoughts, run `tests/canvas-ui.browser.mjs` through Playwright's run-code tool on the local app fixture.
+
+Use sample data in README screenshots. Describe behavior in terms of what triggers it, rather than the branch or session where it was introduced.

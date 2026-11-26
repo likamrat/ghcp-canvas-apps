@@ -2,7 +2,7 @@
 
 Ideas often show up while you're in the middle of something else. Save them in Thoughts and come back to the same list from any Copilot chat on this computer.
 
-![Thoughts showing saved ideas, checkboxes, and edit and copy controls](screenshot.png)
+![Thoughts showing saved ideas, checkboxes, and edit and copy controls](screenshot-idea-list.png)
 
 ## Install
 

@@ -47,6 +47,6 @@ const canvas = createCanvas({
             if (entry && !entry.hasBrowserWindow()) { servers.delete(instanceId); await entry.close(); }
         },
 });
-// The runtime accepts icon metadata that this SDK factory does not yet copy.
+// Set the icon on the declaration that the runtime uses to discover the canvas.
 canvas.declaration.icon = "icon.png";
 await joinSession({ canvases: [canvas] });

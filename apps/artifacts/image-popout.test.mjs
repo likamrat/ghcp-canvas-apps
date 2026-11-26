@@ -141,7 +141,7 @@ test("image click state preserves selection and reports launch failures without 
     assert.equal(attributes.has("aria-disabled"), false);
 });
 
-test("an older server gives image clicks extension-reload guidance, not a generic response error", async () => {
+test("a server without the image-window route gives extension-reload guidance on image clicks", async () => {
     const source = await readFile(new URL("app.js", import.meta.url), "utf8");
     const start = source.indexOf("async function api("), end = source.indexOf("async function openImageWindow(");
     assert.ok(start >= 0 && end > start);

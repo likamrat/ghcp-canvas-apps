@@ -2,9 +2,9 @@
 
 When screenshots pile up across Copilot chats, browse them by session instead of digging through the conversation.
 
-![Session hierarchy, gallery filters, auto-refresh, and screenshot pages](screenshot.png)
+![Session hierarchy, gallery filters, auto-refresh, and screenshot pages](screenshot-gallery.png)
 
-![Screenshot preview with zoom, reset, navigation, and image details](screenshot-preview.png)
+![Screenshot preview with zoom, reset, navigation, and image details](screenshot-image-preview.png)
 
 ## Install
 

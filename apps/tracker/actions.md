@@ -27,4 +27,4 @@ Open the `work-tracker` canvas with `boardName` or `boardId`. Omit both to choos
 | Paused | `paused` |
 | Done | `done` |
 
-Use the IDs from `get_board`. If an older tracker already has a custom status named Awaiting deployment, that status keeps its original ID.
+Use the IDs from `get_board`. A tracker with a custom Awaiting deployment status keeps that status's ID.
