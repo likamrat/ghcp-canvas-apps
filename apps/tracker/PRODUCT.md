@@ -16,6 +16,8 @@ Named trackers are shared across local Copilot chats. A tracker presents work it
 
 The table opens with subtasks collapsed. Each work item can have one level of subtasks. Tracker does not import session plans.
 
+Users can hide items without losing them, restore hidden items, or delete an item or tracker after confirmation.
+
 A tracker can reference a Copilot session, but the link is optional and does not change which chats can use it.
 
 Tracker follows the existing Canvas apps' design language and keeps the status table compact enough to read beside a chat.

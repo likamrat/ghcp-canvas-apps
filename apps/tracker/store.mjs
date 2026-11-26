@@ -13,6 +13,7 @@ const itemId = text(64);
 const boardName = text(100);
 const sessionId = text(128, 0);
 const version = { type: "integer", minimum: 1 };
+const boardKey = object({ boardId });
 const fields = { title: text(160), statusId: text(64), owner: text(100, 0), note: text(2000, 0), url: text(2048, 0) };
 const itemKey = { boardId, itemId, version };
 export const openSchema = { ...object({ boardId, boardName }, []), maxProperties: 1 };
@@ -34,7 +35,7 @@ export const actions = {
         items: { type: "array", minItems: 1, maxItems: 50, items: object({ ...fields, parentId: itemId }, ["title"]) },
     })],
     update_item: ["Patch one item using its current version from get_board. Send only changed fields; never retry a conflict without rereading.", object({
-        ...itemKey, changes: { ...object(fields, []), minProperties: 1 },
+        ...itemKey, changes: { ...object({ ...fields, hidden: { type: "boolean" } }, []), minProperties: 1 },
     })],
     remove_item: ["Permanently remove one item only on explicit user request. Use the current item version from get_board.", object(itemKey)],
 };
@@ -153,6 +154,9 @@ export function createStore(path = join(
         if (!columns.some(column => column.name === "parentId")) {
             db.exec("ALTER TABLE items ADD COLUMN parentId TEXT REFERENCES items(id) ON DELETE RESTRICT");
         }
+        if (!columns.some(column => column.name === "hidden")) {
+            db.exec("ALTER TABLE items ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1))");
+        }
         db.exec("CREATE INDEX IF NOT EXISTS items_by_parent ON items(parentId)");
         const boardColumns = db.prepare("PRAGMA table_info(boards)").all();
         if (!boardColumns.some(column => column.name === "sessionId")) {
@@ -200,11 +204,23 @@ export function createStore(path = join(
     const insertStatus = db.prepare("INSERT INTO statuses (boardId, id, label, labelKey, tone) VALUES (?, ?, ?, ?, ?)");
     const listBoards = db.prepare("SELECT id, name, sessionId, sessionName FROM boards ORDER BY name COLLATE NOCASE, id");
     const readItem = db.prepare("SELECT * FROM items WHERE id = ?");
+    const formatItem = (item) => ({ ...item, hidden: Boolean(item.hidden) });
     const changed = () => new TrackerError("item_changed",
         "This item changed or was removed in another chat. Reopen it before trying again.", 409);
 
     return {
         close: () => db.close(),
+        deleteBoard(raw) {
+            const { boardId } = validate(boardKey, raw);
+            return transaction("BEGIN IMMEDIATE", () => {
+                requireBoard(boardId);
+                db.prepare("DELETE FROM items WHERE boardId = ? AND parentId IS NOT NULL").run(boardId);
+                db.prepare("DELETE FROM items WHERE boardId = ?").run(boardId);
+                db.prepare("DELETE FROM statuses WHERE boardId = ?").run(boardId);
+                db.prepare("DELETE FROM boards WHERE id = ?").run(boardId);
+                return { id: boardId };
+            });
+        },
         resolveOpen(input = {}) {
             const { boardId, boardName } = validate(openSchema, input);
             if (boardId) return requireBoard(boardId);
@@ -250,7 +266,7 @@ export function createStore(path = join(
                             .sort((a, b) => (defaultOrder.get(a.id) ?? defaults.length) - (defaultOrder.get(b.id) ?? defaults.length)),
                         items: db.prepare(input.includeDetails
                             ? "SELECT * FROM items WHERE boardId = ? ORDER BY rowid"
-                            : "SELECT * FROM items WHERE boardId = ? AND parentId IS NULL ORDER BY rowid").all(input.boardId),
+                            : "SELECT * FROM items WHERE boardId = ? AND parentId IS NULL ORDER BY rowid").all(input.boardId).map(formatItem),
                     }));
                 case "add_status": {
                     const { boardId, label, tooltip } = input;
@@ -279,24 +295,25 @@ export function createStore(path = join(
                                 ).get(parentId, boardId)) invalid("Choose a summary item from this tracker as the parent.");
                                 const id = randomUUID();
                                 insert.run(id, boardId, statusId, title, owner, note, url, now, now, parentId);
-                                return readItem.get(id);
+                                return formatItem(readItem.get(id));
                             }),
                         };
                     });
                 case "update_item":
                     return transaction("BEGIN IMMEDIATE", () => {
                         const { boardId, itemId, version, changes } = input;
-                        const { title, statusId, owner, note, url } = changes;
+                        const { title, statusId, owner, note, url, hidden } = changes;
                         if (url !== undefined) validateUrl(url);
                         if (statusId !== undefined) requireStatus(boardId, statusId);
                         const result = db.prepare(`
                             UPDATE items SET title = COALESCE(?, title), statusId = COALESCE(?, statusId),
                                 owner = COALESCE(?, owner), note = COALESCE(?, note), url = COALESCE(?, url),
+                                hidden = COALESCE(?, hidden),
                                 updatedAt = ?, version = version + 1 WHERE boardId = ? AND id = ? AND version = ?
                         `).run(title ?? null, statusId ?? null, owner ?? null, note ?? null, url ?? null,
-                            now, boardId, itemId, version);
+                            hidden === undefined ? null : Number(hidden), now, boardId, itemId, version);
                         if (!result.changes) throw changed();
-                        return readItem.get(itemId);
+                        return formatItem(readItem.get(itemId));
                     });
                 case "remove_item":
                     return transaction("BEGIN IMMEDIATE", () => {

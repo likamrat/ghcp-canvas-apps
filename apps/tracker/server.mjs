@@ -68,12 +68,13 @@ export async function startServer(store, { launchBrowser = launchBrowserWindow, 
                 const data = await read(file);
                 return res.writeHead(200, { "Content-Type": type }).end(data);
             }
-            if (req.method === "POST" && (pathname === "/api" || pathname === "/api/open-browser")) {
+            if (req.method === "POST" && ["/api", "/api/open-browser", "/api/delete-board"].includes(pathname)) {
                 if (req.headers["x-tracker-token"] !== token || req.headers["content-type"] !== "application/json") {
                     return reply(res, 403, { error: "Tracker rejected the request. Reload this view and try again." });
                 }
                 const input = await readInput(req);
                 if (pathname === "/api") return reply(res, 200, store.run(input.action, input.input, currentSessionId));
+                if (pathname === "/api/delete-board") return reply(res, 200, store.deleteBoard(input));
                 const board = store.resolveOpen(input);
                 const url = new URL(origin);
                 url.searchParams.set("view", "browser");

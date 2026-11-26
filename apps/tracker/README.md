@@ -18,6 +18,16 @@ Link a Copilot session when you create a tracker or from the **Trackers** menu. 
 
 Trackers stay on this computer and can be opened from other local chats. Plans, pull requests, and sessions don't update them automatically.
 
+## Hide or delete work
+
+Select an item's title to open its editor. Check **Hide item** and save to keep it out of the list without deleting it. Hiding a parent also hides its subtasks. To restore an item, turn on **Show hidden items**, open the item, clear **Hide item**, and save.
+
+![Tracker item editor with Hide item and Delete item controls](screenshot-item-visibility.png)
+
+To delete one item, choose **Delete item** in its editor and confirm. If the item has subtasks, delete those first. To delete the whole list, choose **Delete tracker** from the tracker menu and confirm. This permanently deletes its items, subtasks, and statuses.
+
+![Delete tracker confirmation naming the tracker and what will be deleted](screenshot-delete-tracker.png)
+
 ## Track work from a coding session
 
 If you want Copilot to fill in the tracker, paste this into the session where the work is happening. Replace `[tracker name]` with the name you want to use.

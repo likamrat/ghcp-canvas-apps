@@ -6,6 +6,7 @@ const pageUrl = new URL(location.href);
 const boardMenu = byId("board-menu");
 const boardMenuButton = byId("board-menu-button");
 const statusFilter = byId("status-filter");
+const showHidden = byId("show-hidden");
 const toggleSubtasks = byId("toggle-subtasks");
 const expandedParents = new Set();
 const search = byId("search");
@@ -20,7 +21,7 @@ const itemForm = byId("item-form");
 const removeForm = byId("remove-form");
 let preferredId = pageUrl.searchParams.get("board");
 let boards = [], data = null, snapshot = "", revision = 0, reading = false, saving = false;
-let naming, editing;
+let naming, editing, deleting;
 
 const statusTips = new Map([
     ["todo", "Work has not started."],
@@ -66,6 +67,7 @@ function renderBoardMenu(selected) {
     byId("board-menu-label").textContent = selected?.name ?? "Trackers";
     boardMenuButton.ariaLabel = selected ? `Trackers: ${selected.name}` : "Trackers";
     const linkSession = byId("board-session");
+    byId("delete-board").hidden = !selected;
     linkSession.hidden = !selected;
     linkSession.textContent = selected?.sessionId ? "Change linked session" : "Link Copilot session";
     linkSession.dataset.tip = selected?.sessionId
@@ -149,6 +151,7 @@ async function load({ manual = false } = {}) {
         }
         if (oldBoard !== target.id) {
             clearFilters();
+            showHidden.checked = false;
             expandedParents.clear();
         }
         const statusOptions = [["", "All statuses"], ...data.statuses.map(({ id, label }) => [id, label])];
@@ -157,10 +160,6 @@ async function load({ manual = false } = {}) {
         }
         byId("board-title").textContent = data.board.name;
         showMessage(byId("board-session-name"), data.board.sessionName ? `Copilot session: ${data.board.sessionName}` : "");
-        const summary = data.items.filter(item => !item.parentId);
-        const count = summary.length;
-        const done = summary.filter(item => item.statusId === "done").length;
-        byId("board-count").textContent = `${count} ${count === 1 ? "item" : "items"} \u00b7 ${done} done`;
         byId("welcome").hidden = true;
         byId("board").hidden = false;
         renderRows();
@@ -198,9 +197,15 @@ function row(item, status, { parent, contextOnly = false, showSubtasksColumn, su
     title.textContent = item.title;
     title.addEventListener("click", () => openItem(item));
     work.append(title);
-    if (item.owner || item.url) {
+    if (item.owner || item.url || item.hidden || parent?.hidden) {
         const meta = document.createElement("div");
         meta.className = "item-meta";
+        if (item.hidden || parent?.hidden) {
+            const label = document.createElement("span");
+            label.className = "item-visibility-label";
+            label.textContent = item.hidden ? "Hidden" : "Hidden with parent";
+            meta.append(label);
+        }
         if (item.owner) {
             const owner = document.createElement("span");
             owner.textContent = item.owner;
@@ -278,13 +283,23 @@ function row(item, status, { parent, contextOnly = false, showSubtasksColumn, su
 
 function renderRows({ all = false } = {}) {
     if (!data) return;
+    const hiddenIds = new Set(data.items.filter(item => item.hidden).map(item => item.id));
+    const hiddenCount = data.items.filter(item => hiddenIds.has(item.id) || hiddenIds.has(item.parentId)).length;
+    if (!hiddenCount) showHidden.checked = false;
+    byId("hidden-filter").hidden = !hiddenCount;
+    byId("hidden-filter-label").textContent = `Show hidden items (${hiddenCount})`;
+    const visibleItems = showHidden.checked ? data.items
+        : data.items.filter(item => !hiddenIds.has(item.id) && !hiddenIds.has(item.parentId));
+    const summary = visibleItems.filter(item => !item.parentId);
+    const done = summary.filter(item => item.statusId === "done").length;
+    byId("board-count").textContent = `${summary.length} ${summary.length === 1 ? "item" : "items"} \u00b7 ${done} done`;
     const query = search.value.trim().toLowerCase();
     const filter = statusFilter.value;
     const statuses = new Map(data.statuses.map(status => [status.id, status]));
     const matches = item => (!filter || item.statusId === filter) &&
         (!query || [item.title, item.owner, item.note].some(text => text.toLowerCase().includes(query)));
     const subtasksByParent = new Map();
-    for (const item of data.items) {
+    for (const item of visibleItems) {
         if (!item.parentId) continue;
         if (!subtasksByParent.has(item.parentId)) subtasksByParent.set(item.parentId, []);
         subtasksByParent.get(item.parentId).push(item);
@@ -305,8 +320,7 @@ function renderRows({ all = false } = {}) {
     toggleSubtasks.textContent = allExpanded ? "Collapse all" : "Expand all";
     const focused = document.activeElement?.dataset.focus;
     const contents = document.createDocumentFragment();
-    for (const item of data.items) {
-        if (item.parentId) continue;
+    for (const item of summary) {
         const summaryMatches = matches(item);
         const subtasks = subtasksByParent.get(item.id) ?? [];
         const matchingSubtasks = subtasks.filter(matches);
@@ -331,10 +345,11 @@ function renderRows({ all = false } = {}) {
     byId("no-rows").hidden = Boolean(shown);
     if (!shown) {
         const filtered = Boolean(query || filter);
-        byId("no-rows-title").textContent = filtered ? "No matching items" : "No items yet";
-        byId("no-rows-detail").textContent = filtered
-            ? "Try another search or clear the filters."
-            : "Add a work item, or ask Copilot to add the work you want to follow.";
+        const allHidden = !visibleItems.length && hiddenCount > 0;
+        byId("no-rows-title").textContent = allHidden ? "All items are hidden" : filtered ? "No matching items" : "No items yet";
+        byId("no-rows-detail").textContent = allHidden ? "Select Show hidden items to view or restore them."
+            : filtered ? "Try another search or clear the filters."
+                : "Add a work item, or ask Copilot to add the work you want to follow.";
         byId("clear-filters").hidden = !filtered;
     }
 }
@@ -423,6 +438,12 @@ function openItem(item) {
     byId("item-title").textContent = item ? "Edit item" : "Add item";
     byId("save-item").textContent = item ? "Save changes" : "Add item";
     byId("remove-item").hidden = !item;
+    byId("item-visibility").hidden = !item;
+    byId("hide-item").checked = Boolean(item?.hidden);
+    const hiddenParent = item?.parentId && data.items.some(candidate => candidate.id === item.parentId && candidate.hidden);
+    byId("hide-item-help").textContent = hiddenParent ? "This subtask also stays hidden while its parent is hidden."
+        : item?.parentId ? "Use Show hidden items to find and restore it."
+            : "This also hides its subtasks. Use Show hidden items to find and restore it.";
     setOptions(byId("item-status"), data.statuses.map(({ id, label }) => [id, label]),
         item?.statusId ?? (statusFilter.value || "todo"));
     const parents = data.items.filter(candidate => !candidate.parentId);
@@ -486,6 +507,7 @@ itemForm.addEventListener("submit", event => {
     void submit(itemForm, async () => {
         if (item) {
             const changes = Object.fromEntries(Object.entries(values).filter(([key, value]) => value !== item[key]));
+            if (byId("hide-item").checked !== Boolean(item.hidden)) changes.hidden = byId("hide-item").checked;
             if (Object.keys(changes).length) await action("update_item", { boardId, itemId: item.id, version: item.version, changes });
         } else {
             await action("add_items", { boardId, items: [values] });
@@ -497,13 +519,26 @@ itemForm.addEventListener("submit", event => {
 
 removeForm.addEventListener("submit", event => {
     event.preventDefault();
-    const { boardId, item } = editing;
+    const { boardId, item } = deleting;
     void submit(removeForm, async () => {
-        await action("remove_item", { boardId, itemId: item.id, version: item.version });
+        if (item) await action("remove_item", { boardId, itemId: item.id, version: item.version });
+        else await post("/api/delete-board", { boardId });
         removeDialog.close();
-        itemDialog.close();
-    }, "Item removed.");
+        if (item) itemDialog.close();
+    }, item ? "Item deleted." : "Tracker deleted.");
 });
+
+function confirmDelete(board, item) {
+    deleting = { boardId: board.id, item };
+    const label = item ? "Delete item" : "Delete tracker";
+    byId("remove-title").textContent = `${label}?`;
+    byId("remove-description").textContent = item
+        ? `Delete "${item.title}" from this tracker? This cannot be undone.`
+        : `Delete "${board.name}" and all its items, subtasks, and statuses? This cannot be undone.`;
+    byId("confirm-delete").textContent = label;
+    showMessage(removeForm.querySelector(".error"), "");
+    removeDialog.showModal();
+}
 
 for (const dialog of [nameDialog, itemDialog, removeDialog]) {
     dialog.addEventListener("cancel", event => { if (saving) event.preventDefault(); });
@@ -516,6 +551,11 @@ function closeBoardMenu() {
 }
 byId("new-board").addEventListener("click", () => { closeBoardMenu(); openName("board"); });
 byId("board-session").addEventListener("click", () => { closeBoardMenu(); openName("session"); });
+byId("delete-board").addEventListener("click", () => {
+    const board = data?.board;
+    closeBoardMenu();
+    if (board) confirmDelete(board);
+});
 boardMenu.addEventListener("beforetoggle", event => {
     if (event.newState === "open") positionBoardMenu(true);
     else if (tipTarget && boardMenu.contains(tipTarget)) hideTip();
@@ -526,10 +566,7 @@ sessionSearch.addEventListener("input", renderSessionOptions);
 sessionOptions.addEventListener("change", event => { naming.sessionId = event.target.value; });
 byId("add-status").addEventListener("click", () => openName("status"));
 byId("add-item").addEventListener("click", () => openItem());
-byId("remove-item").addEventListener("click", () => {
-    showMessage(removeForm.querySelector(".error"), "");
-    removeDialog.showModal();
-});
+byId("remove-item").addEventListener("click", () => confirmDelete({ id: editing.boardId }, editing.item));
 byId("refresh").addEventListener("click", () => void load({ manual: true }));
 byId("board-options").addEventListener("click", event => {
     const button = event.target.closest("[data-board-id]");
@@ -541,6 +578,7 @@ byId("board-options").addEventListener("click", event => {
 });
 search.addEventListener("input", renderRows);
 statusFilter.addEventListener("change", renderRows);
+showHidden.addEventListener("change", renderRows);
 toggleSubtasks.addEventListener("click", () => renderRows({ all: true }));
 byId("clear-filters").addEventListener("click", () => {
     clearFilters();

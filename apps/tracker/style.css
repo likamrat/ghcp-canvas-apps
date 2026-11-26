@@ -139,6 +139,12 @@ dialog textarea { display: block; resize: vertical; }
 .session-option:has(:checked) { background: var(--selected); }
 input[type="radio"].session-choice { flex: 0 0 auto; width: 14px; height: 14px; padding: 0; margin: 0; appearance: auto; }
 .session-option input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.board-menu button.danger { color: var(--error); }
+.filters .check-filter { padding-inline: 4px; }
+.item-visibility-label { color: var(--muted); font-style: italic; }
+#item-visibility { margin-block-start: 10px; }
+#item-visibility .check-filter { display: flex; margin: 0; min-height: 28px; color: var(--ink); }
+#remove-description { overflow-wrap: anywhere; }
 #remove-item { margin-inline-end: auto; }
 @media (max-width: 500px) {
     .app-brand { flex-basis: 9rem; }

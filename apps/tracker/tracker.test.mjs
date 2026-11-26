@@ -101,6 +101,7 @@ test("upgrading an existing tracker adds Awaiting deployment without replacing a
     try {
         legacy.exec(`DELETE FROM statuses WHERE id = 'awaiting-deployment';
             DROP INDEX items_by_parent; ALTER TABLE items DROP COLUMN parentId;
+            ALTER TABLE items DROP COLUMN hidden;
             ALTER TABLE boards DROP COLUMN sessionId; ALTER TABLE boards DROP COLUMN sessionName;
             ALTER TABLE statuses DROP COLUMN tooltip`);
         customStatus = "custom-deployment";
@@ -159,6 +160,51 @@ test("linking resolves stable workspace IDs from session aliases and allows unli
         assert.equal(store.run("set_board_session", { boardId: board.id, sessionId: "" }).sessionId, null);
         assert.equal(store.run("create_board", { name: "Unlinked" }).sessionName, null);
     } finally { store.close(); }
+});
+
+test("item visibility is reversible, persists across views, and rejects stale edits", async t => {
+    const root = await mkdtemp(join(tmpdir(), "tracker-visibility-"));
+    const first = createStore(join(root, "tracker.sqlite"));
+    const second = createStore(join(root, "tracker.sqlite"));
+    t.after(async () => { first.close(); second.close(); await rm(root, { recursive: true, force: true }); });
+    const { id: boardId } = first.run("create_board", { name: "Release checklist" });
+    const { items: [item] } = first.run("add_items", { boardId, items: [{ title: "Test update", statusId: "done" }] });
+    const key = { boardId, itemId: item.id, version: item.version };
+    const hidden = first.run("update_item", { ...key, changes: { hidden: true } });
+    assert.equal(hidden.hidden, true);
+    assert.equal(second.run("get_board", { boardId }).items[0].hidden, true);
+    assert.throws(() => second.run("update_item", { ...key, changes: { hidden: false } }), { code: "item_changed" });
+    const restored = second.run("update_item", { ...key, version: hidden.version, changes: { hidden: false } });
+    assert.equal(restored.hidden, false);
+    assert.equal(restored.statusId, "done");
+    assert.equal(first.run("get_board", { boardId }).items[0].hidden, false);
+});
+
+test("the canvas can delete a tracker with subtasks without affecting other trackers", async t => {
+    const store = createStore(":memory:");
+    const server = await startServer(store);
+    t.after(async () => { await server.close(); store.close(); });
+    const { id: boardId } = store.run("create_board", { name: "Release checklist" });
+    const { id: keepId } = store.run("create_board", { name: "Design review" });
+    const { id: customStatus } = store.run("add_status", { boardId, label: "Needs sign-off" });
+    const { items: [parent] } = store.run("add_items", { boardId, items: [{ title: "Test update", statusId: customStatus }] });
+    store.run("add_items", { boardId, items: [{ title: "Test on Windows", parentId: parent.id }] });
+    const { items: [keep] } = store.run("add_items", { boardId: keepId, items: [{ title: "Check keyboard navigation" }] });
+
+    const html = await (await fetch(server.url)).text();
+    const token = html.match(/name="tracker-token" content="([^"]+)"/)[1];
+    const remove = (value) => fetch(new URL("/api/delete-board", server.url), {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-tracker-token": value },
+        body: JSON.stringify({ boardId }),
+    });
+    assert.equal((await remove("invalid")).status, 403);
+    assert.equal(store.run("get_board", { boardId, includeDetails: true }).items.length, 2);
+    assert.equal((await remove(token)).status, 200);
+    assert.throws(() => store.run("get_board", { boardId }), { code: "board_not_found" });
+    assert.deepEqual(store.run("get_board", { boardId: keepId }).items, [keep]);
+    assert.equal((await remove(token)).status, 404);
+    assert.notEqual(store.run("create_board", { name: "Release checklist" }).id, boardId);
 });
 
 test("canvas HTTP calls share the agent store and keep the named board in the browser popout", async t => {

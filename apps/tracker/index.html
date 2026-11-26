@@ -35,6 +35,7 @@
           <div class="board-menu-actions">
             <button type="button" id="new-board" data-tip="Create a separate tracker for a body of work.">New tracker</button>
             <button type="button" id="board-session" data-tip="Link this tracker to a Copilot session without changing trackers." hidden>Change linked session</button>
+            <button type="button" id="delete-board" class="danger" hidden>Delete tracker</button>
           </div>
         </div>
       </div>
@@ -67,6 +68,10 @@
         </div>
         <button type="button" id="add-status" class="control-button">Add status</button>
         <button id="toggle-subtasks" class="control-button" type="button" aria-expanded="false" hidden>Expand all</button>
+        <label id="hidden-filter" class="check-filter" hidden>
+          <input id="show-hidden" type="checkbox">
+          <span id="hidden-filter-label">Show hidden items</span>
+        </label>
       </div>
       <p id="result-count" class="visually-hidden" role="status"></p>
       <div id="table-wrap" class="table-wrap">
@@ -144,9 +149,16 @@
       <textarea id="item-note" name="note" maxlength="2000" rows="3" placeholder="What changed or what happens next?"></textarea>
       <label for="item-url">Source link <span>(optional)</span></label>
       <input id="item-url" name="url" type="url" maxlength="2048" placeholder="https://...">
+      <div id="item-visibility" hidden>
+        <label class="check-filter" for="hide-item">
+          <input id="hide-item" type="checkbox" aria-describedby="hide-item-help">
+          Hide item
+        </label>
+        <p id="hide-item-help" class="muted"></p>
+      </div>
       <p class="error" role="alert" hidden></p>
       <div class="dialog-actions">
-        <button class="control-button danger" type="button" id="remove-item" hidden>Remove</button>
+        <button class="control-button danger" type="button" id="remove-item" hidden>Delete item</button>
         <button class="control-button" type="button" data-close>Cancel</button>
         <button class="control-button" type="submit" id="save-item">Save item</button>
       </div>
@@ -155,12 +167,12 @@
 
   <dialog id="remove-dialog" aria-labelledby="remove-title" aria-describedby="remove-description">
     <form id="remove-form">
-      <h2 id="remove-title">Remove this item?</h2>
-      <p id="remove-description">This permanently removes the item from the tracker.</p>
+      <h2 id="remove-title"></h2>
+      <p id="remove-description"></p>
       <p class="error" role="alert" hidden></p>
       <div class="dialog-actions">
-        <button class="control-button" type="button" data-close autofocus>Keep item</button>
-        <button class="control-button danger" type="submit">Remove item</button>
+        <button class="control-button" type="button" data-close autofocus>Cancel</button>
+        <button id="confirm-delete" class="control-button danger" type="submit">Delete item</button>
       </div>
     </form>
   </dialog>
