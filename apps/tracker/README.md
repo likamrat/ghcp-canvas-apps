@@ -2,7 +2,7 @@
 
 Keep a work list for a release, a handoff, or your own projects. Update it in the canvas or ask Copilot to update it from a chat.
 
-![Tracker showing release statuses, two-line update previews, and the Columns control](screenshot-table-view.png)
+![Tracker table with column dividers, release statuses, and two-line update previews](screenshot-table-view.png)
 
 ## Use
 
@@ -14,7 +14,7 @@ Choose **Add item** or select an item's title to edit it. Items can have an owne
 
 New items start at **To do** unless a status filter is active. Hover over a status or focus it with the keyboard to see the full label and what it means. **Awaiting deployment**, for example, means the change is merged but isn't live. Use **Add status** for a custom label and an optional tip. [See all statuses](actions.md#built-in-statuses).
 
-To add a subtask, pick a parent in **Add under**. Subtasks start collapsed; use the count at the right of a row to open them, or **Expand all** when several rows have subtasks. If a subtask matches a search or filter, its parent appears without expanding. Each subtask has its own status.
+To add a subtask, pick a parent in **Add under**. Subtasks start collapsed. Use the count in the **Subtasks** column to open them. **Expand all** appears when more than one item has subtasks or when the **Subtasks** column is hidden. If a subtask matches a search or filter, its parent appears without expanding. Each subtask has its own status.
 
 Link a Copilot session when you create a tracker or from the **Trackers** menu. The session name appears above the table and groups trackers in the menu. Choose **No session linked** to unlink it. Linking doesn't make plans, pull requests, or sessions update your tracker automatically.
 
@@ -70,7 +70,7 @@ the tracker is missing or a thought doesn't describe a task. Leave Thoughts unch
 
 ## Install
 
-If **Tracker** already appears in **Canvas apps**, skip this step. Otherwise, paste this into a local Copilot chat. It installs Tracker for all your local chats without creating a tracker or linking one to the current session.
+To install Tracker or update an existing copy, paste this into a local Copilot chat. It makes Tracker available across your local chats without creating a tracker or linking one to the current session.
 
 ```text
 Install or update Tracker as a persistent personal canvas extension from:
