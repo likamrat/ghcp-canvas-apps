@@ -52,7 +52,7 @@ thead th {
 }
 thead th:first-child { width: 34%; }
 table:has(#update-column[hidden]) thead th:first-child { width: auto; }
-#status-column { width: 10rem; }
+#status-column { width: 11rem; }
 tbody th { font-weight: 400; }
 tbody tr:hover { background: var(--hover); }
 .subtask-row th { padding-inline-start: 28px; }
@@ -103,15 +103,14 @@ button.subtask-toggle[aria-expanded="true"] { background: var(--selected); borde
 .note-toggle:hover { text-decoration: underline; }
 .narrow-note { display: none; }
 .status {
-    display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; padding: 2px 6px;
-    border-radius: 4px; background: color-mix(in srgb, var(--status-color, var(--muted)) 14%, var(--surface));
+    display: inline-block; vertical-align: top; max-inline-size: 100%; padding: 2px 6px;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-radius: 4px;
     color: var(--ink); font-size: .8125rem; font-weight: 600; line-height: 1.4;
 }
-:is(.status, .status-heading):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
-.status::before {
-    content: ""; width: 8px; height: 8px; flex: 0 0 8px;
-    background: var(--status-color, var(--muted)); border-radius: 50%;
+.status:is(:hover, :focus-visible) {
+    background: color-mix(in srgb, var(--status-color, var(--muted)) 19%, var(--surface));
 }
+:is(.status, .status-heading):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
 .status[data-tone="blue"] { --status-color: var(--true-color-blue, light-dark(#0969da, #58a6ff)); }
 .status[data-tone="purple"] { --status-color: var(--true-color-purple, light-dark(#8250df, #bc8cff)); }
 .status[data-tone="teal"] { --status-color: light-dark(#137d83, #56d4dd); }
@@ -164,7 +163,7 @@ input[type="radio"].session-choice { flex: 0 0 auto; width: 14px; height: 14px; 
 }
 @container (width < 33rem) {
     thead th:first-child { width: auto; }
-    #status-column { width: 35%; }
+    #status-column { width: min(11rem, 46%); }
     .subtasks-column { width: 4.25rem; font-size: .75rem; }
     :is(.subtasks-column, .subtasks-cell) { padding-inline: 3px 6px; }
     .wide-note { display: none; }

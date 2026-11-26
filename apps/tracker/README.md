@@ -4,23 +4,27 @@ Keep a work list for a release, a handoff, or your own projects. Update it in th
 
 ![Tracker showing release statuses, two-line update previews, and the Columns control](screenshot-table-view.png)
 
-## Use Tracker without a prompt
+## Use
 
-In the GitHub Copilot app, open **Canvas apps** and choose **Tracker**. If it isn't listed, [install it first](#install). Open the tracker menu and choose **New tracker**, or select a tracker you've already saved.
+### In the canvas
 
-Choose **Add item** or select an item's title to edit it. Items can have an owner, an update, and a source link. Search titles, owners, and updates, or use **Filter by status**.
+In the GitHub Copilot app, open **Canvas apps** and choose **Tracker**. If it isn't listed, [install it first](#install). Open the **Trackers** menu to create or open a list.
 
-New items start at **To do** unless a status filter is active. Hover over a status or focus it with the keyboard to see what it means. For example, **Awaiting deployment** means the change is merged and isn't live yet. Use **Add status** for a custom label and an optional hover tip. [See all statuses](actions.md#built-in-statuses).
+Choose **Add item** or select an item's title to edit it. Items can have an owner, an update, and a source link.
 
-Use **Columns** to show or hide Status, Latest update, and Subtasks. Long updates start at two lines. Choose **Show more** to read the full update and **Show less** to collapse it. Search still checks the full update.
+New items start at **To do** unless a status filter is active. Hover over a status or focus it with the keyboard to see the full label and what it means. **Awaiting deployment**, for example, means the change is merged but isn't live. Use **Add status** for a custom label and an optional tip. [See all statuses](actions.md#built-in-statuses).
 
 To add a subtask, pick a parent in **Add under**. Subtasks start collapsed; use the count at the right of a row to open them, or **Expand all** when several rows have subtasks. If a subtask matches a search or filter, its parent appears without expanding. Each subtask has its own status.
 
-Link a Copilot session when you create a tracker or from the **Trackers** menu. The session name appears above the table and groups trackers in the menu. Choose **No session linked** to unlink it.
+Link a Copilot session when you create a tracker or from the **Trackers** menu. The session name appears above the table and groups trackers in the menu. Choose **No session linked** to unlink it. Linking doesn't make plans, pull requests, or sessions update your tracker automatically.
 
-Trackers stay on this computer and can be opened from other local chats. Plans, pull requests, and sessions don't update them automatically.
+#### Filter and adjust the table
 
-## Hide or delete work
+Search titles, owners, and updates, or use **Filter by status**. Use **Columns** to show or hide Status, Latest update, and Subtasks.
+
+Long updates start at two lines. Choose **Show more** to read the full update and **Show less** to collapse it. Search still checks the full update.
+
+#### Hide or delete work
 
 Select an item's title to open its editor. Check **Hide item** and save to keep it out of the list without deleting it. Hiding a parent also hides its subtasks. To restore an item, turn on **Show hidden items**, open the item, clear **Hide item**, and save.
 
@@ -30,9 +34,11 @@ To delete one item, choose **Delete item** in its editor and confirm. If the ite
 
 ![Delete tracker confirmation naming the tracker and what will be deleted](screenshot-delete-tracker.png)
 
-## Track work from a coding session
+### With a Copilot prompt
 
-If you want Copilot to fill in the tracker, paste this into the session where the work is happening. Replace `[tracker name]` with the name you want to use.
+#### Track work from a coding session
+
+Paste this into the session where the work is happening and replace `[tracker name]`.
 
 ```text
 Use the Tracker Canvas app to record the work from this coding session in
@@ -47,9 +53,9 @@ Show me the tracker when you're done.
 
 To link the tracker to the session as well, add: "Link this tracker to the current Copilot session."
 
-To open a saved tracker from chat, you can just ask: "Open the Release readiness tracker in Tracker."
+To open a saved tracker from any local chat, ask: "Open the Release readiness tracker in Tracker."
 
-## Turn Thoughts into work items (optional)
+#### Turn Thoughts into work items (optional)
 
 Paste this into Copilot with both [Thoughts](../thoughts/README.md) and Tracker installed. Name a few thoughts, ask for all open thoughts, or ask for every saved thought, including completed ones.
 
