@@ -37,7 +37,7 @@ To link the tracker to the session as well, add: "Link this tracker to the curre
 
 To open a saved tracker from chat, you can just ask: "Open the Release readiness tracker in Tracker."
 
-## Turn Thoughts into work items
+## Turn Thoughts into work items (optional)
 
 Paste this into Copilot with both [Thoughts](../thoughts/README.md) and Tracker installed. Name a few thoughts, ask for all open thoughts, or ask for every saved thought, including completed ones.
 
