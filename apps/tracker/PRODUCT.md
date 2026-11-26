@@ -20,6 +20,8 @@ Users can hide or resize columns in the current view without changing the saved 
 
 Users can hide items without losing them, restore hidden items, or delete an item or tracker after confirmation.
 
+Each view can refresh manually or on a selected interval. Automatic refresh checks for saved changes from other chats without interrupting an open editor.
+
 A tracker can reference a Copilot session, but the link is optional and does not change which chats can use it.
 
 Tracker follows the existing Canvas apps' design language and keeps the status table compact enough to read beside a chat.

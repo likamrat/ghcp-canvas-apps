@@ -11,7 +11,9 @@ footer { margin-top: 24px; }
     display: flex; flex-wrap: wrap; align-items: end; gap: var(--control-gap);
 }
 .board-bar { margin-top: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--edge); justify-content: space-between; }
-.board-menu-wrap { flex: 1 1 0; min-width: 0; max-width: 22rem; }
+.board-menu-wrap { flex: 1 1 8rem; min-width: 0; max-width: 22rem; }
+.refresh-options { display: flex; align-items: end; gap: var(--control-gap); margin-inline-start: auto; }
+.refresh-options .field { inline-size: 9rem; }
 #board-menu-button { width: 100%; justify-content: space-between; }
 #board-menu-button:active, .board-menu button:active { transform: none; }
 #board-menu-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

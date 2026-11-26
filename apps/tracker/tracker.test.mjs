@@ -246,6 +246,17 @@ test("the canvas can delete a tracker with subtasks without affecting other trac
     assert.notEqual(store.run("create_board", { name: "Release checklist" }).id, boardId);
 });
 
+test("canvas HTTP serves the refresh scheduler as JavaScript", async t => {
+    const store = createStore(":memory:");
+    t.after(() => store.close());
+    const server = await startServer(store);
+    t.after(() => server.close());
+    const response = await fetch(new URL("refresh.mjs", server.url));
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type"), /^text\/javascript\b/);
+    await response.text();
+});
+
 test("canvas HTTP calls share the agent store and keep the named board in the browser popout", async t => {
     const store = createStore(":memory:");
     let opened;

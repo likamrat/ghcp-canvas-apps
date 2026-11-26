@@ -1,4 +1,4 @@
-"use strict";
+import { createRefreshCycle } from "./refresh.mjs";
 
 const byId = id => document.getElementById(id);
 const token = document.querySelector('meta[name="tracker-token"]').content;
@@ -30,6 +30,16 @@ const removeForm = byId("remove-form");
 let preferredId = pageUrl.searchParams.get("board");
 let boards = [], data = null, snapshot = "", revision = 0, reading = false, saving = false;
 let naming, editing, deleting;
+const autoRefresh = byId("auto-refresh");
+const refreshCycle = createRefreshCycle({
+    refresh() {
+        if (document.querySelector("dialog[open], .board-menu:popover-open, .column-resize.dragging")) {
+            refreshCycle.setInterval(Number(autoRefresh.value));
+            return;
+        }
+        void load();
+    },
+});
 
 const statusTips = new Map([
     ["todo", "Work has not started."],
@@ -134,6 +144,7 @@ async function load({ manual = false } = {}) {
     const current = ++revision;
     const oldBoard = data?.board.id;
     reading = true;
+    refreshCycle.setBusy(true);
     if (manual) byId("refresh").disabled = true;
     try {
         const { boards: available } = await action("list_boards");
@@ -178,7 +189,10 @@ async function load({ manual = false } = {}) {
         showMessage(byId("error"), readableError(error));
         if (!snapshot || byId("board").hidden) showWelcome("Could not load trackers. Use Refresh to try again.");
     } finally {
-        if (current === revision) reading = false;
+        if (current === revision) {
+            reading = false;
+            refreshCycle.setBusy(saving);
+        }
         if (manual) byId("refresh").disabled = false;
     }
 }
@@ -533,6 +547,7 @@ function openItem(item) {
 
 function setSaving(form, value) {
     saving = value;
+    refreshCycle.setBusy(reading || saving);
     form.setAttribute("aria-busy", String(value));
     for (const button of form.querySelectorAll("button")) button.disabled = value;
 }
@@ -901,8 +916,10 @@ document.addEventListener("pointerdown", hideTip);
 window.addEventListener("scroll", hideTip, { passive: true });
 window.addEventListener("resize", hideTip);
 
+autoRefresh.addEventListener("change", () => refreshCycle.setInterval(Number(autoRefresh.value)));
+document.addEventListener("visibilitychange", () => refreshCycle.setHidden(document.hidden));
+window.addEventListener("pagehide", () => refreshCycle.stop());
+window.addEventListener("pageshow", () => refreshCycle.resume());
+refreshCycle.setHidden(document.hidden);
+refreshCycle.setInterval(Number(autoRefresh.value));
 void load();
-setInterval(() => {
-    if (!document.hidden && !reading && !saving &&
-        !document.querySelector("dialog[open], #board-menu:popover-open")) void load();
-}, 3000);

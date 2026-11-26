@@ -7,6 +7,7 @@ import { TrackerError } from "./store.mjs";
 
 const assets = new Map([
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
+    ["/refresh.mjs", ["refresh.mjs", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
     ["/branding.css", ["branding.css", "text/css; charset=utf-8"]],
     ...["filter", "refresh", "ui-icons", "icon"].map(name => [`/${name}.svg`, [`${name}.svg`, "image/svg+xml"]]),
