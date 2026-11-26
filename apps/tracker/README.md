@@ -4,21 +4,11 @@ Keep a work list for a release, a handoff, or your own projects. Update it in th
 
 ![Tracker showing release work items, statuses, updates, and an expanded subtask](screenshot-release-readiness.png)
 
-## Install
+## Use Tracker without a prompt
 
-Paste this into a local Copilot chat. It installs Tracker for all your local chats without creating a tracker or linking one to the current session.
+In the GitHub Copilot app, open **Canvas apps** and choose **Tracker**. If it isn't listed, [install it first](#install). Open the tracker menu and choose **New tracker**, or select a tracker you've already saved.
 
-```text
-Install or update Tracker as a persistent personal canvas extension from:
-https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/tracker
-
-Keep my saved trackers, reload extensions, and open Tracker. Don't create
-a tracker or link one to this session.
-```
-
-## Use
-
-Use the **Trackers** menu to create or switch trackers. Choose **Add item** or select an item's title to edit it. Items can have an owner, an update, and a source link. Search titles, owners, and updates, or use **Filter by status**.
+Choose **Add item** or select an item's title to edit it. Items can have an owner, an update, and a source link. Search titles, owners, and updates, or use **Filter by status**.
 
 New items start at **To do** unless a status filter is active. Hover over a status or focus it with the keyboard to see what it means. For example, **Awaiting deployment** means the change is merged and isn't live yet. Use **Add status** for a custom label and an optional hover tip. [See all statuses](actions.md#built-in-statuses).
 
@@ -28,17 +18,24 @@ Link a Copilot session when you create a tracker or from the **Trackers** menu. 
 
 Trackers stay on this computer and can be opened from other local chats. Plans, pull requests, and sessions don't update them automatically.
 
-## Open Tracker from any chat
+## Track work from a coding session
 
-Replace `[tracker name]` with the name of a tracker you've already created:
+If you want Copilot to fill in the tracker, paste this into the session where the work is happening. Replace `[tracker name]` with the name you want to use.
 
 ```text
-Open the Tracker Canvas app and show me the [tracker name] tracker.
-If that tracker doesn't exist, show me the available trackers.
-Don't create or link any tracker to this session.
+Use the Tracker Canvas app to record the work from this coding session in
+[tracker name]. Open that tracker, or create it if it doesn't exist.
+
+Add one item per distinct task, not one per chat message. Update matching
+items instead of duplicating them, and leave unrelated items alone.
+Set each status based on what happened in this session. Add a short update
+with any blocker, next step, or relevant pull request link.
+Show me the tracker when you're done.
 ```
 
-To make an update, name the tracker and the item: "In Release readiness, mark the smoke test Ready to merge and link its pull request."
+To link the tracker to the session as well, add: "Link this tracker to the current Copilot session."
+
+To open a saved tracker from chat, you can just ask: "Open the Release readiness tracker in Tracker."
 
 ## Turn Thoughts into work items
 
@@ -49,6 +46,18 @@ Turn [which thoughts to use] from Thoughts into work items in [tracker name].
 Give each distinct task a clear title and keep useful context in its update.
 Set new items to To do and skip duplicates. Ask before adding anything if
 the tracker is missing or a thought doesn't describe a task. Leave Thoughts unchanged.
+```
+
+## Install
+
+If **Tracker** already appears in **Canvas apps**, skip this step. Otherwise, paste this into a local Copilot chat. It installs Tracker for all your local chats without creating a tracker or linking one to the current session.
+
+```text
+Install or update Tracker as a persistent personal canvas extension from:
+https://github.com/likamrat/ghcp-canvas-apps/tree/main/apps/tracker
+
+Keep my saved trackers, reload extensions, and open Tracker. Don't create
+a tracker or link one to this session.
 ```
 
 [Canvas actions and status IDs](actions.md)
