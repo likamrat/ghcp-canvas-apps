@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="tracker-token" content="__TOKEN__">
+  <title>Tracker</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=__ICON_VERSION__">
+  <link rel="stylesheet" href="/branding.css">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <template id="subtask-icon">
+    <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5h13m-8 7h8m-8 7h8M3 10a2 2 0 0 0 2 2h3M3 5v12a2 2 0 0 0 2 2h3"/></svg>
+  </template>
+  <main>
+    <header class="app-header">
+      <div class="app-brand">
+        <h1 class="app-wordmark" aria-label="Tracker"><span class="visually-hidden">Tracker</span>__APP_WORDMARK__</h1>
+        <p class="app-tagline">See where the work stands.</p>
+      </div>
+      <button id="open-browser" class="control-button" type="button">Open in browser</button>
+    </header>
+    <p id="browser-status" class="browser-status" role="status" hidden></p>
+
+    <div class="board-bar">
+      <div class="board-menu-wrap">
+        <button type="button" id="board-menu-button" class="control-button" popovertarget="board-menu" disabled>
+          <span id="board-menu-label">Trackers</span>
+          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#chevron"/></svg>
+        </button>
+        <div id="board-menu" class="board-menu" popover aria-label="Trackers">
+          <div id="board-options" class="board-options"></div>
+          <div class="board-menu-actions">
+            <button type="button" id="new-board" data-tip="Create a separate tracker for a body of work.">New tracker</button>
+            <button type="button" id="board-session" data-tip="Link this tracker to a Copilot session without changing trackers." hidden>Change linked session</button>
+          </div>
+        </div>
+      </div>
+      <button type="button" id="refresh" class="control-button icon-button refresh-control" aria-label="Refresh trackers" data-tip="Refresh trackers"></button>
+    </div>
+    <p id="error" class="error" role="alert" hidden></p>
+    <div id="welcome" class="empty" role="status">Loading trackers...</div>
+
+    <section id="board" aria-labelledby="board-title" hidden>
+      <div class="board-heading">
+        <div>
+          <h2 id="board-title"></h2>
+          <div class="board-meta">
+            <p id="board-count" class="muted"></p>
+            <p id="board-session-name" class="muted" hidden></p>
+          </div>
+        </div>
+        <button type="button" id="add-item" class="control-button">
+          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#plus"/></svg>Add item
+        </button>
+      </div>
+      <div class="filters">
+        <div class="field">
+          <label for="search">Search work</label>
+          <input id="search" type="search" placeholder="Item, owner, or update" autocomplete="off">
+        </div>
+        <div class="field select-field">
+          <label for="status-filter">Filter by status</label>
+          <select id="status-filter"></select>
+        </div>
+        <button type="button" id="add-status" class="control-button">Add status</button>
+        <button id="toggle-subtasks" class="control-button" type="button" aria-expanded="false" hidden>Expand all</button>
+      </div>
+      <p id="result-count" class="visually-hidden" role="status"></p>
+      <div id="table-wrap" class="table-wrap">
+        <table aria-label="Work items">
+          <thead>
+            <tr>
+              <th scope="col">Work item</th>
+              <th scope="col"><span tabindex="0" class="status-heading" data-tip="The current stage of this work item. Select the item to change it." aria-describedby="status-heading-description">Status</span></th>
+              <th scope="col" class="wide-note">Latest update</th>
+              <th scope="col" class="subtasks-column" id="subtasks-column" hidden>Subtasks</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div id="no-rows" class="empty" hidden>
+        <h3 id="no-rows-title"></h3>
+        <p id="no-rows-detail"></p>
+        <button id="clear-filters" class="control-button" type="button" hidden>Clear filters</button>
+      </div>
+    </section>
+    <p id="notice" class="visually-hidden" role="status"></p>
+    <footer>Saved on this computer. Available across your local chats.</footer>
+  </main>
+  <div id="tracker-tooltip" class="tracker-tooltip" role="tooltip" popover="manual" hidden></div>
+  <span id="status-heading-description" hidden>The current stage of this work item. Select the item to change it.</span>
+
+  <dialog id="name-dialog" aria-labelledby="name-title">
+    <form id="name-form">
+      <h2 id="name-title"></h2>
+      <div id="name-field">
+        <label for="name-input" id="name-label"></label>
+        <input id="name-input" required>
+      </div>
+      <div id="status-tip-field" hidden>
+        <label for="status-tip">Hover tip <span>(optional)</span></label>
+        <p id="status-tip-help" class="muted">Explain what this status means or when to use it. This text appears when someone hovers over or focuses the status in the table.</p>
+        <textarea id="status-tip" name="tooltip" rows="2" maxlength="200" aria-describedby="status-tip-help" placeholder="e.g. Waiting for the final sign-off." disabled></textarea>
+      </div>
+      <fieldset id="session-field" hidden>
+        <legend>Copilot session <span>(optional)</span></legend>
+        <label for="session-search" class="visually-hidden">Search Copilot sessions</label>
+        <input id="session-search" type="search" placeholder="Search sessions" autocomplete="off">
+        <div id="session-options" class="session-options"></div>
+        <p class="muted" id="session-picker-status" role="status" hidden></p>
+      </fieldset>
+      <p class="error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="control-button" type="button" data-close>Cancel</button>
+        <button class="control-button" id="name-submit" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="item-dialog" aria-labelledby="item-title">
+    <form id="item-form">
+      <h2 id="item-title"></h2>
+      <label for="item-name">Work item</label>
+      <input id="item-name" name="title" maxlength="160" required autofocus>
+      <div id="item-parent-field" class="select-field" hidden>
+        <label for="item-parent">Add under <span>(optional)</span></label>
+        <select id="item-parent" name="parentId" disabled></select>
+      </div>
+      <div class="item-fields">
+        <div class="select-field">
+          <label for="item-status">Status</label>
+          <select id="item-status" name="statusId" required></select>
+        </div>
+        <div>
+          <label for="item-owner">Owner <span>(optional)</span></label>
+          <input id="item-owner" name="owner" maxlength="100" placeholder="Person or agent">
+        </div>
+      </div>
+      <label for="item-note">Latest update <span>(optional)</span></label>
+      <textarea id="item-note" name="note" maxlength="2000" rows="3" placeholder="What changed or what happens next?"></textarea>
+      <label for="item-url">Source link <span>(optional)</span></label>
+      <input id="item-url" name="url" type="url" maxlength="2048" placeholder="https://...">
+      <p class="error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="control-button danger" type="button" id="remove-item" hidden>Remove</button>
+        <button class="control-button" type="button" data-close>Cancel</button>
+        <button class="control-button" type="submit" id="save-item">Save item</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="remove-dialog" aria-labelledby="remove-title" aria-describedby="remove-description">
+    <form id="remove-form">
+      <h2 id="remove-title">Remove this item?</h2>
+      <p id="remove-description">This permanently removes the item from the tracker.</p>
+      <p class="error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="control-button" type="button" data-close autofocus>Keep item</button>
+        <button class="control-button danger" type="submit">Remove item</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

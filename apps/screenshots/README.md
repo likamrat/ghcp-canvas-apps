@@ -1,12 +1,10 @@
-<p align="center">
-  <img src="logo.svg" alt="Screenshots logo" width="440">
-</p>
+![Screenshots logo](logo.svg)
 
-When screenshots pile up across Copilot sessions, finding the one you need means digging through old chats. Screenshots gives you a visual history of each session so you can find the image and get back to your work.
+When screenshots pile up across Copilot chats, browse them by session instead of digging through the conversation.
 
-<a href="screenshot.png"><img src="screenshot.png" alt="Session hierarchy, gallery filters, auto-refresh, and screenshot pages" width="960"></a>
+![Session hierarchy, gallery filters, auto-refresh, and screenshot pages](screenshot.png)
 
-<a href="screenshot-preview.png"><img src="screenshot-preview.png" alt="Screenshot preview with zoom, reset, navigation, and image details" width="960"></a>
+![Screenshot preview with zoom, reset, navigation, and image details](screenshot-preview.png)
 
 ## Install
 
@@ -22,8 +20,8 @@ Reload extensions, verify Screenshots appears in Canvas apps, and open it.
 
 ## Use
 
-Choose a session, narrow the gallery, and open an image to zoom. **Include child screenshots** adds images from its linked sessions.
+Choose a session and filter the gallery. Open an image to zoom in. **Include child screenshots** adds images from the selected session's children.
 
 Download one image or all filtered results as a ZIP, including matches on other pages. Existing downloads are not overwritten.
 
-Images stay local and unchanged. Missing originals may use retained session copies; remote files are not fetched.
+Images stay local and unchanged. If an original is missing, Screenshots can use a copy saved with the session. It doesn't fetch remote files.

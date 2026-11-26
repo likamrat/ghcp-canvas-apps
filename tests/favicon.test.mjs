@@ -4,14 +4,15 @@ import { startServer as screenshots } from "../apps/screenshots/server.mjs";
 import { startServer as monitor } from "../apps/context-monitor/server.mjs";
 import { startServer as thoughts } from "../apps/thoughts/server.mjs";
 import { startServer as artifacts } from "../apps/artifacts/server.mjs";
+import { startServer as tracker } from "../apps/tracker/server.mjs";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
 test("all apps declare and serve bundled favicons in standalone browser views", async (t) => {
-    const servers = [await screenshots({}), await monitor(() => ({})), await thoughts({}), await artifacts({})];
+    const servers = [await screenshots({}), await monitor(() => ({})), await thoughts({}), await artifacts({}), await tracker({})];
     t.after(() => Promise.all(servers.map((server) => server.close())));
     for (const [index, server] of servers.entries()) {
-        const app = ["screenshots", "context-monitor", "thoughts", "artifacts"][index];
+        const app = ["screenshots", "context-monitor", "thoughts", "artifacts", "tracker"][index];
         const base = new URL(`../apps/${app}/`, import.meta.url);
         const page = new URL(server.url);
         page.searchParams.set("view", "browser");
@@ -55,7 +56,13 @@ test("each app has one complete background-backed logo and a matching Lucide app
             .map((value) => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
         return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
     };
-    for (const [app, name] of [["screenshots", "Screenshots"], ["context-monitor", "Context Monitor"], ["thoughts", "Thoughts"], ["artifacts", "Artifacts"]]) {
+    for (const [app, name, prefix, replaced] of [
+        ["screenshots", "Screenshots", "screensh", "o"],
+        ["context-monitor", "Context Monitor", "context monit", "o"],
+        ["thoughts", "Thoughts", "th", "o"],
+        ["artifacts", "Artifacts", "artif", "a"],
+        ["tracker", "Tracker", "tr", "a"],
+    ]) {
         const base = new URL(`../apps/${app}/`, import.meta.url);
         const svg = await readFile(new URL("icon.svg", base), "utf8");
         assert.match(svg, /viewBox="0 0 64 64"/);
@@ -73,14 +80,20 @@ test("each app has one complete background-backed logo and a matching Lucide app
         assert.equal(png.readUInt32BE(20), 512);
         const projectIcon = await readFile(new URL(`../.github/extensions/${app}/icon.png`, import.meta.url));
         assert.deepEqual(projectIcon, png, "Project discovery and personal installation must use the same app icon");
-        const readme = await readFile(new URL("README.md", base), "utf8");
-        const header = `<p align="center">\n  <img src="logo.svg" alt="${name} logo" width="440">\n</p>\n\n`;
-        assert.ok(readme.replaceAll("\r\n", "\n").startsWith(header),
-            "Center a compact complete logo above the introduction");
+        const readme = (await readFile(new URL("README.md", base), "utf8")).replaceAll("\r\n", "\n");
+        assert.ok(readme.startsWith(`![${name} logo](logo.svg)\n\n`),
+            "Use a standalone Markdown logo so the Canvas preview does not show HTML as text");
         assert.doesNotMatch(readme, /^# /m, "The logo already names the app; do not repeat it as a title");
         assert.doesNotMatch(readme, /[\u2014\u2013]/, "Keep README prose free of decorative dashes");
-        assert.equal((readme.match(/src="logo.svg"/g) ?? []).length, 1);
-        assert.doesNotMatch(readme, /<picture>|prefers-color-scheme|logo-(?:light|dark)/);
+        assert.equal((readme.match(/\]\(logo\.svg\)/g) ?? []).length, 1);
+        assert.doesNotMatch(readme, /<(?:img|picture)\b|\[!\[|prefers-color-scheme|logo-(?:light|dark)/,
+            "The Canvas preview needs standalone Markdown images, not HTML or linked images");
+        const screenshots = [...readme.matchAll(/^!\[[^\]\n]+\]\((screenshot[\w-]*\.png)\)$/gm)];
+        assert.ok(screenshots.length, `${name} must show a screenshot with alt text`);
+        for (const [, path] of screenshots) {
+            const image = await readFile(new URL(path, base));
+            assert.equal(image.readUInt32BE(0), 0x89504e47, `${name}: ${path} must be a PNG`);
+        }
         const logo = await readFile(new URL("logo.svg", base), "utf8");
         assert.ok(logo.includes(`<title>${name}</title>`));
         const canvas = logo.match(/\bviewBox="([\d. ]+)"/)?.[1].split(" ").map(Number);
@@ -94,7 +107,7 @@ test("each app has one complete background-backed logo and a matching Lucide app
         assert.match(logo, /<g[^>]+aria-label=/, "The logo must contain the outlined wordmark");
         assert.doesNotMatch(logo, /<text|<script|<image|@font-face|prefers-color-scheme/, "One logo must work without font, image, or theme dependencies");
         assert.match(logo, /data-typeface="Bricolage Grotesque"/);
-        assert.match(logo, new RegExp(`data-replaced-letter="${app === "artifacts" ? "a" : "o"}"`));
+        assert.ok(logo.includes(`data-replaced-letter="${replaced}"`));
         assert.match(logo, /<circle[^>]+class="icon-halo"/, "The letter replacement must have a subtle circular background");
         const halo = logo.match(/<circle class="icon-halo"[^>]+>/)?.[0];
         assert.match(halo, /fill="#000000"/);
@@ -107,7 +120,7 @@ test("each app has one complete background-backed logo and a matching Lucide app
         assert.ok(metrics, "Record the glyph-edge spacing used to center the circle");
         assert.ok(Math.abs(Number(metrics[1]) - Number(metrics[2])) < .01,
             "The circle must be centered between the visible letter edges, not font advance boxes");
-        assert.match(logo, new RegExp(`data-letter-prefix="${app === "screenshots" ? "screensh" : app === "context-monitor" ? "context monit" : app === "artifacts" ? "artif" : "th"}"`));
+        assert.ok(logo.includes(`data-letter-prefix="${prefix}"`));
         const wordmark = logo.slice(logo.indexOf(`<g aria-label="${name}"`));
         assert.equal((wordmark.match(/<path transform=/g) ?? []).length, name.length - 1,
             "The symbol replaces one letter; every other wordmark glyph belongs in the image");

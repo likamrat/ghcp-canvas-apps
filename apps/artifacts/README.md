@@ -1,10 +1,8 @@
-<p align="center">
-  <img src="logo.svg" alt="Artifacts logo" width="440">
-</p>
+![Artifacts logo](logo.svg)
 
 Files get buried in long chats. Artifacts brings them together so you can find what you made, take a closer look, and keep the pieces you need.
 
-<a href="screenshot.png"><img src="screenshot.png" alt="Artifacts with a session's files, pinned items, and a document preview" width="960"></a>
+![Artifacts showing a session's files, pinned items, and a document preview](screenshot.png)
 
 ## Install
 
@@ -22,16 +20,16 @@ Artifacts appears in Canvas apps, and open it.
 
 Choose a session, then open an artifact. Pin files you want to keep handy, search the list, or switch to Gallery or Timeline. Filters start collapsed.
 
-Click a preview image to open it in a separate, image-only window, from either the canvas or browser view. Close it to return without losing your place. Requires Edge, Chrome, or Chromium. After updating, reload extensions and reopen Artifacts; refreshing an existing page does not restart its server.
+In the canvas or browser view, click an image preview to open it in a separate window. Close the window to return to where you were. This requires Edge, Chrome, or Chromium. After an update, reload extensions and reopen Artifacts; refreshing the page alone won't load the update.
 
 Markdown opens as a formatted document, including tables and local images. Code examples stay readable as code; scripts and remote images are not loaded.
 
-Create notes, revisit their saved versions, or download a file. **Request a change** prepares text to copy into Copilot chat; it does not send a message.
+Create a note or revisit a saved version. **Request a change** prepares text you can copy into Copilot chat without sending it for you.
 
-Downloads go to your Downloads folder without replacing existing files. Use **Open in folder** to find the saved copy.
+Download files to your Downloads folder without replacing existing files. Use **Open in folder** to find the saved copy.
 
 Your files stay local and unchanged. Version history covers notes saved through Artifacts, not earlier versions of discovered files.
 
-<a href="screenshot-dark.png"><img src="screenshot-dark.png" alt="Artifacts in dark mode" width="960"></a>
+![Artifacts in dark mode](screenshot-dark.png)
 
-<a href="screenshot-sessions.png"><img src="screenshot-sessions.png" alt="Searchable session picker with its own scrollbar and navigation controls" width="640"></a>
+![Searchable session picker with its own scrollbar and navigation controls](screenshot-sessions.png)

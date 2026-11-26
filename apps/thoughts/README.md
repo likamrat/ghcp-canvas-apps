@@ -1,10 +1,8 @@
-<p align="center">
-  <img src="logo.svg" alt="Thoughts logo" width="440">
-</p>
+![Thoughts logo](logo.svg)
 
-Ideas often show up while you're in the middle of something else. Thoughts keeps them in one place across your Copilot chats, so you can stay with the task at hand and come back to them later.
+Ideas often show up while you're in the middle of something else. Save them in Thoughts and come back to the same list from any Copilot chat on this computer.
 
-<a href="screenshot.png"><img src="screenshot.png" alt="Thoughts showing saved ideas, copy and edit actions, and completion controls" width="640"></a>
+![Thoughts showing saved ideas, checkboxes, and edit and copy controls](screenshot.png)
 
 ## Install
 
@@ -20,6 +18,6 @@ Reload extensions, verify Thoughts appears in Canvas apps, and open it.
 
 ## Use
 
-Choose **Add thought** or press **Ctrl/Cmd + Enter**. Edit, copy, or complete it when you're ready. Deleting a thought asks for confirmation.
+Type a thought, then choose **Add thought** or press **Ctrl+Enter** (**Cmd+Enter** on Mac). You can edit or copy the thought from its row.
 
-Your thoughts stay on this computer and are shared across your chats.
+Check a thought off to move it from **Open** to **Done**. To bring it back, open **Done** and uncheck it. Deleting a thought asks for confirmation.

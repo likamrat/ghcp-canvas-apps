@@ -1,10 +1,8 @@
-<p align="center">
-  <img src="logo.svg" alt="Context Monitor logo" width="440">
-</p>
+![Context Monitor logo](logo.svg)
 
-With several Copilot sessions running, it's hard to tell which ones are nearing their context limit. Context Monitor shows where each session stands, so you can decide where to keep working and where to start fresh.
+Context Monitor shows which Copilot sessions are nearing their context limit, so you can decide where to keep working and where to start fresh.
 
-<a href="screenshot.png"><img src="screenshot.png" alt="Context Monitor with 600 sessions, a heat map, and GPT and Claude session details" width="960"></a>
+![Context Monitor showing a session heat map and GPT and Claude session details](screenshot.png)
 
 ## Install
 
@@ -22,6 +20,6 @@ Reload extensions, verify Context Monitor appears in Canvas apps, and open it.
 
 Scan the heat map or select a session for details. Filter by model or usage, and adjust warning levels under **Usage settings**. The heat map covers all matching sessions, not just the current page.
 
-Input/output totals accumulate across the session. Context shows the current window usage.
+Input and output totals cover the whole session. The context reading shows how much of the current window is in use.
 
-Reads local app metadata without changing it. No conversations are read or uploaded.
+Context Monitor reads local app metadata without changing it. It doesn't read or upload conversations.

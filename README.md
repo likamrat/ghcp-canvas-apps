@@ -1,6 +1,6 @@
 # Canvas apps for the GitHub Copilot app
 
-Personal canvas extensions for the GitHub Copilot app. Each opens in a panel alongside your chats.
+These Canvas apps open beside your chats in the GitHub Copilot app. Each installs separately and keeps its data on your computer.
 
 | App | What it does |
 | --- | --- |
@@ -8,11 +8,12 @@ Personal canvas extensions for the GitHub Copilot app. Each opens in a panel alo
 | [Thoughts](apps/thoughts/README.md) | Keep ideas for later without losing focus on your current task. |
 | [Context Monitor](apps/context-monitor/README.md) | See which sessions have room to continue and which are nearing their context limit. |
 | [Screenshots](apps/screenshots/README.md) | Find the screenshot you need without digging through old chats. |
+| [Tracker](apps/tracker/README.md) | Track work and subtasks by status. Update the list yourself or ask Copilot. |
 
-Open an app's README for screenshots and installation instructions. Your data stays on your computer.
+Each app's README has screenshots, a copy-ready install prompt, and instructions for using it.
 
 ## Development
 
-Node 24+. Run `node --test` from the repository root.
+Use Node 24 or later. Run `node --test` from the repository root.
 
-Each app is independently installable. Keep `branding.css` and `ui-icons.svg` identical across app folders; the tests check this. For rendered control checks, run `tests/canvas-ui.browser.mjs` through Playwright's run-code tool on each local app fixture.
+Keep `branding.css` and `ui-icons.svg` identical across app folders. The tests check both files. To check controls in the browser for Artifacts, Context Monitor, Screenshots, or Thoughts, run `tests/canvas-ui.browser.mjs` through Playwright's run-code tool on the local app fixture.

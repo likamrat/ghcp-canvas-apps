@@ -5,11 +5,12 @@ import { startServer as artifacts } from "../apps/artifacts/server.mjs";
 import { startServer as screenshots } from "../apps/screenshots/server.mjs";
 import { startServer as monitor } from "../apps/context-monitor/server.mjs";
 import { startServer as thoughts } from "../apps/thoughts/server.mjs";
+import { startServer as tracker } from "../apps/tracker/server.mjs";
 
 test("all app headers use the same theme-aware wordmark and control treatment", async t => {
-    const apps = ["artifacts", "screenshots", "context-monitor", "thoughts"];
-    const names = ["Artifacts", "Screenshots", "Context Monitor", "Thoughts"];
-    const servers = [await artifacts({}), await screenshots({}), await monitor(() => ({})), await thoughts({})];
+    const apps = ["artifacts", "screenshots", "context-monitor", "thoughts", "tracker"];
+    const names = ["Artifacts", "Screenshots", "Context Monitor", "Thoughts", "Tracker"];
+    const servers = [await artifacts({}), await screenshots({}), await monitor(() => ({})), await thoughts({}), await tracker({})];
     t.after(() => Promise.all(servers.map(server => server.close())));
     const canonical = await readFile(new URL("../apps/artifacts/branding.css", import.meta.url), "utf8");
     for (const [index, app] of apps.entries()) {
@@ -25,7 +26,7 @@ test("all app headers use the same theme-aware wordmark and control treatment", 
         assert.match(html, /class="[^"]*\brefresh-control\b[^"]*"/);
         const browserButton = [...html.matchAll(/<button\b[^>]*>/g)].map(match => match[0]).find(tag => tag.includes('id="open-browser"'));
         assert.match(browserButton, /class="[^"]*\bcontrol-button\b/, `${app} uses the shared action control`);
-        if (app !== "thoughts") {
+        if (app !== "thoughts" && app !== "tracker") {
             const panel = html.match(/<details\b[^>]*class="control-panel"[^>]*>/)?.[0];
             assert.ok(panel, `${app} has a collapsible filter panel`);
             assert.doesNotMatch(panel, /\sopen(?:\s|=|>)/, `${app} starts collapsed`);
