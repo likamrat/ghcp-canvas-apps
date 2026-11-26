@@ -23,10 +23,12 @@ Open the `work-tracker` canvas with `boardName` or `boardId`. Omit both to choos
 | To do | `todo` |
 | In progress | `in-progress` |
 | In review | `in-review` |
+| Packaged | `packaged` |
 | Ready to merge | `ready-to-merge` |
 | Awaiting deployment | `awaiting-deployment` |
+| Verified live | `verified-live` |
 | Blocked | `blocked` |
 | Paused | `paused` |
 | Done | `done` |
 
-Use the IDs from `get_board`. A tracker with a custom Awaiting deployment status keeps that status's ID.
+Use the IDs from `get_board`. A custom status that matches a built-in label keeps its ID and tooltip, and uses the built-in color.

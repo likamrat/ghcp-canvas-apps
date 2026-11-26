@@ -2,7 +2,7 @@
 
 Keep a work list for a release, a handoff, or your own projects. Update it in the canvas or ask Copilot to update it from a chat.
 
-![Tracker showing release work items, statuses, updates, and an expanded subtask](screenshot-release-readiness.png)
+![Tracker showing release statuses, two-line update previews, and the Columns control](screenshot-table-view.png)
 
 ## Use Tracker without a prompt
 
@@ -11,6 +11,8 @@ In the GitHub Copilot app, open **Canvas apps** and choose **Tracker**. If it is
 Choose **Add item** or select an item's title to edit it. Items can have an owner, an update, and a source link. Search titles, owners, and updates, or use **Filter by status**.
 
 New items start at **To do** unless a status filter is active. Hover over a status or focus it with the keyboard to see what it means. For example, **Awaiting deployment** means the change is merged and isn't live yet. Use **Add status** for a custom label and an optional hover tip. [See all statuses](actions.md#built-in-statuses).
+
+Use **Columns** to show or hide Status, Latest update, and Subtasks. Long updates start at two lines. Choose **Show more** to read the full update and **Show less** to collapse it. Search still checks the full update.
 
 To add a subtask, pick a parent in **Add under**. Subtasks start collapsed; use the count at the right of a row to open them, or **Expand all** when several rows have subtasks. If a subtask matches a search or filter, its parent appears without expanding. Each subtask has its own status.
 

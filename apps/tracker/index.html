@@ -67,6 +67,16 @@
           <select id="status-filter"></select>
         </div>
         <button type="button" id="add-status" class="control-button">Add status</button>
+        <button type="button" id="columns-button" class="control-button" popovertarget="columns-menu">
+          Columns
+          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#chevron"/></svg>
+        </button>
+        <fieldset id="columns-menu" class="board-menu" popover>
+          <legend class="visually-hidden">Visible columns</legend>
+          <label class="check-filter"><input type="checkbox" value="status" checked> Status</label>
+          <label class="check-filter"><input type="checkbox" value="update" checked> Latest update</label>
+          <label class="check-filter"><input type="checkbox" value="subtasks" checked> Subtasks</label>
+        </fieldset>
         <button id="toggle-subtasks" class="control-button" type="button" aria-expanded="false" hidden>Expand all</button>
         <label id="hidden-filter" class="check-filter" hidden>
           <input id="show-hidden" type="checkbox">
@@ -79,8 +89,8 @@
           <thead>
             <tr>
               <th scope="col">Work item</th>
-              <th scope="col"><span tabindex="0" class="status-heading" data-tip="The current stage of this work item. Select the item to change it." aria-describedby="status-heading-description">Status</span></th>
-              <th scope="col" class="wide-note">Latest update</th>
+              <th scope="col" id="status-column"><span tabindex="0" class="status-heading" data-tip="The current stage of this work item. Select the item to change it." aria-describedby="status-heading-description">Status</span></th>
+              <th scope="col" id="update-column" class="wide-note">Latest update</th>
               <th scope="col" class="subtasks-column" id="subtasks-column" hidden>Subtasks</th>
             </tr>
           </thead>

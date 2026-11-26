@@ -40,13 +40,15 @@ export const actions = {
     remove_item: ["Permanently remove one item only on explicit user request. Use the current item version from get_board.", object(itemKey)],
 };
 
-const awaitingDeployment = ["awaiting-deployment", "Awaiting deployment", "amber"];
 const defaults = [
     ["todo", "To do", "neutral"], ["in-progress", "In progress", "blue"],
-    ["in-review", "In review", "purple"], ["ready-to-merge", "Ready to merge", "teal"],
-    awaitingDeployment, ["blocked", "Blocked", "red"], ["paused", "Paused", "amber"], ["done", "Done", "green"],
+    ["in-review", "In review", "purple"],
+    ["packaged", "Packaged", "blue", "A package was built and checked. That does not mean it was merged or deployed."],
+    ["ready-to-merge", "Ready to merge", "teal"],
+    ["awaiting-deployment", "Awaiting deployment", "amber"],
+    ["verified-live", "Verified live", "green", "The deployment was verified in the target environment."],
+    ["blocked", "Blocked", "red"], ["paused", "Paused", "amber"], ["done", "Done", "green"],
 ];
-const defaultOrder = new Map(defaults.map(([id], index) => [id, index]));
 
 export class TrackerError extends Error {
     constructor(code, message, status) {
@@ -101,6 +103,12 @@ function validate(schema, value, field = "Input") {
 }
 
 const nameKey = (name) => name.normalize("NFC").toLowerCase();
+const defaultStatuses = new Map(defaults.map(([, label, tone, tooltip], index) =>
+    [nameKey(label), { tone, tooltip, index }]));
+
+function builtInStatus(status) {
+    return defaultStatuses.get(nameKey(status.label));
+}
 
 function validateUrl(url) {
     if (!url) return;
@@ -165,11 +173,11 @@ export function createStore(path = join(
         if (!db.prepare("PRAGMA table_info(statuses)").all().some(column => column.name === "tooltip")) {
             db.exec("ALTER TABLE statuses ADD COLUMN tooltip TEXT");
         }
-        const [id, label, tone] = awaitingDeployment;
-        db.prepare(`
-            INSERT INTO statuses (boardId, id, label, labelKey, tone)
-            SELECT id, ?, ?, ?, ? FROM boards WHERE true ON CONFLICT DO NOTHING
-        `).run(id, label, nameKey(label), tone);
+        const backfillStatus = db.prepare(`
+            INSERT INTO statuses (boardId, id, label, labelKey, tone, tooltip)
+            SELECT id, ?, ?, ?, ?, ? FROM boards WHERE true ON CONFLICT DO NOTHING
+        `);
+        for (const [id, label, tone, tooltip = null] of defaults) backfillStatus.run(id, label, nameKey(label), tone, tooltip);
     });
 
     function sessions() {
@@ -201,7 +209,7 @@ export function createStore(path = join(
         }
     }
 
-    const insertStatus = db.prepare("INSERT INTO statuses (boardId, id, label, labelKey, tone) VALUES (?, ?, ?, ?, ?)");
+    const insertStatus = db.prepare("INSERT INTO statuses (boardId, id, label, labelKey, tone, tooltip) VALUES (?, ?, ?, ?, ?, ?)");
     const listBoards = db.prepare("SELECT id, name, sessionId, sessionName FROM boards ORDER BY name COLLATE NOCASE, id");
     const readItem = db.prepare("SELECT * FROM items WHERE id = ?");
     const formatItem = (item) => ({ ...item, hidden: Boolean(item.hidden) });
@@ -255,7 +263,9 @@ export function createStore(path = join(
                             VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(nameKey) DO NOTHING`)
                             .run(id, name, nameKey(name), now, ...link);
                         if (!result.changes) throw new TrackerError("duplicate_board", "A tracker with that name already exists.", 409);
-                        for (const [statusId, label, tone] of defaults) insertStatus.run(id, statusId, label, nameKey(label), tone);
+                        for (const [statusId, label, tone, tooltip = null] of defaults) {
+                            insertStatus.run(id, statusId, label, nameKey(label), tone, tooltip);
+                        }
                         return requireBoard(id);
                     });
                 }
@@ -263,7 +273,11 @@ export function createStore(path = join(
                     return transaction("BEGIN", () => ({
                         board: requireBoard(input.boardId),
                         statuses: db.prepare("SELECT id, label, tone, tooltip FROM statuses WHERE boardId = ? ORDER BY rowid").all(input.boardId)
-                            .sort((a, b) => (defaultOrder.get(a.id) ?? defaults.length) - (defaultOrder.get(b.id) ?? defaults.length)),
+                            .sort((a, b) => (builtInStatus(a)?.index ?? defaults.length) - (builtInStatus(b)?.index ?? defaults.length))
+                            .map(status => {
+                                const builtin = builtInStatus(status);
+                                return builtin ? { ...status, tone: builtin.tone, tooltip: status.tooltip ?? builtin.tooltip ?? null } : status;
+                            }),
                         items: db.prepare(input.includeDetails
                             ? "SELECT * FROM items WHERE boardId = ? ORDER BY rowid"
                             : "SELECT * FROM items WHERE boardId = ? AND parentId IS NULL ORDER BY rowid").all(input.boardId).map(formatItem),

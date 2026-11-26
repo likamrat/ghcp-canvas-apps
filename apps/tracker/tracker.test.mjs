@@ -162,6 +162,35 @@ test("linking resolves stable workspace IDs from session aliases and allows unli
     } finally { store.close(); }
 });
 
+test("release statuses backfill saved trackers and preserve an existing custom status and its items", async t => {
+    const root = await mkdtemp(join(tmpdir(), "tracker-release-statuses-"));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    const path = join(root, "tracker.sqlite");
+    const original = createStore(path);
+    const { id: boardId } = original.run("create_board", { name: "Release checklist" });
+    original.close();
+    const legacy = new DatabaseSync(path);
+    legacy.prepare("DELETE FROM statuses WHERE boardId = ? AND id IN ('verified-live', 'packaged')").run(boardId);
+    legacy.prepare(`INSERT INTO statuses (boardId, id, label, labelKey, tone, tooltip)
+        VALUES (?, 'custom-live', 'Verified Live', 'verified live', 'neutral', 'Checked the running service.')`).run(boardId);
+    legacy.prepare(`INSERT INTO items (id, boardId, statusId, title, owner, note, url, createdAt, updatedAt)
+        VALUES ('release', ?, 'custom-live', 'Check the release', '', '', '', '2025-01-15', '2025-01-15')`).run(boardId);
+    legacy.close();
+
+    const upgraded = createStore(path);
+    try {
+        const { statuses, items } = upgraded.run("get_board", { boardId });
+        const live = statuses.filter(status => /^verified live$/i.test(status.label));
+        assert.deepEqual(live.map(({ id, tone, tooltip }) => ({ id, tone, tooltip })), [
+            { id: "custom-live", tone: "green", tooltip: "Checked the running service." },
+        ]);
+        assert.equal(items[0].statusId, "custom-live");
+        assert.equal(statuses.find(status => status.id === "packaged").tone, "blue");
+        const { id: freshId } = upgraded.run("create_board", { name: "Next release" });
+        assert.equal(upgraded.run("get_board", { boardId: freshId }).statuses.find(status => status.id === "verified-live").tone, "green");
+    } finally { upgraded.close(); }
+});
+
 test("item visibility is reversible, persists across views, and rejects stale edits", async t => {
     const root = await mkdtemp(join(tmpdir(), "tracker-visibility-"));
     const first = createStore(join(root, "tracker.sqlite"));

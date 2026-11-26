@@ -5,10 +5,14 @@ const token = document.querySelector('meta[name="tracker-token"]').content;
 const pageUrl = new URL(location.href);
 const boardMenu = byId("board-menu");
 const boardMenuButton = byId("board-menu-button");
+const columnsMenu = byId("columns-menu");
+const tableWrap = byId("table-wrap");
 const statusFilter = byId("status-filter");
 const showHidden = byId("show-hidden");
 const toggleSubtasks = byId("toggle-subtasks");
 const expandedParents = new Set();
+const expandedNotes = new Set();
+const hiddenColumns = new Set();
 const search = byId("search");
 const rows = byId("rows");
 const nameDialog = byId("name-dialog");
@@ -97,18 +101,18 @@ function renderBoardMenu(selected) {
     byId("board-options").replaceChildren(...groups.map(([, { group }]) => group));
 }
 
-function positionBoardMenu(opening = false) {
-    if (!opening && !boardMenu.matches(":popover-open")) return;
-    if (opening) boardMenu.classList.add("measuring");
-    const trigger = boardMenuButton.getBoundingClientRect();
+function positionMenu(menu, button, opening = false) {
+    if (!opening && !menu.matches(":popover-open")) return;
+    if (opening) menu.classList.add("measuring");
+    const trigger = button.getBoundingClientRect();
     const below = innerHeight - trigger.bottom - 16;
     const above = trigger.top - 16;
-    boardMenu.style.removeProperty("max-height");
-    const openBelow = below >= boardMenu.offsetHeight || below >= above;
-    boardMenu.style.maxHeight = `min(26rem, ${Math.max(0, openBelow ? below : above)}px)`;
-    boardMenu.style.left = `${Math.max(12, Math.min(trigger.left, innerWidth - boardMenu.offsetWidth - 12))}px`;
-    boardMenu.style.top = `${openBelow ? trigger.bottom + 5 : trigger.top - boardMenu.offsetHeight - 5}px`;
-    if (opening) boardMenu.classList.remove("measuring");
+    menu.style.removeProperty("max-height");
+    const openBelow = below >= menu.offsetHeight || below >= above;
+    menu.style.maxHeight = `min(26rem, ${Math.max(0, openBelow ? below : above)}px)`;
+    menu.style.left = `${Math.max(12, Math.min(trigger.left, innerWidth - menu.offsetWidth - 12))}px`;
+    menu.style.top = `${openBelow ? trigger.bottom + 5 : trigger.top - menu.offsetHeight - 5}px`;
+    if (opening) menu.classList.remove("measuring");
 }
 
 function setBoardUrl(id) {
@@ -153,6 +157,7 @@ async function load({ manual = false } = {}) {
             clearFilters();
             showHidden.checked = false;
             expandedParents.clear();
+            expandedNotes.clear();
         }
         const statusOptions = [["", "All statuses"], ...data.statuses.map(({ id, label }) => [id, label])];
         if (statusOptions.length !== statusFilter.options.length || oldBoard !== target.id) {
@@ -177,6 +182,38 @@ async function load({ manual = false } = {}) {
 function clearFilters() {
     search.value = "";
     statusFilter.value = "";
+}
+
+function renderNote(container, item, layout) {
+    container.hidden = hiddenColumns.has("update");
+    if (!item.note) return;
+    const expanded = expandedNotes.has(item.id);
+    const text = document.createElement("p");
+    text.className = expanded ? "note-text note-expanded" : "note-text";
+    text.id = `note-${layout}-${item.id}`;
+    text.textContent = item.note;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "note-toggle";
+    button.hidden = true;
+    button.textContent = expanded ? "Show less" : "Show more";
+    button.ariaLabel = `${button.textContent} of the update for ${item.title}`;
+    button.ariaExpanded = String(expanded);
+    button.setAttribute("aria-controls", text.id);
+    button.dataset.focus = `note-${layout}-${item.id}`;
+    button.addEventListener("click", () => {
+        if (!expandedNotes.delete(item.id)) expandedNotes.add(item.id);
+        renderRows();
+    });
+    container.append(text, button);
+}
+
+function updateNoteControls() {
+    const measurements = [...rows.querySelectorAll(".note-text")].map(text => [
+        text.nextElementSibling,
+        text.clientHeight > 0 && (text.classList.contains("note-expanded") || text.scrollHeight > text.clientHeight),
+    ]);
+    for (const [button, visible] of measurements) button.hidden = !visible;
 }
 
 function row(item, status, { parent, contextOnly = false, showSubtasksColumn, subtaskCount = 0, matchingCount = subtaskCount }) {
@@ -225,15 +262,17 @@ function row(item, status, { parent, contextOnly = false, showSubtasksColumn, su
         work.append(meta);
     }
     if (item.note) {
-        const note = document.createElement("p");
+        const note = document.createElement("div");
         note.className = "narrow-note item-note";
         const label = document.createElement("span");
         label.className = "visually-hidden";
         label.textContent = "Latest update: ";
-        note.append(label, item.note);
+        note.append(label);
+        renderNote(note, item, "narrow");
         work.append(note);
     }
     const state = document.createElement("td");
+    state.hidden = hiddenColumns.has("status");
     const badge = document.createElement("span");
     badge.className = "status";
     badge.dataset.tone = status.tone;
@@ -250,7 +289,7 @@ function row(item, status, { parent, contextOnly = false, showSubtasksColumn, su
     state.append(badge, description);
     const note = document.createElement("td");
     note.className = "wide-note item-note";
-    note.textContent = item.note;
+    renderNote(note, item, "wide");
     tr.append(work, state, note);
     if (showSubtasksColumn) {
         const cell = document.createElement("td");
@@ -312,10 +351,13 @@ function renderRows({ all = false } = {}) {
         if (allWereExpanded) expandedParents.clear();
         else for (const id of subtasksByParent.keys()) expandedParents.add(id);
     }
-    const showSubtasksColumn = subtasksByParent.size > 0;
-    const allExpanded = showSubtasksColumn && expandedParents.size === subtasksByParent.size;
+    const hasSubtasks = subtasksByParent.size > 0;
+    const showSubtasksColumn = hasSubtasks && !hiddenColumns.has("subtasks");
+    const allExpanded = hasSubtasks && expandedParents.size === subtasksByParent.size;
+    byId("status-column").hidden = hiddenColumns.has("status");
+    byId("update-column").hidden = hiddenColumns.has("update");
     byId("subtasks-column").hidden = !showSubtasksColumn;
-    toggleSubtasks.hidden = subtasksByParent.size < 2;
+    toggleSubtasks.hidden = !hasSubtasks || (showSubtasksColumn && subtasksByParent.size < 2);
     toggleSubtasks.ariaExpanded = String(allExpanded);
     toggleSubtasks.textContent = allExpanded ? "Collapse all" : "Expand all";
     const focused = document.activeElement?.dataset.focus;
@@ -335,13 +377,14 @@ function renderRows({ all = false } = {}) {
     const shown = contents.childElementCount;
     if (tipTarget && rows.contains(tipTarget)) hideTip();
     rows.replaceChildren(contents);
+    tableWrap.hidden = !shown;
+    updateNoteControls();
     if (focused) {
         const control = [...rows.querySelectorAll("[data-focus]")].find(entry => entry.dataset.focus === focused);
         (control ?? byId("add-item")).focus({ preventScroll: true });
     }
     const count = query || filter ? `${shown} ${shown === 1 ? "row" : "rows"} shown` : "";
     if (byId("result-count").textContent !== count) byId("result-count").textContent = count;
-    byId("table-wrap").hidden = !shown;
     byId("no-rows").hidden = Boolean(shown);
     if (!shown) {
         const filtered = Boolean(query || filter);
@@ -556,12 +599,25 @@ byId("delete-board").addEventListener("click", () => {
     closeBoardMenu();
     if (board) confirmDelete(board);
 });
-boardMenu.addEventListener("beforetoggle", event => {
-    if (event.newState === "open") positionBoardMenu(true);
-    else if (tipTarget && boardMenu.contains(tipTarget)) hideTip();
+for (const [menu, button] of [[boardMenu, boardMenuButton], [columnsMenu, byId("columns-button")]]) {
+    menu.addEventListener("beforetoggle", event => {
+        if (event.newState === "open") positionMenu(menu, button, true);
+        else if (tipTarget && menu.contains(tipTarget)) hideTip();
+    });
+    window.addEventListener("resize", () => positionMenu(menu, button));
+    window.addEventListener("scroll", () => positionMenu(menu, button), { passive: true });
+}
+columnsMenu.addEventListener("change", ({ target }) => {
+    if (target.checked) hiddenColumns.delete(target.value);
+    else hiddenColumns.add(target.value);
+    renderRows();
 });
-window.addEventListener("resize", () => positionBoardMenu());
-window.addEventListener("scroll", () => positionBoardMenu(), { passive: true });
+let tableWidth;
+new ResizeObserver(([entry]) => {
+    if (entry.contentRect.width === tableWidth) return;
+    tableWidth = entry.contentRect.width;
+    updateNoteControls();
+}).observe(tableWrap);
 sessionSearch.addEventListener("input", renderSessionOptions);
 sessionOptions.addEventListener("change", event => { naming.sessionId = event.target.value; });
 byId("add-status").addEventListener("click", () => openName("status"));
