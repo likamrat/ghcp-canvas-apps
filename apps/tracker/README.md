@@ -2,7 +2,7 @@
 
 Keep a work list for a release, a handoff, or your own projects. Update it in the canvas or ask Copilot to update it from a chat.
 
-![Tracker showing release work items, statuses, updates, and an expanded subtask](screenshot.png)
+![Tracker showing release work items, statuses, updates, and an expanded subtask](screenshot-release-readiness.png)
 
 ## Install
 
