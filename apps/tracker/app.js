@@ -12,6 +12,8 @@ const columnWidths = new Map();
 const resizeMenu = byId("resize-column-menu");
 const resetWidths = byId("reset-column-widths");
 const statusFilter = byId("status-filter");
+const statusCounts = byId("status-counts");
+const clearFiltersButton = byId("clear-filters");
 const showHidden = byId("show-hidden");
 const toggleSubtasks = byId("toggle-subtasks");
 const expandedParents = new Set();
@@ -338,32 +340,55 @@ function row(item, status, { parent, contextOnly = false, showSubtasksColumn, su
     return tr;
 }
 
+let statusSummarySnapshot;
 function renderStatusSummary(items) {
     const total = items.length;
     byId("board-count").textContent = `${total} ${total === 1 ? "item" : "items"}`;
     byId("status-summary").hidden = !total;
     const counts = new Map();
     for (const { statusId } of items) counts.set(statusId, (counts.get(statusId) ?? 0) + 1);
+    const entries = data.statuses.filter(({ id }) => counts.has(id))
+        .map(({ id, label, tone }) => ({ id, label, tone, count: counts.get(id) }));
+    const nextSnapshot = JSON.stringify(entries);
+    let focused;
+    if (nextSnapshot !== statusSummarySnapshot) {
+        focused = statusCounts.contains(document.activeElement) && document.activeElement.dataset.statusId;
+        renderStatusTags(entries);
+        statusSummarySnapshot = nextSnapshot;
+    }
+    const buttons = [...statusCounts.querySelectorAll("button")];
+    for (const button of buttons) {
+        button.ariaPressed = String(button.dataset.statusId === statusFilter.value);
+    }
+    if (focused) {
+        const replacement = buttons.find(button => button.dataset.statusId === focused);
+        (replacement ?? statusFilter).focus({ preventScroll: true });
+    }
+}
+
+function renderStatusTags(entries) {
     const segments = document.createDocumentFragment();
     const labels = document.createDocumentFragment();
-    for (const { id, label, tone } of data.statuses) {
-        const count = counts.get(id);
-        if (!count) continue;
+    for (const { id, label, tone, count } of entries) {
         const segment = document.createElement("span");
         segment.className = "status-tone";
         segment.dataset.tone = tone;
         segment.style.flexGrow = String(count);
         segments.append(segment);
         const entry = document.createElement("li");
-        entry.className = "status-tag status-tone";
-        entry.dataset.tone = tone;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "status-filter-tag status-tag status-tone";
+        button.dataset.tone = tone;
+        button.dataset.statusId = id;
         const number = document.createElement("strong");
         number.textContent = String(count);
-        entry.append(number, ` ${label}`);
+        button.append(number, ` ${label}`);
+        entry.append(button);
         labels.append(entry);
     }
     byId("status-distribution").replaceChildren(segments);
-    byId("status-counts").replaceChildren(labels);
+    statusCounts.replaceChildren(labels);
 }
 
 function renderRows({ all = false } = {}) {
@@ -379,6 +404,8 @@ function renderRows({ all = false } = {}) {
     renderStatusSummary(summary);
     const query = search.value.trim().toLowerCase();
     const filter = statusFilter.value;
+    const filtered = Boolean(query || filter);
+    clearFiltersButton.hidden = !filtered;
     const statuses = new Map(data.statuses.map(status => [status.id, status]));
     const matches = item => (!filter || item.statusId === filter) &&
         (!query || [item.title, item.owner, item.note].some(text => text.toLowerCase().includes(query)));
@@ -428,17 +455,15 @@ function renderRows({ all = false } = {}) {
         const control = [...rows.querySelectorAll("[data-focus]")].find(entry => entry.dataset.focus === focused);
         (control ?? byId("add-item")).focus({ preventScroll: true });
     }
-    const count = query || filter ? `${shown} ${shown === 1 ? "row" : "rows"} shown` : "";
+    const count = filtered ? `${shown} ${shown === 1 ? "row" : "rows"} shown` : "";
     if (byId("result-count").textContent !== count) byId("result-count").textContent = count;
     byId("no-rows").hidden = Boolean(shown);
     if (!shown) {
-        const filtered = Boolean(query || filter);
         const allHidden = !visibleItems.length && hiddenCount > 0;
         byId("no-rows-title").textContent = allHidden ? "All items are hidden" : filtered ? "No matching items" : "No items yet";
         byId("no-rows-detail").textContent = allHidden ? "Select Show hidden items to view or restore them."
             : filtered ? "Try another search or clear the filters."
                 : "Add a work item, or ask Copilot to add the work you want to follow.";
-        byId("clear-filters").hidden = !filtered;
     }
 }
 
@@ -805,9 +830,16 @@ byId("board-options").addEventListener("click", event => {
 });
 search.addEventListener("input", renderRows);
 statusFilter.addEventListener("change", renderRows);
+statusCounts.addEventListener("click", event => {
+    const button = event.target.closest("button[data-status-id]");
+    if (!button) return;
+    const id = button.dataset.statusId;
+    statusFilter.value = statusFilter.value === id ? "" : id;
+    renderRows();
+});
 showHidden.addEventListener("change", renderRows);
 toggleSubtasks.addEventListener("click", () => renderRows({ all: true }));
-byId("clear-filters").addEventListener("click", () => {
+clearFiltersButton.addEventListener("click", () => {
     clearFilters();
     renderRows();
     search.focus();
