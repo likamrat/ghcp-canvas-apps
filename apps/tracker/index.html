@@ -79,9 +79,16 @@
           <label for="search">Search work</label>
           <input id="search" type="search" placeholder="Item, owner, or update" autocomplete="off">
         </div>
-        <div class="field select-field">
-          <label for="status-filter"><span class="status-filter-icon filter-heading" aria-hidden="true"></span>Filter by status</label>
-          <select id="status-filter"></select>
+        <div class="field">
+          <label id="status-filter-label" for="status-filter"><span class="status-filter-icon filter-heading" aria-hidden="true"></span>Filter by status</label>
+          <button type="button" id="status-filter" class="control-button" popovertarget="status-filter-options" aria-labelledby="status-filter-label status-filter-value">
+            <span id="status-filter-value">All statuses</span>
+            <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#chevron"/></svg>
+          </button>
+          <fieldset id="status-filter-options" class="board-menu" popover>
+            <legend class="visually-hidden">Filter by status</legend>
+            <div id="status-filter-choices"></div>
+          </fieldset>
         </div>
         <button type="button" id="add-status" class="control-button">Add status</button>
         <button type="button" id="columns-button" class="control-button" popovertarget="columns-menu">

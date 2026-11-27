@@ -14,7 +14,7 @@ Choose **Add item** or select an item's title to edit it. Items can have an owne
 
 The bar and counts above the table show how the tracker's items are split by status. The summary counts top-level items, not subtasks. Search and status filters only change the table. Hidden items count only while **Show hidden items** is on.
 
-New items start at **To do** unless a status filter is active. The table and summary use the same tinted tags with neutral text in light and dark themes. **In progress** and **Awaiting deployment** are yellow, **Packaged** is blue, **Verified live** and **Done** are green, and **Blocked** is red. **To do** and custom statuses without an assigned color use slate. Hover over a status in the table or focus it with the keyboard to see the full label and what it means. Use **Add status** for a custom label and an optional tip. [See all statuses](actions.md#built-in-statuses).
+New items start at **To do** unless exactly one status is selected in the filter. The table and summary use the same tinted tags with neutral text in light and dark themes. **In progress** and **Awaiting deployment** are yellow, **Packaged** is blue, **Verified live** and **Done** are green, and **Blocked** is red. **To do** and custom statuses without an assigned color use slate. Hover over a status in the table or focus it with the keyboard to see the full label and what it means. Use **Add status** for a custom label and an optional tip. [See all statuses](actions.md#built-in-statuses).
 
 To add a subtask, pick a parent in **Add under**. Subtasks start collapsed. Use the count in the **Subtasks** column to open them. **Expand all** appears when more than one item has subtasks or when the **Subtasks** column is hidden. If a subtask matches a search or filter, its parent appears without expanding. Each subtask has its own status.
 
@@ -28,9 +28,9 @@ Link a Copilot session when you create a tracker or from the **Trackers** menu. 
 
 Search titles, owners, and updates, or use **Filter by status**. Use **Columns** to show or hide Status, Latest update, and Subtasks.
 
-Select a status tag above the table to filter by that status. Select it again to remove just the status filter, or choose **Clear filters** to reset both search and status. The summary counts don't change as you filter.
+Select one or more status tags above the table or check them in **Filter by status**. The table shows items in any selected status that also match your search. Select a tag again to remove just that status. Choose **Clear filters** to reset both search and statuses. The summary counts don't change as you filter.
 
-![The selected Packaged tag matches the dropdown marked with a filter icon, with Clear filters beside the table controls](screenshot-status-filter.png)
+![In progress and In review selected together, with the picker showing 2 selected and the table showing both statuses](screenshot-status-filter.png)
 
 Drag the short mark between column headers to resize the two columns. You can also focus it and press the left or right arrow key, or click it and choose **Narrower** or **Wider**. Widths apply to the current view. To restore the defaults, choose **Columns** → **Reset column widths**.
 

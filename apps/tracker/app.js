@@ -12,6 +12,9 @@ const columnWidths = new Map();
 const resizeMenu = byId("resize-column-menu");
 const resetWidths = byId("reset-column-widths");
 const statusFilter = byId("status-filter");
+const statusFilterOptions = byId("status-filter-options");
+const statusFilterChoices = byId("status-filter-choices");
+const selectedStatuses = new Set();
 const statusCounts = byId("status-counts");
 const clearFiltersButton = byId("clear-filters");
 const showHidden = byId("show-hidden");
@@ -165,6 +168,7 @@ async function load({ manual = false } = {}) {
             renderBoardMenu(target);
         }
         boardMenuButton.disabled = false;
+        const previousStatuses = data?.statuses;
         data = next;
         if (!data) {
             showWelcome("No trackers yet. Choose New tracker from the Trackers menu to get started.");
@@ -176,9 +180,9 @@ async function load({ manual = false } = {}) {
             expandedParents.clear();
             expandedNotes.clear();
         }
-        const statusOptions = [["", "All statuses"], ...data.statuses.map(({ id, label }) => [id, label])];
-        if (statusOptions.length !== statusFilter.options.length || oldBoard !== target.id) {
-            setOptions(statusFilter, statusOptions, statusFilter.value);
+        if (oldBoard !== target.id || !previousStatuses || previousStatuses.length !== data.statuses.length ||
+            data.statuses.some(({ id, label }, index) => id !== previousStatuses[index].id || label !== previousStatuses[index].label)) {
+            renderStatusFilterChoices(data.statuses);
         }
         byId("board-title").textContent = data.board.name;
         showMessage(byId("board-session-name"), data.board.sessionName ? `Copilot session: ${data.board.sessionName}` : "");
@@ -201,7 +205,31 @@ async function load({ manual = false } = {}) {
 
 function clearFilters() {
     search.value = "";
-    statusFilter.value = "";
+    selectedStatuses.clear();
+}
+
+function renderStatusFilterChoices(statuses) {
+    const available = new Set(statuses.map(({ id }) => id));
+    for (const id of selectedStatuses) if (!available.has(id)) selectedStatuses.delete(id);
+    statusFilterChoices.replaceChildren(...statuses.map(({ id, label }) => {
+        const choice = document.createElement("label");
+        choice.className = "check-filter";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = id;
+        choice.append(checkbox, label);
+        return choice;
+    }));
+}
+
+function syncStatusFilter() {
+    const size = selectedStatuses.size;
+    byId("status-filter-value").textContent = size === 0 ? "All statuses"
+        : size === 1 ? data.statuses.find(({ id }) => selectedStatuses.has(id)).label
+            : `${size} selected`;
+    for (const checkbox of statusFilterChoices.querySelectorAll("input")) {
+        checkbox.checked = selectedStatuses.has(checkbox.value);
+    }
 }
 
 function renderNote(container, item, layout) {
@@ -358,7 +386,7 @@ function renderStatusSummary(items) {
     }
     const buttons = [...statusCounts.querySelectorAll("button")];
     for (const button of buttons) {
-        button.ariaPressed = String(button.dataset.statusId === statusFilter.value);
+        button.ariaPressed = String(selectedStatuses.has(button.dataset.statusId));
     }
     if (focused) {
         const replacement = buttons.find(button => button.dataset.statusId === focused);
@@ -401,13 +429,13 @@ function renderRows({ all = false } = {}) {
     const visibleItems = showHidden.checked ? data.items
         : data.items.filter(item => !hiddenIds.has(item.id) && !hiddenIds.has(item.parentId));
     const summary = visibleItems.filter(item => !item.parentId);
+    syncStatusFilter();
     renderStatusSummary(summary);
     const query = search.value.trim().toLowerCase();
-    const filter = statusFilter.value;
-    const filtered = Boolean(query || filter);
+    const filtered = Boolean(query || selectedStatuses.size);
     clearFiltersButton.hidden = !filtered;
     const statuses = new Map(data.statuses.map(status => [status.id, status]));
-    const matches = item => (!filter || item.statusId === filter) &&
+    const matches = item => (!selectedStatuses.size || selectedStatuses.has(item.statusId)) &&
         (!query || [item.title, item.owner, item.note].some(text => text.toLowerCase().includes(query)));
     const subtasksByParent = new Map();
     for (const item of visibleItems) {
@@ -558,7 +586,7 @@ function openItem(item) {
         : item?.parentId ? "Use Show hidden items to find and restore it."
             : "This also hides its subtasks. Use Show hidden items to find and restore it.";
     setOptions(byId("item-status"), data.statuses.map(({ id, label }) => [id, label]),
-        item?.statusId ?? (statusFilter.value || "todo"));
+        item?.statusId ?? (selectedStatuses.size === 1 ? selectedStatuses.values().next().value : "todo"));
     const parents = data.items.filter(candidate => !candidate.parentId);
     const parentField = byId("item-parent");
     parentField.disabled = Boolean(item) || !parents.length;
@@ -670,7 +698,7 @@ byId("delete-board").addEventListener("click", () => {
     closeBoardMenu();
     if (board) confirmDelete(board);
 });
-for (const [menu, button] of [[boardMenu, boardMenuButton], [columnsMenu, byId("columns-button")]]) {
+for (const [menu, button] of [[boardMenu, boardMenuButton], [columnsMenu, byId("columns-button")], [statusFilterOptions, statusFilter]]) {
     menu.addEventListener("beforetoggle", event => {
         if (event.newState === "open") positionMenu(menu, button, true);
         else if (tipTarget && menu.contains(tipTarget)) hideTip();
@@ -829,13 +857,17 @@ byId("board-options").addEventListener("click", event => {
     void load();
 });
 search.addEventListener("input", renderRows);
-statusFilter.addEventListener("change", renderRows);
+function toggleStatusFilter(id, selected) {
+    if (selected) selectedStatuses.add(id);
+    else selectedStatuses.delete(id);
+    renderRows();
+}
+statusFilterChoices.addEventListener("change", ({ target }) => toggleStatusFilter(target.value, target.checked));
 statusCounts.addEventListener("click", event => {
     const button = event.target.closest("button[data-status-id]");
     if (!button) return;
     const id = button.dataset.statusId;
-    statusFilter.value = statusFilter.value === id ? "" : id;
-    renderRows();
+    toggleStatusFilter(id, !selectedStatuses.has(id));
 });
 showHidden.addEventListener("change", renderRows);
 toggleSubtasks.addEventListener("click", () => renderRows({ all: true }));

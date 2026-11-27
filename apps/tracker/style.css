@@ -69,6 +69,11 @@ footer { margin-top: 24px; }
 .filters label[for="status-filter"] { display: flex; align-items: center; gap: 5px; }
 .status-filter-icon { display: inline-flex; }
 .status-filter-icon::before { width: 13px; height: 13px; flex-basis: 13px; forced-color-adjust: none; }
+#status-filter { width: 100%; justify-content: space-between; padding-inline-start: 8px; }
+#status-filter-value { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
+#status-filter-options { min-inline-size: 0; }
+#status-filter-choices .check-filter { padding-inline: 8px; border-radius: 4px; color: var(--ink); overflow-wrap: anywhere; }
+#status-filter-choices .check-filter:hover { background: var(--hover); }
 #columns-menu, #resize-column-menu { min-inline-size: 0; width: min(12rem, calc(100vw - 24px)); }
 #columns-menu .check-filter { padding-inline: 8px; color: var(--ink); }
 #reset-column-widths { border-top: 1px solid var(--edge); border-radius: 0 0 4px 4px; }
