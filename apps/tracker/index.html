@@ -30,10 +30,20 @@
           <span id="board-menu-label">Trackers</span>
           <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#chevron"/></svg>
         </button>
-        <div id="board-menu" class="board-menu" popover aria-label="Trackers">
-          <div id="board-options" class="board-options"></div>
+        <div id="board-menu" class="board-menu" popover role="group" aria-label="Trackers">
+          <div class="board-menu-header">
+            <label for="board-search" class="visually-hidden">Search trackers</label>
+            <input id="board-search" type="search" placeholder="Tracker or session name" autocomplete="off" autofocus>
+            <button type="button" id="new-board" class="control-button" data-tip="Create a separate tracker for a body of work.">
+              <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="/ui-icons.svg#plus"/></svg>New tracker
+            </button>
+          </div>
+          <div class="board-menu-results">
+            <ul id="board-options" class="board-options" role="list" aria-label="Saved trackers"></ul>
+            <p id="board-search-empty" class="board-group" role="status" hidden></p>
+          </div>
           <div class="board-menu-actions">
-            <button type="button" id="new-board" data-tip="Create a separate tracker for a body of work.">New tracker</button>
+            <p class="board-group">Manage current tracker</p>
             <button type="button" id="board-session" data-tip="Link this tracker to a Copilot session without changing trackers." hidden>Change linked session</button>
             <button type="button" id="delete-board" class="danger" hidden>Delete tracker</button>
           </div>

@@ -5,6 +5,8 @@ const token = document.querySelector('meta[name="tracker-token"]').content;
 const pageUrl = new URL(location.href);
 const boardMenu = byId("board-menu");
 const boardMenuButton = byId("board-menu-button");
+const boardSearch = byId("board-search");
+const boardOptions = byId("board-options");
 const columnsMenu = byId("columns-menu");
 const tableWrap = byId("table-wrap");
 const columnHeaders = [...tableWrap.querySelectorAll("thead th")];
@@ -90,34 +92,49 @@ function renderBoardMenu(selected) {
     byId("board-menu-label").textContent = selected?.name ?? "Trackers";
     boardMenuButton.ariaLabel = selected ? `Trackers: ${selected.name}` : "Trackers";
     const linkSession = byId("board-session");
+    boardMenu.querySelector(".board-menu-actions").hidden = !selected;
     byId("delete-board").hidden = !selected;
     linkSession.hidden = !selected;
     linkSession.textContent = selected?.sessionId ? "Change linked session" : "Link Copilot session";
     linkSession.dataset.tip = selected?.sessionId
         ? "Change or remove this tracker's session link. The tracker stays open."
         : "Associate this tracker with a Copilot session.";
-    const grouped = new Map();
-    for (const { id, name, sessionId, sessionName } of boards) {
-        if (!grouped.has(sessionId)) {
-            const group = document.createElement("div");
-            const label = document.createElement("p");
-            label.className = "board-group";
-            label.textContent = sessionName ?? "No linked session";
-            label.dataset.tip = sessionName ? `Copilot session: ${sessionName}` : "These trackers are not linked to a Copilot session.";
-            group.append(label);
-            grouped.set(sessionId, { group, label: label.textContent });
-        }
+    renderBoardOptions(selected?.id);
+}
+
+function renderBoardOptions(currentId = data?.board.id) {
+    const query = boardSearch.value.trim().normalize("NFC").toLowerCase();
+    const matches = boards
+        .filter(({ name, sessionName }) => [name, sessionName].some(text => text?.normalize("NFC").toLowerCase().includes(query)))
+        .sort((a, b) => Number(b.id === currentId) - Number(a.id === currentId) || a.name.localeCompare(b.name));
+    boardOptions.replaceChildren(...matches.map(({ id, name, sessionName }) => {
+        const entry = document.createElement("li");
         const button = document.createElement("button");
         button.type = "button";
-        button.textContent = name;
         button.dataset.boardId = id;
-        button.dataset.tip = id === selected?.id ? "This tracker is already open." : `Open ${name}`;
-        if (id === selected?.id) button.ariaCurrent = "true";
-        grouped.get(sessionId).group.append(button);
-    }
-    const groups = [...grouped].sort(([aId, a], [bId, b]) =>
-        Number(!aId) - Number(!bId) || a.label.localeCompare(b.label));
-    byId("board-options").replaceChildren(...groups.map(([, { group }]) => group));
+        const title = document.createElement("span");
+        title.className = "board-option-name";
+        title.textContent = name;
+        button.append(title);
+        if (id === currentId) {
+            button.ariaCurrent = "true";
+            const badge = document.createElement("span");
+            badge.className = "board-option-current";
+            badge.ariaHidden = "true";
+            badge.textContent = "Open";
+            button.append(badge);
+        }
+        if (sessionName) {
+            const session = document.createElement("span");
+            session.className = "board-option-session";
+            session.textContent = `Session: ${sessionName}`;
+            button.append(session);
+        }
+        entry.append(button);
+        return entry;
+    }));
+    boardOptions.parentElement.scrollTop = 0;
+    showMessage(byId("board-search-empty"), matches.length ? "" : query ? "No matching trackers." : "No saved trackers yet.");
 }
 
 function positionMenu(menu, button, opening = false) {
@@ -130,7 +147,8 @@ function positionMenu(menu, button, opening = false) {
     const openBelow = below >= menu.offsetHeight || below >= above;
     menu.style.maxHeight = `min(26rem, ${Math.max(0, openBelow ? below : above)}px)`;
     menu.style.left = `${Math.max(12, Math.min(trigger.left, innerWidth - menu.offsetWidth - 12))}px`;
-    menu.style.top = `${openBelow ? trigger.bottom + 5 : trigger.top - menu.offsetHeight - 5}px`;
+    menu.style.top = openBelow ? `${trigger.bottom + 5}px` : "auto";
+    menu.style.bottom = openBelow ? "auto" : `${innerHeight - trigger.top + 5}px`;
     if (opening) menu.classList.remove("measuring");
 }
 
@@ -700,8 +718,13 @@ byId("delete-board").addEventListener("click", () => {
 });
 for (const [menu, button] of [[boardMenu, boardMenuButton], [columnsMenu, byId("columns-button")], [statusFilterOptions, statusFilter]]) {
     menu.addEventListener("beforetoggle", event => {
-        if (event.newState === "open") positionMenu(menu, button, true);
-        else if (tipTarget && menu.contains(tipTarget)) hideTip();
+        if (event.newState === "open") {
+            if (menu === boardMenu) {
+                boardSearch.value = "";
+                renderBoardOptions();
+            }
+            positionMenu(menu, button, true);
+        } else if (tipTarget && menu.contains(tipTarget)) hideTip();
     });
     window.addEventListener("resize", () => positionMenu(menu, button));
     window.addEventListener("scroll", () => positionMenu(menu, button), { passive: true });
@@ -848,7 +871,13 @@ byId("add-status").addEventListener("click", () => openName("status"));
 byId("add-item").addEventListener("click", () => openItem());
 byId("remove-item").addEventListener("click", () => confirmDelete({ id: editing.boardId }, editing.item));
 byId("refresh").addEventListener("click", () => void load({ manual: true }));
-byId("board-options").addEventListener("click", event => {
+boardSearch.addEventListener("input", () => renderBoardOptions());
+boardSearch.addEventListener("keydown", event => {
+    if (event.isComposing || event.key !== "Enter" || boardOptions.children.length !== 1) return;
+    event.preventDefault();
+    boardOptions.querySelector("button").click();
+});
+boardOptions.addEventListener("click", event => {
     const button = event.target.closest("[data-board-id]");
     if (!button) return;
     closeBoardMenu();

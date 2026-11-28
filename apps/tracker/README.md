@@ -8,7 +8,9 @@ Keep a work list for a release, a handoff, or your own projects. Update it in th
 
 ### In the canvas
 
-In the GitHub Copilot app, open **Canvas apps** and choose **Tracker**. If it isn't listed, [install it first](#install). Open the **Trackers** menu to create or open a list.
+In the GitHub Copilot app, open **Canvas apps** and choose **Tracker**. If it isn't listed, [install it first](#install). Open the tracker switcher to search by tracker or linked session name. The open tracker is marked **Open** and appears first when it matches. Choose **New tracker** to create a list.
+
+![Tracker switcher showing two matches by linked session, with the open tracker marked and management actions below](screenshot-tracker-switcher.png)
 
 Choose **Add item** or select an item's title to edit it. Items can have an owner, an update, and a source link.
 
@@ -18,7 +20,7 @@ New items start at **To do** unless exactly one status is selected in the filter
 
 To add a subtask, pick a parent in **Add under**. Subtasks start collapsed. Use the count in the **Subtasks** column to open them. **Expand all** appears when more than one item has subtasks or when the **Subtasks** column is hidden. If a subtask matches a search or filter, its parent appears without expanding. Each subtask has its own status.
 
-Link a Copilot session when you create a tracker or from the **Trackers** menu. The session name appears above the table and groups trackers in the menu. Choose **No session linked** to unlink it. Linking doesn't make plans, pull requests, or sessions update your tracker automatically.
+Link a Copilot session when you create a tracker or under **Manage current tracker** in the switcher. Linked session names appear below tracker names in the switcher and above the table. Choose **No session linked** to unlink a session. Linking doesn't make plans, pull requests, or sessions update your tracker automatically.
 
 #### Refresh the tracker
 
